@@ -61,6 +61,24 @@ function App() {
 		}
 	};
 
+	const testQuadrantSelection = async (quadrant: string) => {
+		try {
+			console.log(`🎯 Testing ${quadrant} quadrant selection...`);
+			const result = await invoke('select_screen_quadrant', { quadrant }) as any;
+			console.log('✅ Quadrant selection result:', result);
+			
+			if (result && !result.cancelled) {
+				setScreenshotResult(result.image_data);
+				alert(`${quadrant} quadrant captured! Bounds: ${result.bounds.width}x${result.bounds.height} at (${result.bounds.x}, ${result.bounds.y})`);
+			} else {
+				alert(`${quadrant} selection was cancelled or invalid`);
+			}
+		} catch (error) {
+			console.error('❌ Quadrant selection failed:', error);
+			alert(`${quadrant} selection failed: ${error}`);
+		}
+	};
+
 	if (!isReady) {
 		return (
 			<div className="flex items-center justify-center h-screen bg-gray-50">
@@ -90,7 +108,8 @@ function App() {
 					</p>
 					
 					{/* Test buttons */}
-					<div className="pt-6 space-y-3">
+					<div className="pt-6 space-y-4">
+						{/* Main action buttons */}
 						<div className="flex space-x-3 justify-center">
 							<button
 								onClick={takeScreenshot}
@@ -100,7 +119,7 @@ function App() {
 									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
 									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
 								</svg>
-								<span>Test Screenshot</span>
+								<span>Full Screenshot</span>
 							</button>
 							
 							<button
@@ -110,9 +129,48 @@ function App() {
 								<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
 								</svg>
-								<span>Test Selection</span>
+								<span>Interactive Selection</span>
 							</button>
 						</div>
+						
+						{/* Quadrant selection buttons */}
+						<div className="space-y-2">
+							<p className="text-sm text-gray-600 text-center">Test Screen Areas:</p>
+							<div className="grid grid-cols-3 gap-2 max-w-md mx-auto">
+								<button
+									onClick={() => testQuadrantSelection('top-left')}
+									className="bg-blue-500 text-white px-3 py-2 rounded text-sm hover:bg-blue-600 transition-colors"
+								>
+									↖️ Top Left
+								</button>
+								<button
+									onClick={() => testQuadrantSelection('center')}
+									className="bg-purple-500 text-white px-3 py-2 rounded text-sm hover:bg-purple-600 transition-colors"
+								>
+									⭕ Center
+								</button>
+								<button
+									onClick={() => testQuadrantSelection('top-right')}
+									className="bg-blue-500 text-white px-3 py-2 rounded text-sm hover:bg-blue-600 transition-colors"
+								>
+									↗️ Top Right
+								</button>
+								<button
+									onClick={() => testQuadrantSelection('bottom-left')}
+									className="bg-orange-500 text-white px-3 py-2 rounded text-sm hover:bg-orange-600 transition-colors"
+								>
+									↙️ Bottom Left
+								</button>
+								<div></div>
+								<button
+									onClick={() => testQuadrantSelection('bottom-right')}
+									className="bg-orange-500 text-white px-3 py-2 rounded text-sm hover:bg-orange-600 transition-colors"
+								>
+									↘️ Bottom Right
+								</button>
+							</div>
+						</div>
+					</div>
 						
 						{screenshotResult && (
 							<div className="mt-4 p-4 bg-white rounded-lg shadow-sm max-w-sm mx-auto">

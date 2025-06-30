@@ -10,7 +10,7 @@ use base64::{Engine as _, engine::general_purpose};
 
 // Import overlay modules
 pub mod overlay;
-use overlay::{ScreenCapture, SelectionOverlay, CaptureBounds, SelectionResult, MousePosition, get_overlay};
+use overlay::{ScreenCapture, SelectionOverlay, CaptureBounds, SelectionResult, MousePosition, get_overlay, NativeOverlay, ScreenQuadrant};
 
 // App state
 #[derive(Debug, Default)]
@@ -142,6 +142,29 @@ async fn cancel_selection() -> Result<(), String> {
 }
 
 #[tauri::command]
+async fn select_screen_quadrant(quadrant: String) -> Result<SelectionResult, String> {
+    println!("🎯 Selecting screen quadrant: {}", quadrant);
+    
+    let screen_quadrant = match quadrant.as_str() {
+        "top-left" => ScreenQuadrant::TopLeft,
+        "top-right" => ScreenQuadrant::TopRight,
+        "bottom-left" => ScreenQuadrant::BottomLeft,
+        "bottom-right" => ScreenQuadrant::BottomRight,
+        "center" => ScreenQuadrant::Center,
+        _ => return Err(format!("Invalid quadrant: {}", quadrant)),
+    };
+    
+    NativeOverlay::select_screen_quadrant(screen_quadrant).await
+}
+
+#[tauri::command]
+async fn manual_selection(x: i32, y: i32, width: u32, height: u32) -> Result<SelectionResult, String> {
+    let bounds = CaptureBounds { x, y, width, height };
+    println!("🎯 Manual selection: {:?}", bounds);
+    NativeOverlay::manual_selection(bounds).await
+}
+
+#[tauri::command]
 async fn copy_to_clipboard(text: String) -> Result<(), String> {
     // TODO: Implement clipboard functionality
     println!("Copying to clipboard: {}", text);
@@ -181,6 +204,8 @@ pub fn run() {
             update_selection_mouse,
             end_drag_selection,
             cancel_selection,
+            select_screen_quadrant,
+            manual_selection,
             copy_to_clipboard,
             register_global_hotkey,
         ])

@@ -49,18 +49,8 @@ impl SelectionOverlay {
     pub async fn start_selection() -> Result<SelectionResult, String> {
         println!("🎯 Starting screen selection overlay...");
         
-        // Get screen information
-        let screen_info = ScreenCapture::get_screen_info()?;
-        if screen_info.is_empty() {
-            return Err("No screens available".to_string());
-        }
-        
-        let primary_screen = &screen_info[0];
-        println!("📺 Primary screen: {}x{}", primary_screen.width, primary_screen.height);
-        
-        // For now, we'll implement a simplified version that works without native overlay
-        // This is a placeholder implementation that will be enhanced with native overlay
-        Self::show_selection_placeholder(primary_screen).await
+        // Use the native overlay for interactive selection
+        super::native_overlay::NativeOverlay::start_interactive_selection().await
     }
 
     /// Placeholder implementation for selection (will be replaced with native overlay)
