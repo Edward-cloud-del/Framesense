@@ -4,8 +4,9 @@ use tauri::Manager;
 use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
 use screenshots::Screen;
-use image::ImageFormat;
+use image::{ImageFormat, RgbaImage, DynamicImage};
 use std::io::Cursor;
+use base64::{Engine as _, engine::general_purpose};
 
 // App state
 #[derive(Debug, Default)]
@@ -78,14 +79,27 @@ async fn take_fullscreen_screenshot() -> Result<String, String> {
     let screen = &screens[0];
     println!("📸 Capturing screen: {}x{}", screen.display_info.width, screen.display_info.height);
     
-    let image = screen.capture().map_err(|e| format!("Failed to capture screen: {}", e))?;
+    let screenshot = screen.capture().map_err(|e| format!("Failed to capture screen: {}", e))?;
     
-    // Convert to base64
-    let mut buffer = Cursor::new(Vec::new());
-    image.save(&mut buffer, ImageFormat::Png)
-        .map_err(|e| format!("Failed to encode image: {}", e))?;
+    // Convert screenshots::Image to image::RgbaImage
+    let rgba_image = RgbaImage::from_raw(
+        screenshot.width(),
+        screenshot.height(),
+        screenshot.rgba().to_vec(),
+    ).ok_or("Failed to create RGBA image from screenshot")?;
     
-    let base64_data = base64::encode(buffer.into_inner());
+    // Convert to DynamicImage for easier encoding
+    let dynamic_image = DynamicImage::ImageRgba8(rgba_image);
+    
+    // Convert to PNG bytes
+    let mut png_buffer = Vec::new();
+    {
+        let mut cursor = Cursor::new(&mut png_buffer);
+        dynamic_image.write_to(&mut cursor, ImageFormat::Png)
+            .map_err(|e| format!("Failed to encode PNG: {}", e))?;
+    }
+    
+    let base64_data = general_purpose::STANDARD.encode(&png_buffer);
     println!("✅ Screenshot captured! Size: {} bytes", base64_data.len());
     
     Ok(format!("data:image/png;base64,{}", base64_data))
