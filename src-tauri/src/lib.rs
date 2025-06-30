@@ -8,6 +8,10 @@ use image::{ImageFormat, RgbaImage, DynamicImage};
 use std::io::Cursor;
 use base64::{Engine as _, engine::general_purpose};
 
+// Import overlay modules
+pub mod overlay;
+use overlay::{ScreenCapture, SelectionOverlay, CaptureBounds, SelectionResult, MousePosition, get_overlay};
+
 // App state
 #[derive(Debug, Default)]
 pub struct AppState {
@@ -20,19 +24,7 @@ pub struct PermissionStatus {
     pub accessibility: bool,
 }
 
-#[derive(Clone, Serialize, Deserialize)]
-pub struct CaptureResult {
-    pub image_data: String, // Base64 encoded image
-    pub bounds: CaptureBounds,
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-pub struct CaptureBounds {
-    pub x: i32,
-    pub y: i32,
-    pub width: u32,
-    pub height: u32,
-}
+// CaptureBounds and CaptureResult are now defined in overlay module
 
 // Tauri commands
 #[tauri::command]
@@ -106,13 +98,47 @@ async fn take_fullscreen_screenshot() -> Result<String, String> {
 }
 
 #[tauri::command]
-async fn capture_screen_region(bounds: CaptureBounds) -> Result<CaptureResult, String> {
-    // TODO: Implement region capture
-    // For now, return a placeholder
-    Ok(CaptureResult {
-        image_data: "placeholder".to_string(),
-        bounds,
-    })
+async fn start_screen_selection() -> Result<SelectionResult, String> {
+    println!("🎯 Frontend requested screen selection");
+    SelectionOverlay::start_selection().await
+}
+
+#[tauri::command]
+async fn capture_screen_region(bounds: CaptureBounds) -> Result<String, String> {
+    println!("📸 Capturing screen region: {:?}", bounds);
+    match ScreenCapture::capture_region(bounds).await {
+        Ok(result) => Ok(result.image_data),
+        Err(e) => Err(e),
+    }
+}
+
+#[tauri::command]
+async fn get_screen_info() -> Result<Vec<overlay::ScreenInfo>, String> {
+    ScreenCapture::get_screen_info()
+}
+
+#[tauri::command]
+async fn start_drag_selection(pos: MousePosition) -> Result<(), String> {
+    let overlay = get_overlay();
+    overlay.start_drag(pos)
+}
+
+#[tauri::command]
+async fn update_selection_mouse(pos: MousePosition) -> Result<(), String> {
+    let overlay = get_overlay();
+    overlay.update_mouse_position(pos)
+}
+
+#[tauri::command]
+async fn end_drag_selection() -> Result<Option<SelectionResult>, String> {
+    let overlay = get_overlay();
+    overlay.end_drag().await
+}
+
+#[tauri::command]
+async fn cancel_selection() -> Result<(), String> {
+    let overlay = get_overlay();
+    overlay.cancel_selection()
 }
 
 #[tauri::command]
@@ -148,7 +174,13 @@ pub fn run() {
             request_permissions,
             open_system_preferences,
             take_fullscreen_screenshot,
+            start_screen_selection,
             capture_screen_region,
+            get_screen_info,
+            start_drag_selection,
+            update_selection_mouse,
+            end_drag_selection,
+            cancel_selection,
             copy_to_clipboard,
             register_global_hotkey,
         ])
