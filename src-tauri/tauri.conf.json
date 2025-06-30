@@ -1,0 +1,80 @@
+{
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "windows": {
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": ""
+    },
+    "publisher": "FrameSense",
+    "copyright": "Copyright © 2025 FrameSense",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "resources": [],
+    "externalBin": [],
+    "category": "Productivity",
+    "shortDescription": "AI-powered screen capture with instant insights",
+    "longDescription": "FrameSense is an ultra-smooth desktop app that lets you drag a selection over screen content and get instant AI-powered analysis. Perfect for text extraction, image analysis, and smart contextual responses.",
+    "macOS": {
+      "frameworks": [],
+      "minimumSystemVersion": "10.15",
+      "exceptionDomain": "",
+      "signingIdentity": null,
+      "entitlements": null
+    },
+    "linux": {
+      "deb": {
+        "depends": []
+      }
+    },
+    "createUpdaterArtifacts": true
+  },
+  "build": {
+    "beforeDevCommand": "pnpm start",
+    "beforeBuildCommand": "pnpm build",
+    "frontendDist": "../build",
+    "devUrl": "http://localhost:1420"
+  },
+  "productName": "FrameSense",
+  "mainBinaryName": "FrameSense",
+  "version": "../package.json",
+  "identifier": "com.framesense.app",
+  "plugins": {
+    "updater": {
+      "endpoints": [
+        "https://github.com/framesense/releases"
+      ],
+      "pubkey": ""
+    }
+  },
+  "app": {
+    "security": {
+      "csp": "default-src blob: data: filesystem: ws: wss: http: https: tauri: 'unsafe-eval' 'unsafe-inline' 'self' img-src: 'self'; connect-src ipc: http://ipc.localhost"
+    },
+    "windows": [
+      {
+        "title": "FrameSense",
+        "label": "main",
+        "minWidth": 400,
+        "minHeight": 300,
+        "resizable": true,
+        "fullscreen": false,
+        "visible": false,
+        "decorations": true,
+        "alwaysOnTop": false,
+        "useHttpsScheme": true
+      }
+    ],
+    "trayIcon": {
+      "iconPath": "icons/SystemTray1.ico",
+      "iconAsTemplate": true
+    },
+    "withGlobalTauri": false
+  }
+}
