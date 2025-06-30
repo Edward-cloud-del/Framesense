@@ -3,6 +3,9 @@
 use tauri::Manager;
 use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
+use screenshots::Screen;
+use image::ImageFormat;
+use std::io::Cursor;
 
 // App state
 #[derive(Debug, Default)]
@@ -61,8 +64,36 @@ async fn open_system_preferences() -> Result<(), String> {
 }
 
 #[tauri::command]
+async fn take_fullscreen_screenshot() -> Result<String, String> {
+    println!("🔥 Taking fullscreen screenshot...");
+    
+    // Get all screens
+    let screens = Screen::all().map_err(|e| format!("Failed to get screens: {}", e))?;
+    
+    if screens.is_empty() {
+        return Err("No screens found".to_string());
+    }
+    
+    // Take screenshot of first screen
+    let screen = &screens[0];
+    println!("📸 Capturing screen: {}x{}", screen.display_info.width, screen.display_info.height);
+    
+    let image = screen.capture().map_err(|e| format!("Failed to capture screen: {}", e))?;
+    
+    // Convert to base64
+    let mut buffer = Cursor::new(Vec::new());
+    image.save(&mut buffer, ImageFormat::Png)
+        .map_err(|e| format!("Failed to encode image: {}", e))?;
+    
+    let base64_data = base64::encode(buffer.into_inner());
+    println!("✅ Screenshot captured! Size: {} bytes", base64_data.len());
+    
+    Ok(format!("data:image/png;base64,{}", base64_data))
+}
+
+#[tauri::command]
 async fn capture_screen_region(bounds: CaptureBounds) -> Result<CaptureResult, String> {
-    // TODO: Implement native screen capture
+    // TODO: Implement region capture
     // For now, return a placeholder
     Ok(CaptureResult {
         image_data: "placeholder".to_string(),
@@ -102,6 +133,7 @@ pub fn run() {
             check_permissions,
             request_permissions,
             open_system_preferences,
+            take_fullscreen_screenshot,
             capture_screen_region,
             copy_to_clipboard,
             register_global_hotkey,

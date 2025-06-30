@@ -24,6 +24,7 @@ tauri-plugin-global-shortcut = "2"
 # Screen capture and image processing
 screenshots = "0.7"
 image = "0.24"
+base64 = "0.21"
 
 # OCR (will add native Tesseract later)
 # tesseract = "0.13"
