@@ -36,10 +36,10 @@
     "createUpdaterArtifacts": true
   },
   "build": {
-    "beforeDevCommand": "pnpm start",
-    "beforeBuildCommand": "pnpm build",
-    "frontendDist": "../build",
-    "devUrl": "http://localhost:1420"
+    "beforeDevCommand": "npm start",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:5173"
   },
   "productName": "FrameSense",
   "mainBinaryName": "FrameSense",
@@ -65,7 +65,7 @@
         "minHeight": 300,
         "resizable": true,
         "fullscreen": false,
-        "visible": false,
+        "visible": true,
         "decorations": true,
         "alwaysOnTop": false,
         "useHttpsScheme": true

@@ -1,5 +1,6 @@
 {
   "identifier": "desktop-capability",
+  "description": "FrameSense desktop capabilities",
   "platforms": [
     "macOS",
     "windows",
@@ -9,13 +10,15 @@
     "main"
   ],
   "permissions": [
-    "updater:default",
-    "store:default",
-    "autostart:default",
-    "opener:default",
-    "autostart:default",
-    "log:default",
-		"core:window:allow-toggle-maximize",
-		"fs:allow-download-write-recursive"
+    "core:default",
+    "core:window:default",
+    "core:webview:default",
+    "core:app:default",
+    "core:event:default",
+    "core:menu:default",
+    "core:tray:default",
+    "shell:default",
+    "notification:default",
+    "global-shortcut:default"
   ]
 }
