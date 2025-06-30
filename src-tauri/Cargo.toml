@@ -50,5 +50,5 @@ lto = true # Enables link to optimizations
 opt-level = "s" # Optimize for binary size
 
 [lib]
-name = "framesense_lib"
+name = "framesense"
 crate-type = ["staticlib", "cdylib", "rlib"]
