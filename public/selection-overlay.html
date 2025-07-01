@@ -10,11 +10,12 @@
             padding: 0;
             width: 100vw;
             height: 100vh;
-            background: rgba(0, 0, 0, 0.1);
+            background: rgba(0, 0, 0, 0.05);
             cursor: crosshair;
             user-select: none;
             overflow: hidden;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            transition: all 0.2s ease;
         }
 
         .overlay-container {
@@ -23,89 +24,284 @@
             height: 100%;
         }
 
-        .instructions {
+        /* Elegant top bar like Cluely */
+        .top-bar {
             position: absolute;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.8);
-            color: white;
-            padding: 12px 20px;
-            border-radius: 8px;
-            font-size: 14px;
-            pointer-events: none;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.6));
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
             z-index: 1000;
+            opacity: 0;
+            transform: translateY(-100%);
+            animation: slideDown 0.5s ease forwards;
+        }
+
+        @keyframes slideDown {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            color: white;
+            font-weight: 600;
+            font-size: 16px;
+        }
+
+        .brand-icon {
+            width: 24px;
+            height: 24px;
+            background: linear-gradient(135deg, #007AFF, #5AC8FA);
+            border-radius: 6px;
+            margin-right: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 12px;
+        }
+
+        .instructions {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .instruction-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .key {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
         }
 
         .close-button {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            width: 40px;
-            height: 40px;
-            background: rgba(255, 0, 0, 0.8);
+            background: rgba(255, 59, 48, 0.8);
             color: white;
             border: none;
-            border-radius: 50%;
-            font-size: 20px;
+            width: 36px;
+            height: 36px;
+            border-radius: 18px;
+            font-size: 18px;
             font-weight: bold;
             cursor: pointer;
-            z-index: 1000;
-            transition: background 0.2s;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .close-button:hover {
-            background: rgba(255, 0, 0, 1);
+            background: rgba(255, 59, 48, 1);
+            transform: scale(1.1);
         }
 
+        /* Selection box with sophisticated styling */
         .selection-box {
             position: absolute;
             border: 2px solid #007AFF;
-            background: rgba(0, 122, 255, 0.1);
+            background: rgba(0, 122, 255, 0.08);
+            backdrop-filter: blur(10px);
             pointer-events: none;
             display: none;
+            border-radius: 8px;
+            box-shadow: 
+                0 8px 32px rgba(0, 122, 255, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            animation: pulseSelection 0.8s ease-in-out infinite alternate;
+        }
+
+        @keyframes pulseSelection {
+            from { box-shadow: 0 8px 32px rgba(0, 122, 255, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2); }
+            to { box-shadow: 0 12px 40px rgba(0, 122, 255, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.3); }
         }
 
         .selection-corner {
             position: absolute;
-            width: 8px;
-            height: 8px;
+            width: 12px;
+            height: 12px;
             background: #007AFF;
+            border: 2px solid white;
             border-radius: 50%;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            animation: cornerPulse 1s ease-in-out infinite alternate;
         }
 
-        .corner-tl { top: -4px; left: -4px; }
-        .corner-tr { top: -4px; right: -4px; }
-        .corner-bl { bottom: -4px; left: -4px; }
-        .corner-br { bottom: -4px; right: -4px; }
+        @keyframes cornerPulse {
+            from { transform: scale(1); }
+            to { transform: scale(1.2); }
+        }
 
+        .corner-tl { top: -6px; left: -6px; }
+        .corner-tr { top: -6px; right: -6px; }
+        .corner-bl { bottom: -6px; left: -6px; }
+        .corner-br { bottom: -6px; right: -6px; }
+
+        /* Advanced size indicator */
         .size-indicator {
             position: absolute;
-            bottom: -30px;
-            left: 0;
-            background: rgba(0, 0, 0, 0.8);
+            bottom: -45px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.9);
             color: white;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 12px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
             white-space: nowrap;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Content analysis preview */
+        .content-preview {
+            position: absolute;
+            top: -80px;
+            right: 0;
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-size: 12px;
+            max-width: 200px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            opacity: 0;
+            transform: translateY(10px);
+            transition: all 0.3s ease;
+        }
+
+        .content-preview.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .preview-label {
+            color: #007AFF;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        /* Crosshair enhancement */
+        .crosshair {
+            position: absolute;
+            pointer-events: none;
+            z-index: 999;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .crosshair.visible {
+            opacity: 1;
+        }
+
+        .crosshair-line {
+            position: absolute;
+            background: rgba(0, 122, 255, 0.6);
+            border-radius: 1px;
+        }
+
+        .crosshair-h {
+            width: 100vw;
+            height: 1px;
+            left: 0;
+        }
+
+        .crosshair-v {
+            width: 1px;
+            height: 100vh;
+            top: 0;
+        }
+
+        /* Smart grid overlay for precision */
+        .precision-grid {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: 
+                linear-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+            background-size: 20px 20px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .precision-grid.visible {
+            opacity: 1;
         }
     </style>
 </head>
 <body>
     <div class="overlay-container" id="overlay">
-        <div class="instructions">
-            🖱️ Drag to select area • ⏹️ ESC to cancel
+        <!-- Elegant top bar like Cluely -->
+        <div class="top-bar">
+            <div class="brand">
+                <div class="brand-icon">FS</div>
+                FrameSense AI Selection
+            </div>
+            <div class="instructions">
+                <div class="instruction-item">
+                    🖱️ <span>Drag to select</span>
+                </div>
+                <div class="instruction-item">
+                    <span class="key">⌥</span> <span>Precision mode</span>
+                </div>
+                <div class="instruction-item">
+                    <span class="key">ESC</span> <span>Cancel</span>
+                </div>
+            </div>
+            <button class="close-button" id="closeBtn">×</button>
         </div>
-        
-        <button class="close-button" id="closeBtn">×</button>
-        
+
+        <!-- Precision grid for accurate selection -->
+        <div class="precision-grid" id="precisionGrid"></div>
+
+        <!-- Enhanced crosshair -->
+        <div class="crosshair" id="crosshair">
+            <div class="crosshair-line crosshair-h" id="crosshairH"></div>
+            <div class="crosshair-line crosshair-v" id="crosshairV"></div>
+        </div>
+
+        <!-- Sophisticated selection box -->
         <div class="selection-box" id="selectionBox">
             <div class="selection-corner corner-tl"></div>
             <div class="selection-corner corner-tr"></div>
             <div class="selection-corner corner-bl"></div>
             <div class="selection-corner corner-br"></div>
+            
             <div class="size-indicator" id="sizeIndicator">0 × 0</div>
+            
+            <!-- Content analysis preview -->
+            <div class="content-preview" id="contentPreview">
+                <div class="preview-label">Analyzing...</div>
+                <div>🤖 AI will analyze selected content</div>
+            </div>
         </div>
     </div>
 
@@ -115,11 +311,35 @@
         let startY = 0;
         let currentX = 0;
         let currentY = 0;
+        let isPrecisionMode = false;
 
         const overlay = document.getElementById('overlay');
         const selectionBox = document.getElementById('selectionBox');
         const sizeIndicator = document.getElementById('sizeIndicator');
+        const contentPreview = document.getElementById('contentPreview');
         const closeBtn = document.getElementById('closeBtn');
+        const crosshair = document.getElementById('crosshair');
+        const crosshairH = document.getElementById('crosshairH');
+        const crosshairV = document.getElementById('crosshairV');
+        const precisionGrid = document.getElementById('precisionGrid');
+
+        // Enhanced mouse tracking with crosshair
+        overlay.addEventListener('mousemove', (e) => {
+            // Update crosshair position
+            crosshairH.style.top = e.clientY + 'px';
+            crosshairV.style.left = e.clientX + 'px';
+            
+            if (isPrecisionMode) {
+                crosshair.classList.add('visible');
+                precisionGrid.classList.add('visible');
+            }
+            
+            if (!isDragging) return;
+            
+            currentX = e.clientX;
+            currentY = e.clientY;
+            updateSelectionBox();
+        });
 
         // Handle mouse down - start selection
         overlay.addEventListener('mousedown', (e) => {
@@ -135,18 +355,7 @@
             selectionBox.style.display = 'block';
             updateSelectionBox();
             
-            console.log('🖱️ Started drag at:', startX, startY);
-        });
-
-        // Handle mouse move - update selection
-        document.addEventListener('mousemove', (e) => {
-            if (!isDragging) return;
-            
-            e.preventDefault();
-            currentX = e.clientX;
-            currentY = e.clientY;
-            
-            updateSelectionBox();
+            console.log('🎯 Started sophisticated selection at:', startX, startY);
         });
 
         // Handle mouse up - complete selection
@@ -161,22 +370,29 @@
             const width = Math.abs(currentX - startX);
             const height = Math.abs(currentY - startY);
             
-            console.log('🖱️ Selection completed:', { x, y, width, height });
+            console.log('✨ Cluely-style selection completed:', { x, y, width, height });
+            
+            // Show content analysis preview
+            contentPreview.classList.add('visible');
             
             // Minimum selection size
-            if (width < 10 || height < 10) {
-                console.log('❌ Selection too small, cancelling');
-                await window.__TAURI__.invoke('overlay_selection_cancelled');
+            if (width < 15 || height < 15) {
+                console.log('⚠️ Selection too small');
+                setTimeout(async () => {
+                    await window.__TAURI__.invoke('overlay_selection_cancelled');
+                }, 1000);
                 return;
             }
             
             try {
-                // Send selection to Rust backend
+                // Send selection to Rust backend with enhanced data
                 await window.__TAURI__.invoke('overlay_selection_completed', {
                     x: Math.round(x),
                     y: Math.round(y),
                     width: Math.round(width),
-                    height: Math.round(height)
+                    height: Math.round(height),
+                    precision_mode: isPrecisionMode,
+                    timestamp: Date.now()
                 });
             } catch (error) {
                 console.error('❌ Failed to send selection:', error);
@@ -184,24 +400,37 @@
             }
         });
 
-        // Handle escape key
+        // Enhanced keyboard handling
         document.addEventListener('keydown', async (e) => {
             if (e.key === 'Escape') {
                 e.preventDefault();
-                console.log('⏹️ Escape pressed - cancelling selection');
+                console.log('⏹️ Escape pressed - cancelling');
                 await window.__TAURI__.invoke('overlay_selection_cancelled');
+            } else if (e.altKey) {
+                // Precision mode with Alt key (like Cluely's modifiers)
+                isPrecisionMode = true;
+                crosshair.classList.add('visible');
+                precisionGrid.classList.add('visible');
             }
         });
 
-        // Handle close button
+        document.addEventListener('keyup', (e) => {
+            if (!e.altKey) {
+                isPrecisionMode = false;
+                crosshair.classList.remove('visible');
+                precisionGrid.classList.remove('visible');
+            }
+        });
+
+        // Close button handling
         closeBtn.addEventListener('click', async (e) => {
             e.preventDefault();
             e.stopPropagation();
-            console.log('✖️ Close button clicked');
+            console.log('🔴 Close button clicked');
             await window.__TAURI__.invoke('overlay_selection_cancelled');
         });
 
-        // Update selection box appearance
+        // Enhanced selection box update with smart content detection
         function updateSelectionBox() {
             const x = Math.min(startX, currentX);
             const y = Math.min(startY, currentY);
@@ -213,7 +442,30 @@
             selectionBox.style.width = width + 'px';
             selectionBox.style.height = height + 'px';
             
-            sizeIndicator.textContent = `${Math.round(width)} × ${Math.round(height)}`;
+            // Enhanced size display
+            const ratio = (width / height).toFixed(2);
+            sizeIndicator.textContent = `${Math.round(width)} × ${Math.round(height)} (${ratio})`;
+            
+            // Smart content analysis preview
+            if (width > 100 && height > 50) {
+                const area = width * height;
+                let analysisText = '';
+                
+                if (area > 50000) {
+                    analysisText = '📄 Large content area detected';
+                } else if (width > height * 2) {
+                    analysisText = '📝 Text content likely';
+                } else if (Math.abs(width - height) < 50) {
+                    analysisText = '🖼️ Image content likely';
+                } else {
+                    analysisText = '🎯 Mixed content detected';
+                }
+                
+                contentPreview.children[1].textContent = analysisText;
+                contentPreview.classList.add('visible');
+            } else {
+                contentPreview.classList.remove('visible');
+            }
         }
 
         // Prevent context menu
@@ -221,7 +473,7 @@
             e.preventDefault();
         });
 
-        console.log('✅ Selection overlay loaded and ready');
+        console.log('🚀 Cluely-inspired FrameSense overlay loaded and ready!');
     </script>
 </body>
 </html> 

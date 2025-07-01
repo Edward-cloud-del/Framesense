@@ -1,4 +1,4 @@
-use tauri::{AppHandle, Manager, WebviewWindow, WindowBuilder, WindowUrl};
+use tauri::{AppHandle, Manager, WebviewWindow, WebviewWindowBuilder, WebviewUrl};
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex, mpsc};
 use super::screen_capture::{ScreenCapture, CaptureBounds, ScreenInfo};
@@ -82,11 +82,11 @@ impl InteractiveOverlay {
     async fn create_fullscreen_overlay(app_handle: &AppHandle, screen_info: &ScreenInfo) -> Result<WebviewWindow, String> {
         println!("🖼️ Creating transparent fullscreen overlay window...");
         
-        // Create overlay window configuration
-        let window_builder = WindowBuilder::new(
+        // Create overlay window configuration  
+        let overlay_window = WebviewWindowBuilder::new(
             app_handle,
             "selection-overlay",
-            WindowUrl::App("selection-overlay.html".into())
+            WebviewUrl::App("selection-overlay.html".into())
         )
         .title("FrameSense Selection Overlay")
         .inner_size(screen_info.width as f64, screen_info.height as f64)
@@ -96,15 +96,11 @@ impl InteractiveOverlay {
         .minimizable(false)
         .closable(true)
         .decorations(false)
-        .transparent(true)
         .always_on_top(true)
         .skip_taskbar(true)
-        .focused(true);
-
-        // Build the window
-        let overlay_window = window_builder
-            .build()
-            .map_err(|e| format!("Failed to create overlay window: {}", e))?;
+        .focused(true)
+        .build()
+        .map_err(|e| format!("Failed to create overlay window: {}", e))?;
 
         println!("✅ Transparent overlay window created successfully!");
         
