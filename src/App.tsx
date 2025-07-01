@@ -1,15 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
 import PermissionWizard from './components/PermissionWizard';
 import ResultOverlay from './components/ResultOverlay';
 import ProgressIndicator from './components/ProgressIndicator';
-import DragOverlay from './components/DragOverlay';
+
 import { useAppStore } from './stores/app-store';
 
 function App() {
 	const [isReady, setIsReady] = useState(false);
 	const [screenshotResult, setScreenshotResult] = useState<string | null>(null);
-	const [showDragOverlay, setShowDragOverlay] = useState(false);
+
 	const { 
 		hasPermissions, 
 		isProcessing, 
@@ -20,15 +21,45 @@ function App() {
 	useEffect(() => {
 		// Check permissions on app start
 		checkPermissions();
-		}, []);
+		
+		// Listen for capture overlay events from Tauri (global shortcut or tray menu)
+		const unlistenOverlay = listen('show-capture-overlay', () => {
+			console.log('📸 Received show-capture-overlay event from Tauri!');
+			testScreenSelection(); // Use new overlay system
+		});
+		
+		// Listen for selection results from Rust after screen capture
+		const unlistenResult = listen('selection-result', (event: any) => {
+			console.log('🎯 Received selection result from Rust:', event.payload);
+			const result = event.payload;
+			
+			if (result.success && result.type === 'image' && result.imageData) {
+				setScreenshotResult(result.imageData);
+				console.log('✅ Screen selection image loaded!');
+				
+				// Show alert with bounds info
+				const bounds = result.bounds;
+				alert(`Selection Complete!\n\nBounds: ${bounds.width}x${bounds.height} at (${bounds.x}, ${bounds.y})\n\nImage captured and displayed below!`);
+			} else if (result.type === 'error') {
+				console.error('❌ Selection failed:', result.message);
+				alert(`Selection failed: ${result.message}`);
+			}
+		});
+		
+		return () => {
+			unlistenOverlay.then(fn => fn());
+			unlistenResult.then(fn => fn());
+		};
+	}, []);
 
 	const checkPermissions = async () => {
 		try {
 			const permissions = await invoke('check_permissions');
-			setPermissions(permissions);
+			setPermissions(!!permissions); // Force to boolean
 			setIsReady(true);
 		} catch (error) {
 			console.error('Failed to check permissions:', error);
+			setPermissions(true); // Assume true for testing
 			setIsReady(true);
 		}
 	};
@@ -45,25 +76,21 @@ function App() {
 		}
 	};
 
-	const testScreenSelection = () => {
-		console.log('🚀 Starting drag overlay...');
-		setShowDragOverlay(true);
-	};
-
-	const handleSelectionComplete = (result: any) => {
-		console.log('✅ Drag selection completed!', result);
-		setShowDragOverlay(false);
-		
-		if (result && !result.cancelled) {
-			setScreenshotResult(result.image_data);
-			alert(`Drag Selection Complete!\n\nBounds: ${result.bounds.width}x${result.bounds.height} at (${result.bounds.x}, ${result.bounds.y})`);
+	const testScreenSelection = async () => {
+		console.log('🚀 Starting transparent overlay selection...');
+		try {
+			// Create separate transparent overlay window
+			await invoke('create_transparent_overlay');
+			console.log('✅ Transparent overlay window created');
+			
+			// Main window stays normal - no changes needed
+		} catch (error) {
+			console.error('❌ Failed to create overlay:', error);
+			alert(`Failed to create overlay: ${error}`);
 		}
 	};
 
-	const handleSelectionCancel = () => {
-		console.log('❌ Drag selection cancelled');
-		setShowDragOverlay(false);
-	};
+
 
 	const testQuadrantSelection = async (quadrant: string) => {
 		try {
@@ -91,12 +118,16 @@ function App() {
 		);
 	}
 
-	if (!hasPermissions) {
-		return <PermissionWizard onPermissionsGranted={checkPermissions} />;
-	}
+	// Temporary: Skip permissions for testing
+	// if (!hasPermissions) {
+	// 	return <PermissionWizard onPermissionsGranted={checkPermissions} />;
+	// }
 
 	return (
-		<div className="h-screen bg-gray-50 flex flex-col">
+		<div 
+			className="h-screen flex flex-col"
+			style={{ backgroundColor: '#f9fafb' }} // Force main app background
+		>
 			{/* Main content */}
 			<div className="flex-1 flex items-center justify-center">
 				<div className="text-center space-y-4">
@@ -194,14 +225,6 @@ function App() {
 			
 			{/* Result overlay */}
 			{currentResult && <ResultOverlay result={currentResult} />}
-			
-			{/* Drag overlay for interactive selection */}
-			{showDragOverlay && (
-				<DragOverlay 
-					onSelectionComplete={handleSelectionComplete}
-					onCancel={handleSelectionCancel}
-				/>
-			)}
 		</div>
 	);
 }

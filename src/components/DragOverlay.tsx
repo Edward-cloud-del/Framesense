@@ -18,6 +18,8 @@ const DragOverlay: React.FC<DragOverlayProps> = ({ onSelectionComplete, onCancel
 	const [selectionBox, setSelectionBox] = useState<SelectionBox | null>(null);
 	const overlayRef = useRef<HTMLDivElement>(null);
 
+
+
 	const handleMouseDown = useCallback((e: React.MouseEvent) => {
 		e.preventDefault();
 		e.stopPropagation();
@@ -80,46 +82,33 @@ const DragOverlay: React.FC<DragOverlayProps> = ({ onSelectionComplete, onCancel
 		}
 
 		try {
-			// Get screen info to calculate proper scaling
-			const screenInfo = await invoke('get_screen_info') as any[];
-			if (!screenInfo || screenInfo.length === 0) {
-				console.error('❌ No screen info available');
-				onCancel();
-				return;
-			}
+			console.log(`📐 Viewport selection: ${width}x${height} at (${viewportX}, ${viewportY})`);
 
-			const screen = screenInfo[0];
-			console.log(`📺 Screen: ${screen.width}x${screen.height}`);
+			// Get window position to convert viewport coords to screen coords
+			const windowPos = await invoke('get_window_position') as { x: number, y: number };
+			console.log(`🖥️ Window position: (${windowPos.x}, ${windowPos.y})`);
 
-			// Get current window size for scaling calculation
-			const windowWidth = window.innerWidth;
-			const windowHeight = window.innerHeight;
-			console.log(`🖥️ Window: ${windowWidth}x${windowHeight}`);
+			// Convert viewport coordinates to absolute screen coordinates
+			const screenX = Math.round(windowPos.x + viewportX);
+			const screenY = Math.round(windowPos.y + viewportY);
+			const screenWidth = Math.round(width);
+			const screenHeight = Math.round(height);
 
-			// Calculate scale factors
-			const scaleX = screen.width / windowWidth;
-			const scaleY = screen.height / windowHeight;
+			console.log(`🎯 Screen coordinates: ${screenWidth}x${screenHeight} at (${screenX}, ${screenY})`);
 
-			// Convert viewport coordinates to screen coordinates
-			const screenX = Math.round(viewportX * scaleX);
-			const screenY = Math.round(viewportY * scaleY);
-			const screenWidth = Math.round(width * scaleX);
-			const screenHeight = Math.round(height * scaleY);
-
-			console.log(`📐 Viewport: ${width}x${height} at (${viewportX}, ${viewportY})`);
-			console.log(`🎯 Screen: ${screenWidth}x${screenHeight} at (${screenX}, ${screenY})`);
-			console.log(`📏 Scale: ${scaleX.toFixed(2)}x, ${scaleY.toFixed(2)}y`);
-
-			// Call the manual_selection command with screen coordinates
-			const result = await invoke('manual_selection', { 
-				x: screenX, 
-				y: screenY, 
-				width: screenWidth, 
-				height: screenHeight 
+			// Call our process_screen_selection command with absolute screen coordinates
+			await invoke('process_screen_selection', { 
+				bounds: {
+					x: screenX, 
+					y: screenY, 
+					width: screenWidth, 
+					height: screenHeight
+				}
 			});
 			
-			console.log('✅ Drag selection captured with proper coordinates!', result);
-			onSelectionComplete(result);
+			console.log('✅ Screen selection sent to Rust for processing!');
+			// The result will come back via 'selection-result' event that App.tsx listens for
+			onSelectionComplete({ success: true });
 		} catch (error) {
 			console.error('❌ Drag selection failed:', error);
 			onCancel();
@@ -172,7 +161,7 @@ const DragOverlay: React.FC<DragOverlayProps> = ({ onSelectionComplete, onCancel
 			ref={overlayRef}
 			className="fixed inset-0 z-50 cursor-crosshair select-none"
 			style={{ 
-				backgroundColor: 'rgba(0, 0, 0, 0.2)',
+				backgroundColor: 'transparent',
 				userSelect: 'none',
 				pointerEvents: 'auto',
 			}}

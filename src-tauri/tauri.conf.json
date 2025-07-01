@@ -36,8 +36,8 @@
     "createUpdaterArtifacts": true
   },
   "build": {
-    "beforeDevCommand": "npm start",
-    "beforeBuildCommand": "npm run build",
+    "beforeDevCommand": "pnpm start",
+    "beforeBuildCommand": "pnpm build",
     "frontendDist": "../dist",
     "devUrl": "http://localhost:5173"
   },
@@ -54,10 +54,20 @@
     }
   },
   "app": {
+    "macOSPrivateApi": true,
     "security": {
       "csp": "default-src blob: data: filesystem: ws: wss: http: https: tauri: 'unsafe-eval' 'unsafe-inline' 'self' img-src: 'self'; connect-src ipc: http://ipc.localhost"
     },
-    "windows": [],
+    "windows": [
+      {
+        "label": "main",
+        "title": "FrameSense",
+        "width": 800,
+        "height": 600,
+        "center": true,
+        "resizable": true
+      }
+    ],
     "trayIcon": {
       "iconPath": "icons/SystemTray1.ico",
       "iconAsTemplate": true,
