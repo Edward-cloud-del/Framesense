@@ -57,23 +57,12 @@
     "security": {
       "csp": "default-src blob: data: filesystem: ws: wss: http: https: tauri: 'unsafe-eval' 'unsafe-inline' 'self' img-src: 'self'; connect-src ipc: http://ipc.localhost"
     },
-    "windows": [
-      {
-        "title": "FrameSense",
-        "label": "main",
-        "minWidth": 400,
-        "minHeight": 300,
-        "resizable": true,
-        "fullscreen": false,
-        "visible": true,
-        "decorations": true,
-        "alwaysOnTop": false,
-        "useHttpsScheme": true
-      }
-    ],
+    "windows": [],
     "trayIcon": {
       "iconPath": "icons/SystemTray1.ico",
-      "iconAsTemplate": true
+      "iconAsTemplate": true,
+      "menuOnLeftClick": false,
+      "tooltip": "FrameSense - AI Screen Capture"
     },
     "withGlobalTauri": false
   }

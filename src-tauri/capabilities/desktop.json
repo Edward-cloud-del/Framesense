@@ -7,7 +7,7 @@
     "linux"
   ],
   "windows": [
-    "main"
+    "*"
   ],
   "permissions": [
     "core:default",
