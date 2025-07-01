@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FrameSense Selection Overlay</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.1);
+            cursor: crosshair;
+            user-select: none;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        .overlay-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+
+        .instructions {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        .close-button {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 40px;
+            height: 40px;
+            background: rgba(255, 0, 0, 0.8);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 1000;
+            transition: background 0.2s;
+        }
+
+        .close-button:hover {
+            background: rgba(255, 0, 0, 1);
+        }
+
+        .selection-box {
+            position: absolute;
+            border: 2px solid #007AFF;
+            background: rgba(0, 122, 255, 0.1);
+            pointer-events: none;
+            display: none;
+        }
+
+        .selection-corner {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: #007AFF;
+            border-radius: 50%;
+        }
+
+        .corner-tl { top: -4px; left: -4px; }
+        .corner-tr { top: -4px; right: -4px; }
+        .corner-bl { bottom: -4px; left: -4px; }
+        .corner-br { bottom: -4px; right: -4px; }
+
+        .size-indicator {
+            position: absolute;
+            bottom: -30px;
+            left: 0;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="overlay-container" id="overlay">
+        <div class="instructions">
+            🖱️ Drag to select area • ⏹️ ESC to cancel
+        </div>
+        
+        <button class="close-button" id="closeBtn">×</button>
+        
+        <div class="selection-box" id="selectionBox">
+            <div class="selection-corner corner-tl"></div>
+            <div class="selection-corner corner-tr"></div>
+            <div class="selection-corner corner-bl"></div>
+            <div class="selection-corner corner-br"></div>
+            <div class="size-indicator" id="sizeIndicator">0 × 0</div>
+        </div>
+    </div>
+
+    <script>
+        let isDragging = false;
+        let startX = 0;
+        let startY = 0;
+        let currentX = 0;
+        let currentY = 0;
+
+        const overlay = document.getElementById('overlay');
+        const selectionBox = document.getElementById('selectionBox');
+        const sizeIndicator = document.getElementById('sizeIndicator');
+        const closeBtn = document.getElementById('closeBtn');
+
+        // Handle mouse down - start selection
+        overlay.addEventListener('mousedown', (e) => {
+            if (e.target === closeBtn) return;
+            
+            e.preventDefault();
+            isDragging = true;
+            startX = e.clientX;
+            startY = e.clientY;
+            currentX = e.clientX;
+            currentY = e.clientY;
+            
+            selectionBox.style.display = 'block';
+            updateSelectionBox();
+            
+            console.log('🖱️ Started drag at:', startX, startY);
+        });
+
+        // Handle mouse move - update selection
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            
+            e.preventDefault();
+            currentX = e.clientX;
+            currentY = e.clientY;
+            
+            updateSelectionBox();
+        });
+
+        // Handle mouse up - complete selection
+        document.addEventListener('mouseup', async (e) => {
+            if (!isDragging) return;
+            
+            e.preventDefault();
+            isDragging = false;
+            
+            const x = Math.min(startX, currentX);
+            const y = Math.min(startY, currentY);
+            const width = Math.abs(currentX - startX);
+            const height = Math.abs(currentY - startY);
+            
+            console.log('🖱️ Selection completed:', { x, y, width, height });
+            
+            // Minimum selection size
+            if (width < 10 || height < 10) {
+                console.log('❌ Selection too small, cancelling');
+                await window.__TAURI__.invoke('overlay_selection_cancelled');
+                return;
+            }
+            
+            try {
+                // Send selection to Rust backend
+                await window.__TAURI__.invoke('overlay_selection_completed', {
+                    x: Math.round(x),
+                    y: Math.round(y),
+                    width: Math.round(width),
+                    height: Math.round(height)
+                });
+            } catch (error) {
+                console.error('❌ Failed to send selection:', error);
+                await window.__TAURI__.invoke('overlay_selection_cancelled');
+            }
+        });
+
+        // Handle escape key
+        document.addEventListener('keydown', async (e) => {
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                console.log('⏹️ Escape pressed - cancelling selection');
+                await window.__TAURI__.invoke('overlay_selection_cancelled');
+            }
+        });
+
+        // Handle close button
+        closeBtn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('✖️ Close button clicked');
+            await window.__TAURI__.invoke('overlay_selection_cancelled');
+        });
+
+        // Update selection box appearance
+        function updateSelectionBox() {
+            const x = Math.min(startX, currentX);
+            const y = Math.min(startY, currentY);
+            const width = Math.abs(currentX - startX);
+            const height = Math.abs(currentY - startY);
+            
+            selectionBox.style.left = x + 'px';
+            selectionBox.style.top = y + 'px';
+            selectionBox.style.width = width + 'px';
+            selectionBox.style.height = height + 'px';
+            
+            sizeIndicator.textContent = `${Math.round(width)} × ${Math.round(height)}`;
+        }
+
+        // Prevent context menu
+        document.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+        });
+
+        console.log('✅ Selection overlay loaded and ready');
+    </script>
+</body>
+</html> 

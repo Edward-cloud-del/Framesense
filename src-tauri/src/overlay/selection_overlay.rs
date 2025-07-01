@@ -46,11 +46,11 @@ impl SelectionOverlay {
     }
 
     /// Start the screen selection process
-    pub async fn start_selection() -> Result<SelectionResult, String> {
+    pub async fn start_selection(app_handle: tauri::AppHandle) -> Result<SelectionResult, String> {
         println!("🎯 Starting screen selection overlay...");
         
-        // Use the native overlay for interactive selection
-        super::native_overlay::NativeOverlay::start_interactive_selection().await
+        // Use the new interactive overlay for real drag selection
+        super::interactive_overlay::InteractiveOverlay::start_interactive_selection(app_handle).await
     }
 
     /// Placeholder implementation for selection (will be replaced with native overlay)

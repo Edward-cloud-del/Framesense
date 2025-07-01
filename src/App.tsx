@@ -3,11 +3,13 @@ import { invoke } from '@tauri-apps/api/core';
 import PermissionWizard from './components/PermissionWizard';
 import ResultOverlay from './components/ResultOverlay';
 import ProgressIndicator from './components/ProgressIndicator';
+import DragOverlay from './components/DragOverlay';
 import { useAppStore } from './stores/app-store';
 
 function App() {
 	const [isReady, setIsReady] = useState(false);
 	const [screenshotResult, setScreenshotResult] = useState<string | null>(null);
+	const [showDragOverlay, setShowDragOverlay] = useState(false);
 	const { 
 		hasPermissions, 
 		isProcessing, 
@@ -18,7 +20,7 @@ function App() {
 	useEffect(() => {
 		// Check permissions on app start
 		checkPermissions();
-	}, []);
+		}, []);
 
 	const checkPermissions = async () => {
 		try {
@@ -43,22 +45,24 @@ function App() {
 		}
 	};
 
-	const testScreenSelection = async () => {
-		try {
-			console.log('🎯 Testing screen selection...');
-			const result = await invoke('start_screen_selection') as any;
-			console.log('✅ Selection result:', result);
-			
-			if (result && !result.cancelled) {
-				setScreenshotResult(result.image_data);
-				alert(`Selection captured! Bounds: ${result.bounds.width}x${result.bounds.height} at (${result.bounds.x}, ${result.bounds.y})`);
-			} else {
-				alert('Selection was cancelled or invalid');
-			}
-		} catch (error) {
-			console.error('❌ Selection failed:', error);
-			alert(`Selection failed: ${error}`);
+	const testScreenSelection = () => {
+		console.log('🚀 Starting drag overlay...');
+		setShowDragOverlay(true);
+	};
+
+	const handleSelectionComplete = (result: any) => {
+		console.log('✅ Drag selection completed!', result);
+		setShowDragOverlay(false);
+		
+		if (result && !result.cancelled) {
+			setScreenshotResult(result.image_data);
+			alert(`Drag Selection Complete!\n\nBounds: ${result.bounds.width}x${result.bounds.height} at (${result.bounds.x}, ${result.bounds.y})`);
 		}
+	};
+
+	const handleSelectionCancel = () => {
+		console.log('❌ Drag selection cancelled');
+		setShowDragOverlay(false);
 	};
 
 	const testQuadrantSelection = async (quadrant: string) => {
@@ -171,18 +175,17 @@ function App() {
 							</div>
 						</div>
 					</div>
-						
-						{screenshotResult && (
-							<div className="mt-4 p-4 bg-white rounded-lg shadow-sm max-w-sm mx-auto">
-								<p className="text-sm text-gray-600 mb-2">Screenshot captured!</p>
-								<img 
-									src={screenshotResult} 
-									alt="Screenshot" 
-									className="w-full h-32 object-cover rounded border"
-								/>
-							</div>
-						)}
-					</div>
+					
+					{screenshotResult && (
+						<div className="mt-4 p-4 bg-white rounded-lg shadow-sm max-w-sm mx-auto">
+							<p className="text-sm text-gray-600 mb-2">Screenshot captured!</p>
+							<img 
+								src={screenshotResult} 
+								alt="Screenshot" 
+								className="w-full h-32 object-cover rounded border"
+							/>
+						</div>
+					)}
 				</div>
 			</div>
 
@@ -191,6 +194,14 @@ function App() {
 			
 			{/* Result overlay */}
 			{currentResult && <ResultOverlay result={currentResult} />}
+			
+			{/* Drag overlay for interactive selection */}
+			{showDragOverlay && (
+				<DragOverlay 
+					onSelectionComplete={handleSelectionComplete}
+					onCancel={handleSelectionCancel}
+				/>
+			)}
 		</div>
 	);
 }

@@ -2,7 +2,7 @@
 
 use tauri::Manager;
 use serde::{Deserialize, Serialize};
-use std::sync::Mutex;
+use std::sync::{Mutex, Arc, mpsc};
 use screenshots::Screen;
 use image::{ImageFormat, RgbaImage, DynamicImage};
 use std::io::Cursor;
@@ -10,18 +10,27 @@ use base64::{Engine as _, engine::general_purpose};
 
 // Import overlay modules
 pub mod overlay;
-use overlay::{ScreenCapture, SelectionOverlay, CaptureBounds, SelectionResult, MousePosition, get_overlay, NativeOverlay, ScreenQuadrant};
+use overlay::{ScreenCapture, SelectionOverlay, CaptureBounds, SelectionResult, MousePosition, get_overlay, NativeOverlay, ScreenQuadrant, InteractiveOverlay, ProcessedContent};
 
-// App state
+// App state for overlay communication
 #[derive(Debug, Default)]
 pub struct AppState {
     pub permissions_granted: Mutex<bool>,
+    pub overlay_sender: Arc<Mutex<Option<mpsc::Sender<SelectionResult>>>>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct PermissionStatus {
     pub screen_recording: bool,
     pub accessibility: bool,
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug)]
+pub struct OverlaySelection {
+    pub x: i32,
+    pub y: i32,
+    pub width: u32,
+    pub height: u32,
 }
 
 // CaptureBounds and CaptureResult are now defined in overlay module
@@ -98,9 +107,79 @@ async fn take_fullscreen_screenshot() -> Result<String, String> {
 }
 
 #[tauri::command]
-async fn start_screen_selection() -> Result<SelectionResult, String> {
-    println!("🎯 Frontend requested screen selection");
-    SelectionOverlay::start_selection().await
+async fn start_screen_selection(app_handle: tauri::AppHandle) -> Result<SelectionResult, String> {
+    println!("🚀 Frontend requested REAL interactive selection");
+    SelectionOverlay::start_selection(app_handle).await
+}
+
+#[tauri::command]
+async fn overlay_selection_completed(
+    selection: OverlaySelection,
+    app_handle: tauri::AppHandle
+) -> Result<(), String> {
+    println!("✅ Overlay selection completed: {:?}", selection);
+    
+    let state = app_handle.state::<AppState>();
+    
+    // Capture the selected region
+    let bounds = CaptureBounds {
+        x: selection.x,
+        y: selection.y,
+        width: selection.width,
+        height: selection.height,
+    };
+    
+    let capture_result = match ScreenCapture::capture_region(bounds.clone()).await {
+        Ok(result) => {
+            println!("📸 Successfully captured selection region");
+            SelectionResult {
+                bounds: result.bounds,
+                image_data: result.image_data,
+                cancelled: false,
+            }
+        },
+        Err(e) => {
+            println!("❌ Failed to capture selection: {}", e);
+            SelectionResult {
+                bounds,
+                image_data: String::new(),
+                cancelled: true,
+            }
+        }
+    };
+    
+    // Send result through channel if available
+    if let Some(sender) = state.overlay_sender.lock().unwrap().as_ref() {
+        sender.send(capture_result).map_err(|e| format!("Failed to send result: {}", e))?;
+    }
+    
+    Ok(())
+}
+
+#[tauri::command]
+async fn overlay_selection_cancelled(app_handle: tauri::AppHandle) -> Result<(), String> {
+    println!("❌ Overlay selection cancelled");
+    
+    let state = app_handle.state::<AppState>();
+    
+    let cancelled_result = SelectionResult {
+        bounds: CaptureBounds { x: 0, y: 0, width: 0, height: 0 },
+        image_data: String::new(),
+        cancelled: true,
+    };
+    
+    // Send cancellation through channel if available
+    if let Some(sender) = state.overlay_sender.lock().unwrap().as_ref() {
+        sender.send(cancelled_result).map_err(|e| format!("Failed to send cancellation: {}", e))?;
+    }
+    
+    Ok(())
+}
+
+#[tauri::command]
+async fn process_selection_content(result: SelectionResult) -> Result<ProcessedContent, String> {
+    println!("⚙️ Processing selection content");
+    InteractiveOverlay::process_selection(&result).await
 }
 
 #[tauri::command]
@@ -198,6 +277,9 @@ pub fn run() {
             open_system_preferences,
             take_fullscreen_screenshot,
             start_screen_selection,
+            overlay_selection_completed,
+            overlay_selection_cancelled,
+            process_selection_content,
             capture_screen_region,
             get_screen_info,
             start_drag_selection,
