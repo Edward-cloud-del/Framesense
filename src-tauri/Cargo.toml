@@ -13,7 +13,7 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
-tauri = { version = "2", features = ["tray-icon", "image-ico"] }
+tauri = { version = "2", features = ["tray-icon", "image-ico", "webview-data-url"] }
 tokio = { version = "1", features = ["full"] }
 
 # Tauri plugins
@@ -28,9 +28,8 @@ base64 = "0.21"
 
 # Note: Removed cocoa/objc deps since we're using native egui overlay
 
-# Native GUI for overlay (bypasses webview cache issues)
-eframe = "0.28"
-egui = "0.28"
+# URL encoding for inline HTML
+urlencoding = "2.1"
 
 # OCR (will add native Tesseract later)
 # tesseract = "0.13"

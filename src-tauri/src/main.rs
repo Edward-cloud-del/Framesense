@@ -4,13 +4,11 @@ use tauri::{
     RunEvent, WindowEvent,
     tray::TrayIconBuilder,
     menu::{Menu, MenuItem},
+    Manager, WebviewUrl, WebviewWindowBuilder,
 };
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 use serde::{Deserialize, Serialize};
 use base64::Engine;
-use std::thread;
-
-mod overlay_native;
 
 // Note: macOS-specific imports removed since we're using native egui overlay
 
@@ -174,32 +172,197 @@ async fn test_command() -> Result<AppResult, String> {
     })
 }
 
+// Open selection overlay window
+#[tauri::command]
+async fn open_selection_overlay(app: tauri::AppHandle) -> Result<AppResult, String> {
+    println!("🎯 Opening selection overlay window...");
+    
+    // Generate unique timestamp for window ID
+    let timestamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_millis();
+    
+    match WebviewWindowBuilder::new(
+        &app,
+        &format!("selection-overlay-{}", timestamp),
+        WebviewUrl::App("selection-overlay.html".into())
+    )
+    .title("FrameSense Selection")
+    .inner_size(800.0, 600.0)  // Start with reasonable size, will be fullscreen
+    .center()
+    .decorations(false)        // No window decorations for overlay
+    .resizable(false)
+    .always_on_top(true)
+    .focused(true)
+    .visible(true)
+    .transparent(true)         // Make window background transparent
+    .build() {
+        Ok(window) => {
+            println!("✅ Selection overlay window created successfully!");
+            Ok(AppResult {
+                success: true,
+                message: "Selection overlay opened".to_string(),
+            })
+        },
+        Err(e) => {
+            println!("❌ Failed to create selection overlay: {}", e);
+            Err(format!("Failed to create selection overlay: {}", e))
+        }
+    }
+}
+
+// Handle selection completion
+#[tauri::command]
+async fn overlay_selection_completed(selection_data: serde_json::Value, app: tauri::AppHandle) -> Result<AppResult, String> {
+    println!("✅ Selection completed: {:?}", selection_data);
+    
+    // Close all selection overlay windows
+    for window in app.webview_windows().values() {
+        if window.label().contains("selection-overlay") {
+            let _ = window.close();
+        }
+    }
+    
+    // TODO: Here you would process the selection data and perform OCR
+    // For now, just log the selection
+    println!("📐 Selected area: x={}, y={}, width={}, height={}", 
+             selection_data["x"], selection_data["y"], 
+             selection_data["width"], selection_data["height"]);
+    
+    Ok(AppResult {
+        success: true,
+        message: "Selection processed successfully".to_string(),
+    })
+}
+
+// Handle selection cancellation
+#[tauri::command]
+async fn overlay_selection_cancelled(app: tauri::AppHandle) -> Result<AppResult, String> {
+    println!("❌ Selection cancelled by user");
+    
+    // Close all selection overlay windows
+    for window in app.webview_windows().values() {
+        if window.label().contains("selection-overlay") {
+            let _ = window.close();
+        }
+    }
+    
+    Ok(AppResult {
+        success: true,
+        message: "Selection cancelled".to_string(),
+    })
+}
+
 // Note: macOS fullscreen configuration removed since egui handles this natively
 
-// Create native overlay using egui (no webview, no cache problems!)
-fn create_native_overlay() -> Result<(), Box<dyn std::error::Error>> {
-    println!("🚀 Creating native egui overlay - bypassing all webview cache issues!");
+// Create overlay with inline HTML (no cache issues!)
+fn create_overlay_with_inline_html(app: &tauri::AppHandle) -> Result<(), tauri::Error> {
+    println!("🚀 Creating overlay with inline HTML - ZERO cache issues!");
     
-    // Spawn overlay in a separate thread to avoid blocking the main app
-    thread::spawn(|| {
-        if let Err(e) = overlay_native::create_native_overlay() {
-            println!("❌ Native overlay error: {}", e);
-        }
+    // Generate unique timestamp
+    let timestamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_millis();
+    
+        // FIXAD HTML UTAN SYNTAX-FEL
+    let html_content = r#"<!DOCTYPE html>
+<html>
+<head><title>FrameSense</title></head>
+<body style="background: red; padding: 50px; font-size: 30px;">
+<h1 style="color: white;">FRAMESENSE FUNGERAR!</h1>
+<button id="captureBtn" style="background: blue; color: white; padding: 30px; font-size: 25px; border: none; cursor: pointer;">📸 START CAPTURE</button>
+<p style="color: white;">Klicka knappen för transparent capture!</p>
+<div id="dragbox" style="position: absolute; border: 3px solid #ff0000; background: rgba(255,0,0,0.1); display: none; z-index: 1000;"></div>
+
+<script>
+var capturing = false;
+var startX = 0;
+var startY = 0;
+
+document.getElementById('captureBtn').onclick = function() {
+    console.log('START CAPTURE!');
+    capturing = true;
+    
+    document.body.style.background = 'transparent';
+    document.body.style.cursor = 'crosshair';
+    document.body.innerHTML = '<div id="dragbox" style="position: absolute; border: 3px solid #ff0000; background: rgba(255,0,0,0.1); display: none; z-index: 1000;"></div>';
+    
+    document.addEventListener('mousedown', function(e) {
+        if (!capturing) return;
+        startX = e.clientX;
+        startY = e.clientY;
+        var box = document.getElementById('dragbox');
+        box.style.left = startX + 'px';
+        box.style.top = startY + 'px';
+        box.style.width = '0px';
+        box.style.height = '0px';
+        box.style.display = 'block';
     });
     
+    document.addEventListener('mousemove', function(e) {
+        if (!capturing) return;
+        var box = document.getElementById('dragbox');
+        if (box.style.display === 'none') return;
+        var width = Math.abs(e.clientX - startX);
+        var height = Math.abs(e.clientY - startY);
+        var left = Math.min(startX, e.clientX);
+        var top = Math.min(startY, e.clientY);
+        box.style.left = left + 'px';
+        box.style.top = top + 'px';
+        box.style.width = width + 'px';
+        box.style.height = height + 'px';
+    });
+    
+    document.addEventListener('mouseup', function(e) {
+        if (!capturing) return;
+        var width = Math.abs(e.clientX - startX);
+        var height = Math.abs(e.clientY - startY);
+        var left = Math.min(startX, e.clientX);
+        var top = Math.min(startY, e.clientY);
+        
+        alert('SKÄRMOMRÅDE VALT: ' + width + 'x' + height + 'px');
+        window.close();
+    });
+};
+
+console.log('FrameSense ready!');
+</script>
+</body></html>"#.to_string();
+    
+    // Create data URL - completely bypasses file system cache!
+    let data_url = format!("data:text/html;charset=utf-8,{}", urlencoding::encode(&html_content));
+    
+    let overlay = WebviewWindowBuilder::new(
+        app,
+        &format!("overlay-{}", timestamp),
+        WebviewUrl::External(data_url.parse().unwrap())
+    )
+    .title("FrameSense Overlay")
+    .inner_size(800.0, 600.0)  // MYCKET större så du ser den!
+    .center()
+    .decorations(true)   // Visa fönster-kanter så du ser var den är
+    .resizable(true)
+    .always_on_top(true)
+    .visible(true)       // Visa direkt
+    .build()?;
+    
+    // overlay.show()? - redan synlig
+    println!("✅ Transparent capture overlay created!");
     Ok(())
 }
 
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_global_shortcut::Builder::new()
-            .with_handler(|_app, shortcut, event| {
+            .with_handler(|app, shortcut, event| {
                 println!("🔥 GLOBAL SHORTCUT: {:?} - State: {:?}", shortcut, event.state());
                 
                 // Only react to key PRESS, not release!
                 if event.state() == ShortcutState::Pressed {
-                    if let Err(e) = create_native_overlay() {
-                        println!("❌ Failed to create native overlay: {}", e);
+                    if let Err(e) = create_overlay_with_inline_html(app) {
+                        println!("❌ Failed to create inline overlay: {}", e);
                     }
                 } else {
                     println!("⚪ Ignoring key release");
@@ -219,16 +382,16 @@ fn main() {
             let _tray = TrayIconBuilder::new()
                 .icon(app.default_window_icon().unwrap().clone())
                 .menu(&menu)
-                .on_menu_event(|_app, event| {
+                .on_menu_event(|app, event| {
                     match event.id().as_ref() {
                         "quit" => {
                             println!("💀 Quit selected");
                             std::process::exit(0);
                         },
                         "capture" => {
-                            println!("📸 Capture triggered from menu - creating native overlay!");
-                            if let Err(e) = create_native_overlay() {
-                                println!("❌ Failed to create native overlay: {}", e);
+                            println!("📸 Capture triggered from menu - creating inline overlay!");
+                            if let Err(e) = create_overlay_with_inline_html(&app.app_handle()) {
+                                println!("❌ Failed to create inline overlay: {}", e);
                             }
                         },
                         "test" => {
@@ -264,6 +427,9 @@ fn main() {
             test_command,
             test_screen_capture,
             capture_screen_area,
+            open_selection_overlay,
+            overlay_selection_completed,
+            overlay_selection_cancelled,
         ])
         .on_window_event(|window, event| match event {
             WindowEvent::CloseRequested { api, .. } => {
