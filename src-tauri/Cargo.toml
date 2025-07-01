@@ -26,9 +26,11 @@ screenshots = "0.7"
 image = "0.24"
 base64 = "0.21"
 
-# Window management for overlay
-cocoa = "0.25"
-objc = "0.2"
+# Note: Removed cocoa/objc deps since we're using native egui overlay
+
+# Native GUI for overlay (bypasses webview cache issues)
+eframe = "0.28"
+egui = "0.28"
 
 # OCR (will add native Tesseract later)
 # tesseract = "0.13"

@@ -4,18 +4,15 @@ use tauri::{
     RunEvent, WindowEvent,
     tray::TrayIconBuilder,
     menu::{Menu, MenuItem},
-    Manager, WebviewUrl, WebviewWindowBuilder,
 };
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
 use serde::{Deserialize, Serialize};
 use base64::Engine;
+use std::thread;
 
+mod overlay_native;
 
-// macOS-specific imports for fullscreen compatibility
-#[cfg(target_os = "macos")]
-use cocoa::base::{id, nil};
-#[cfg(target_os = "macos")]
-use objc::{msg_send, sel, sel_impl};
+// Note: macOS-specific imports removed since we're using native egui overlay
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct AppResult {
@@ -177,113 +174,32 @@ async fn test_command() -> Result<AppResult, String> {
     })
 }
 
-// Configure macOS window for fullscreen compatibility
-#[cfg(target_os = "macos")]
-fn configure_macos_fullscreen_window(window: &tauri::WebviewWindow) {
-    window.with_webview(|webview| {
-        #[cfg(target_os = "macos")]
-        unsafe {
-            let ns_window = webview.ns_window() as id;
-            if ns_window != nil {
-                // Set window level to appear over fullscreen apps
-                // NSScreenSaverWindowLevel = 1000, NSPopUpMenuWindowLevel = 101
-                // NSMainMenuWindowLevel = 24, NSNormalWindowLevel = 0
-                let window_level: i32 = 1000; // NSScreenSaverWindowLevel for maximum priority
-                let _: () = msg_send![ns_window, setLevel: window_level];
-                
-                // Set collection behavior to allow appearing on all spaces/desktops
-                // NSWindowCollectionBehaviorCanJoinAllSpaces = 1 << 0 = 1
-                // NSWindowCollectionBehaviorStationary = 1 << 4 = 16  
-                // NSWindowCollectionBehaviorIgnoresCycle = 1 << 6 = 64
-                let behavior: u32 = 1 | 16 | 64; // Combined behavior flags
-                let _: () = msg_send![ns_window, setCollectionBehavior: behavior];
-                
-                println!("✅ macOS fullscreen compatibility configured (Level: {}, Behavior: {})!", window_level, behavior);
-            }
-        }
-    }).map_err(|e| println!("❌ Failed to configure macOS window: {}", e)).ok();
-}
+// Note: macOS fullscreen configuration removed since egui handles this natively
 
-#[cfg(not(target_os = "macos"))]
-fn configure_macos_fullscreen_window(_window: &tauri::WebviewWindow) {
-    // No-op on other platforms
-    println!("⚪ macOS fullscreen config skipped (not macOS)");
-}
-
-// Create Cluely-style overlay window
-fn create_overlay_window(app: &tauri::AppHandle) -> Result<(), tauri::Error> {
-    // Force close existing overlay first - with retry logic
-    if let Some(existing) = app.get_webview_window("overlay") {
-        println!("🔄 Destroying existing overlay window to clear cache");
-        let _ = existing.close();
-        
-        // Wait and verify it's actually gone
-        for i in 0..10 {
-            std::thread::sleep(std::time::Duration::from_millis(50));
-            if app.get_webview_window("overlay").is_none() {
-                println!("✅ Overlay window successfully destroyed after {}ms", (i + 1) * 50);
-                break;
-            }
-            if i == 9 {
-                println!("⚠️ Overlay window still exists after 500ms, continuing anyway");
-            }
+// Create native overlay using egui (no webview, no cache problems!)
+fn create_native_overlay() -> Result<(), Box<dyn std::error::Error>> {
+    println!("🚀 Creating native egui overlay - bypassing all webview cache issues!");
+    
+    // Spawn overlay in a separate thread to avoid blocking the main app
+    thread::spawn(|| {
+        if let Err(e) = overlay_native::create_native_overlay() {
+            println!("❌ Native overlay error: {}", e);
         }
-    }
+    });
     
-    // Generate aggressive cache busting parameters
-    let timestamp = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap()
-        .as_nanos(); // Use nanoseconds for more uniqueness
-    
-    // Determine window label - use fallback if overlay still exists
-    let window_label = if app.get_webview_window("overlay").is_some() {
-        let fallback_label = format!("overlay-{}", timestamp % 1000);
-        println!("⚠️ Using fallback window label: {}", fallback_label);
-        fallback_label
-    } else {
-        "overlay".to_string()
-    };
-    
-    println!("🆕 Creating fresh overlay '{}' with cache-buster: {}", window_label, timestamp);
-    
-    let overlay = WebviewWindowBuilder::new(
-        app,
-        &window_label,
-        WebviewUrl::App(format!("overlay.html?v={}&t={}&nocache={}", timestamp, timestamp, timestamp).into())
-    )
-    .title("") // No title
-    .inner_size(600.0, 80.0) // Small Cluely box
-    .center() // Center on current screen
-    .decorations(false) // No window decorations
-    .resizable(false)
-    .always_on_top(true)
-    .visible(false) // Start hidden - show without focus later
-    .accept_first_mouse(false) // Don't accept first mouse click
-    .skip_taskbar(true) // Don't show in dock
-    .shadow(false) // No shadow for cleaner look
-    .build()?;
-    
-    // Configure macOS-specific settings for fullscreen compatibility
-    configure_macos_fullscreen_window(&overlay);
-    
-    // Show WITHOUT taking focus (Cluely behavior)
-    overlay.show()?;
-    
-    println!("✅ New Cluely-style overlay created with fullscreen support!");
     Ok(())
 }
 
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_global_shortcut::Builder::new()
-            .with_handler(|app, shortcut, event| {
+            .with_handler(|_app, shortcut, event| {
                 println!("🔥 GLOBAL SHORTCUT: {:?} - State: {:?}", shortcut, event.state());
                 
                 // Only react to key PRESS, not release!
                 if event.state() == ShortcutState::Pressed {
-                    if let Err(e) = create_overlay_window(app) {
-                        println!("❌ Failed to create overlay: {}", e);
+                    if let Err(e) = create_native_overlay() {
+                        println!("❌ Failed to create native overlay: {}", e);
                     }
                 } else {
                     println!("⚪ Ignoring key release");
@@ -303,16 +219,16 @@ fn main() {
             let _tray = TrayIconBuilder::new()
                 .icon(app.default_window_icon().unwrap().clone())
                 .menu(&menu)
-                .on_menu_event(|app, event| {
+                .on_menu_event(|_app, event| {
                     match event.id().as_ref() {
                         "quit" => {
                             println!("💀 Quit selected");
                             std::process::exit(0);
                         },
                         "capture" => {
-                            println!("📸 Capture triggered from menu - creating overlay!");
-                            if let Err(e) = create_overlay_window(app) {
-                                println!("❌ Failed to create overlay: {}", e);
+                            println!("📸 Capture triggered from menu - creating native overlay!");
+                            if let Err(e) = create_native_overlay() {
+                                println!("❌ Failed to create native overlay: {}", e);
                             }
                         },
                         "test" => {
