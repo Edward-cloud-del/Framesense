@@ -250,7 +250,7 @@ fn create_overlay_window(app: &tauri::AppHandle) -> Result<(), tauri::Error> {
     let overlay = WebviewWindowBuilder::new(
         app,
         &window_label,
-        WebviewUrl::App(format!("overlay-v3.html?v={}&t={}&nocache={}", timestamp, timestamp, timestamp).into())
+        WebviewUrl::App(format!("overlay.html?v={}&t={}&nocache={}", timestamp, timestamp, timestamp).into())
     )
     .title("") // No title
     .inner_size(600.0, 80.0) // Small Cluely box
