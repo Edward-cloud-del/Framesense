@@ -7,8 +7,10 @@ use tauri::{
     Manager, Emitter, WebviewUrl, WebviewWindowBuilder,
 };
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
+use std::sync::{Arc, Mutex};
 use serde::{Deserialize, Serialize};
 use base64::Engine;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 // Note: macOS-specific imports removed since we're using native egui overlay
 
@@ -33,6 +35,16 @@ pub struct CaptureResult {
     pub bounds: Option<CaptureBounds>,
     pub image_data: Option<String>, // Base64 encoded image
 }
+
+// App state that persists between window creations (like Raycast)
+#[derive(Clone, Default)]
+pub struct AppState {
+    pub screenshot_data: Option<String>,
+    pub last_bounds: Option<CaptureBounds>,
+    pub last_window_closed_time: Option<u64>, // Timestamp when window was last closed
+}
+
+type SharedState = Arc<Mutex<AppState>>;
 
 // Test screen capture capability
 #[tauri::command]
@@ -172,14 +184,38 @@ async fn test_command() -> Result<AppResult, String> {
     })
 }
 
+// Check permissions (simplified for now)
+#[tauri::command]
+async fn check_permissions() -> Result<bool, String> {
+    // For now, just return true since we handle permissions via macOS system prompts
+    // In a real app, you might want to check specific permissions here
+    println!("🔐 Checking permissions...");
+    Ok(true)
+}
+
 // Create transparent fullscreen overlay for drag selection
 #[tauri::command]
 async fn start_fullscreen_selection(app: tauri::AppHandle) -> Result<(), String> {
     println!("🎯 Creating transparent fullscreen overlay...");
     
-    // Get screen dimensions (simplified - assumes primary screen)
-    let screen_width = 1920.0; // Will get actual screen size later
-    let screen_height = 1080.0;
+    // Get actual screen dimensions  
+    let (screen_width, screen_height) = match screenshots::Screen::all() {
+        Ok(screens) => {
+            if let Some(screen) = screens.first() {
+                let width = screen.display_info.width as f64;
+                let height = screen.display_info.height as f64;
+                println!("📺 Fullscreen overlay using screen: {}x{}", width, height);
+                (width, height)
+            } else {
+                println!("⚠️ No screens found, using fallback 1920x1080");
+                (1920.0, 1080.0)
+            }
+        },
+        Err(e) => {
+            println!("❌ Failed to get screen info: {}, using fallback", e);
+            (1920.0, 1080.0)
+        }
+    };
     
     // Create enhanced transparent overlay HTML (matches React DragOverlay styling)
     let overlay_html = r#"
@@ -234,7 +270,7 @@ async fn start_fullscreen_selection(app: tauri::AppHandle) -> Result<(), String>
         }
         
         #close-button:hover {
-            background: #dc2626;
+             background: #dc2626;
         }
         
         #selection-box {
@@ -509,12 +545,35 @@ async fn get_window_position(app: tauri::AppHandle) -> Result<serde_json::Value,
 async fn create_transparent_overlay(app: tauri::AppHandle) -> Result<(), String> {
     // Close existing overlay if it exists
     if let Some(existing) = app.get_webview_window("overlay") {
-        let _ = existing.close();
+        println!("🗑️ Closing existing overlay window...");
+        match existing.close() {
+            Ok(_) => {
+                println!("✅ Existing overlay close requested");
+                // Short delay to let window close
+                tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
+            },
+            Err(e) => println!("⚠️ Failed to close existing overlay: {}", e),
+        }
     }
     
-    // Get screen dimensions (hardcoded for now)
-    let screen_width = 1920.0;
-    let screen_height = 1080.0;
+    // Get actual screen dimensions
+    let (screen_width, screen_height) = match screenshots::Screen::all() {
+        Ok(screens) => {
+            if let Some(screen) = screens.first() {
+                let width = screen.display_info.width as f64;
+                let height = screen.display_info.height as f64;
+                println!("📺 Detected screen: {}x{}", width, height);
+                (width, height)
+            } else {
+                println!("⚠️ No screens found, using fallback 1920x1080");
+                (1920.0, 1080.0)
+            }
+        },
+        Err(e) => {
+            println!("❌ Failed to get screen info: {}, using fallback", e);
+            (1920.0, 1080.0)
+        }
+    };
     
     println!("🎯 Creating transparent overlay window...");
     
@@ -564,28 +623,255 @@ async fn close_transparent_overlay(app: tauri::AppHandle) -> Result<(), String> 
 
 
 
-// Trigger React overlay - send event to frontend  
+
+
+// 🔧 DEBUG COMMAND - Get detailed coordinate info
 #[tauri::command]
-async fn trigger_capture_overlay() -> Result<(), String> {
-    println!("🎯 Triggering React capture overlay...");
+async fn debug_coordinates(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
+    let mut debug_info = serde_json::Map::new();
+    
+    // Main window info
+    if let Some(main_window) = app.get_webview_window("main") {
+        if let Ok(pos) = main_window.outer_position() {
+            debug_info.insert("main_outer_position".to_string(), 
+                serde_json::json!({"x": pos.x, "y": pos.y}));
+        }
+        if let Ok(size) = main_window.outer_size() {
+            debug_info.insert("main_outer_size".to_string(), 
+                serde_json::json!({"width": size.width, "height": size.height}));
+        }
+        if let Ok(inner_pos) = main_window.inner_position() {
+            debug_info.insert("main_inner_position".to_string(), 
+                serde_json::json!({"x": inner_pos.x, "y": inner_pos.y}));
+        }
+        if let Ok(inner_size) = main_window.inner_size() {
+            debug_info.insert("main_inner_size".to_string(), 
+                serde_json::json!({"width": inner_size.width, "height": inner_size.height}));
+        }
+        if let Ok(scale) = main_window.scale_factor() {
+            debug_info.insert("scale_factor".to_string(), serde_json::json!(scale));
+        }
+    }
+    
+    // Screen info
+    if let Ok(screens) = screenshots::Screen::all() {
+        if let Some(screen) = screens.first() {
+            debug_info.insert("screen_size".to_string(), 
+                serde_json::json!({
+                    "width": screen.display_info.width,
+                    "height": screen.display_info.height
+                }));
+        }
+    }
+    
+    println!("🔍 DEBUG INFO: {}", serde_json::to_string_pretty(&debug_info).unwrap());
+    Ok(serde_json::Value::Object(debug_info))
+}
+
+// 🔧 TEST COMMAND - Position ChatBox at specific coordinates
+#[tauri::command]
+async fn test_chatbox_position(app: tauri::AppHandle, x: f64, y: f64) -> Result<(), String> {
+    println!("🧪 Testing ChatBox position at ({}, {})", x, y);
+    
+    // Close existing chatbox if it exists
+    if let Some(chatbox) = app.get_webview_window("chatbox") {
+        let _ = chatbox.close();
+        tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
+    }
+    
+    // Create ChatBox at specific position for testing
+    let chatbox_html = r#"
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>ChatBox Position Test</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: rgba(255, 0, 0, 0.8);
+            border: 3px solid red;
+            border-radius: 12px;
+            padding: 16px;
+            font-family: system-ui, -apple-system, sans-serif;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    TEST POSITION<br/>
+    x: {}, y: {}
+    <script>
+        setTimeout(() => window.close(), 3000); // Auto-close after 3 seconds
+    </script>
+</body>
+</html>"#;
+    
+    let test_html = chatbox_html.replace("x: {}, y: {}", &format!("x: {}, y: {}", x, y));
+    let data_url = format!("data:text/html;charset=utf-8,{}", urlencoding::encode(&test_html));
+    
+    let _test_window = WebviewWindowBuilder::new(
+        &app,
+        "test-chatbox",  // Use different ID for test
+        WebviewUrl::External(data_url.parse().unwrap())
+    )
+    .title("Position Test")
+    .inner_size(200.0, 100.0)
+    .position(x, y)
+    .decorations(false)
+    .transparent(true)
+    .always_on_top(true)
+    .skip_taskbar(true)
+    .resizable(false)
+    .build()
+    .map_err(|e| format!("Failed to create test window: {}", e))?;
+    
+    println!("🎯 Test ChatBox created at ({}, {}) - will auto-close in 3 seconds", x, y);
+    Ok(())
+}
+
+
+
+// Save current app state before closing window (like Raycast)
+#[tauri::command]
+async fn save_app_state(app: tauri::AppHandle, screenshot_data: Option<String>) -> Result<(), String> {
+    if let Some(state) = app.try_state::<SharedState>() {
+        let mut app_state = state.lock().unwrap();
+        app_state.screenshot_data = screenshot_data;
+        println!("💾 App state saved with screenshot: {}", app_state.screenshot_data.is_some());
+    }
+    Ok(())
+}
+
+// Get saved app state when creating new window (like Raycast)
+#[tauri::command]
+async fn get_app_state(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
+    if let Some(state) = app.try_state::<SharedState>() {
+        let app_state = state.lock().unwrap();
+        let result = serde_json::json!({
+            "screenshot_data": app_state.screenshot_data,
+            "last_bounds": app_state.last_bounds
+        });
+        println!("📂 App state retrieved with screenshot: {}", app_state.screenshot_data.is_some());
+        Ok(result)
+    } else {
+        Ok(serde_json::json!({"screenshot_data": null, "last_bounds": null}))
+    }
+}
+
+// Create new main window on current Space (like Raycast/Spotlight)
+#[tauri::command]
+async fn create_main_window(app: tauri::AppHandle) -> Result<(), String> {
+    // Close existing window if it exists
+    if let Some(existing) = app.get_webview_window("main") {
+        let _ = existing.close();
+    }
+    
+    println!("🎯 Creating new main window on current Space...");
+    
+    // Create fresh window that will appear on current Space
+    let _window = WebviewWindowBuilder::new(
+        &app,
+        "main",
+        WebviewUrl::App("/".into())
+    )
+    .title("FrameSense")
+    .inner_size(600.0, 140.0)
+    .position(0.0, 100.0) // Will auto-center
+    .center()
+    .resizable(false)
+    .decorations(false)
+    .always_on_top(true)
+    .skip_taskbar(true)
+    .build()
+    .map_err(|e| format!("Failed to create main window: {}", e))?;
+    
+    println!("✅ New main window created on current Space!");
     Ok(())
 }
 
 fn main() {
+    // Initialize shared state for Raycast-style persistence
+    let shared_state: SharedState = Arc::new(Mutex::new(AppState::default()));
+    
     tauri::Builder::default()
+        .manage(shared_state)
         .plugin(tauri_plugin_global_shortcut::Builder::new()
             .with_handler(|app, shortcut, event| {
                 println!("🔥 GLOBAL SHORTCUT: {:?} - State: {:?}", shortcut, event.state());
                 
                 // Only react to key PRESS, not release!
                 if event.state() == ShortcutState::Pressed {
-                    // Emit event to React app to show overlay
-                    if let Some(window) = app.get_webview_window("main") {
-                        window.emit("show-capture-overlay", ()).unwrap();
-                        println!("✅ Sent show-capture-overlay event to React");
-                    } else {
-                        println!("❌ Main window not found");
-                    }
+                    let app_clone = app.clone();
+                    std::thread::spawn(move || {
+                        // Small delay to avoid rapid toggle
+                        std::thread::sleep(std::time::Duration::from_millis(50));
+                        
+                        // Raycast-style: Create/Destroy window to appear on current Space
+                        if let Some(window) = app_clone.get_webview_window("main") {
+                            // Window exists - save state and close it
+                            println!("🔄 Window exists, closing and saving state...");
+                            
+                            // Emit event to React to save its state before closing
+                            let _ = window.emit("save-state-and-close", ());
+                            
+                            // Close after allowing React to save state
+                            std::thread::sleep(std::time::Duration::from_millis(100));
+                            let _ = window.close();
+                            
+                            // Record the time when window was closed for quit logic
+                            if let Some(state) = app_clone.try_state::<SharedState>() {
+                                let mut app_state = state.lock().unwrap();
+                                app_state.last_window_closed_time = Some(
+                                    SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs()
+                                );
+                            }
+                            
+                            println!("🗑️ Window closed (Raycast-style)");
+                        } else {
+                            // No window exists - check if we should quit or create window
+                            println!("✨ No window exists...");
+                            
+                            // Check if we recently closed a window (within 3 seconds)
+                            let should_quit = if let Some(state) = app_clone.try_state::<SharedState>() {
+                                let app_state = state.lock().unwrap();
+                                if let Some(last_closed) = app_state.last_window_closed_time {
+                                    let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+                                    let time_since_closed = now - last_closed;
+                                    println!("⏱️ {} seconds since last window closed", time_since_closed);
+                                    time_since_closed < 3 // Quit if less than 3 seconds
+                                } else {
+                                    false // No previous close time, don't quit
+                                }
+                            } else {
+                                false
+                            };
+                            
+                            if should_quit {
+                                println!("🚪 Alt+Space pressed twice quickly - quitting application...");
+                                std::process::exit(0);
+                            } else {
+                                // Create new window on current Space
+                                println!("🆕 Creating new window on current Space...");
+                                let rt = tokio::runtime::Runtime::new().unwrap();
+                                rt.block_on(async {
+                                    if let Err(e) = create_main_window(app_clone).await {
+                                        println!("❌ Failed to create window: {}", e);
+                                    } else {
+                                        println!("✅ New window created successfully!");
+                                    }
+                                });
+                            }
+                        }
+                    });
                 } else {
                     println!("⚪ Ignoring key release");
                 }
@@ -633,37 +919,54 @@ fn main() {
             // Register global hotkey like Cluely (Cmd+Shift+Space for macOS compatibility)
             println!("🚀 Setting up FrameSense background app...");
             
-            // Setup global shortcut (simplified approach)
-            let shortcut = "Cmd+Shift+Space".parse::<Shortcut>().unwrap();
+            // Setup global shortcut for window toggle (like Cluely)
+            let shortcut = "Alt+Space".parse::<Shortcut>().unwrap();
             
             match app.global_shortcut().register(shortcut) {
                 Ok(_) => {
-                    println!("✅ Global shortcut Cmd+Shift+Space registered successfully!");
-                    println!("⚠️  Note: Shortcut handling will be implemented via events");
+                    println!("✅ Global shortcut Alt+Space registered successfully!");
+                    println!("⚠️  Note: Use Alt+Space to toggle window visibility");
                 },
                 Err(e) => println!("❌ Failed to register global shortcut: {} - Use tray menu instead", e),
             }
             
-            println!("✅ FrameSense is ready! Press Cmd+Shift+Space or use tray menu");
+            println!("✅ FrameSense is ready! Press Alt+Space to create window or use tray menu");
+            
+            // Close initial window - we'll create fresh ones on Alt+Space (Raycast-style)
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.close();
+                println!("🗑️ Closed initial window - will create fresh ones on current Space");
+            }
             
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
             test_command,
+            check_permissions,
             test_screen_capture,
             capture_screen_area,
-            trigger_capture_overlay,
             start_fullscreen_selection,
             process_screen_selection,
             get_window_position,
             create_transparent_overlay,
             close_transparent_overlay,
+            debug_coordinates,
+            test_chatbox_position,
+            save_app_state,
+            get_app_state,
+            create_main_window,
         ])
         .on_window_event(|window, event| match event {
             WindowEvent::CloseRequested { api, .. } => {
-                // Hide window instead of closing for systemtray apps
-                window.hide().unwrap();
-                api.prevent_close();
+                // Only prevent close for overlay windows, let main window close normally
+                if window.label() == "main" {
+                    // Let main window close normally for Raycast-style behavior
+                    println!("🚪 Main window close requested");
+                } else {
+                    // Hide other windows (like overlays) instead of closing
+                    window.hide().unwrap();
+                    api.prevent_close();
+                }
             }
             _ => {}
         })
