@@ -137,8 +137,8 @@ function App() {
 				await invoke('resize_window', { width: 600, height: 220 });
 				console.log('✅ Window expanded to 600x220');
 				
-				// Note: Window stays white with dark ChatBox overlay
-				console.log('✅ ChatBox will appear as dark overlay');
+				// Enable CSS transparency - window is transparent, React controls background
+				console.log('✅ Window transparency enabled via CSS');
 				
 				// Show ChatBox React component
 				setChatBoxOpen(true);
@@ -168,8 +168,8 @@ function App() {
 			await invoke('resize_window', { width: 600, height: 140 });
 			console.log('✅ Window shrunk back to 600x140');
 			
-			// Note: Window stays white, ChatBox overlay removed
-			console.log('✅ ChatBox overlay hidden');
+			// Restore CSS background - window shows white background again
+			console.log('✅ Background restored, transparency disabled');
 			
 		} catch (error) {
 			console.error('❌ Failed to shrink window after chat close:', error);
@@ -219,8 +219,9 @@ function App() {
 		<div 
 			className="h-full flex flex-col px-4 py-3 rounded-xl border border-gray-200 shadow-lg"
 			style={{ 
-				backgroundColor: 'rgba(255, 255, 255, 0.95)', 
-				backdropFilter: 'blur(10px)'
+				backgroundColor: chatBoxOpen ? 'transparent' : 'rgba(255, 255, 255, 0.95)', 
+				backdropFilter: chatBoxOpen ? 'none' : 'blur(10px)',
+				borderColor: chatBoxOpen ? 'transparent' : 'rgb(229, 231, 235)'
 			}}
 		>
 			{/* Compact palette header */}

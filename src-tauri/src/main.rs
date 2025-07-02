@@ -645,8 +645,8 @@ async fn resize_window(app: tauri::AppHandle, width: f64, height: f64) -> Result
     }
 }
 
-// Note: set_transparent_background removed - Tauri doesn't support runtime transparency
-// ChatBox appears as dark overlay over white window instead
+// Note: Main window created with .transparent(true) - React CSS controls background visibility
+// When chatBoxOpen=true: transparent, when false: white background
 
 // 🔧 DEBUG COMMAND - Get detailed coordinate info
 #[tauri::command]
@@ -812,6 +812,7 @@ async fn create_main_window(app: tauri::AppHandle) -> Result<(), String> {
     .center()
     .resizable(false)
     .decorations(false)
+    .transparent(true)    // 🔧 FIX: Enable window transparency!
     .always_on_top(true)
     .skip_taskbar(true)
     .build()
