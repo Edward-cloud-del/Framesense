@@ -133,9 +133,9 @@ function App() {
 			console.log('🔄 Opening ChatBox - expanding window and showing component');
 			
 			try {
-				// Expand window for chat mode (600x140 → 600x300)
-				await invoke('resize_window', { width: 600, height: 300 });
-				console.log('✅ Window expanded to 600x300');
+				// Expand window for chat mode (600x140 → 600x220) - hälften så stor expansion
+				await invoke('resize_window', { width: 600, height: 220 });
+				console.log('✅ Window expanded to 600x220');
 				
 				// Set transparent background for chat mode
 				await invoke('set_transparent_background', { transparent: true });
@@ -165,7 +165,7 @@ function App() {
 			// Hide ChatBox component first
 			setChatBoxOpen(false);
 			
-			// Shrink window back to compact size (600x300 → 600x140)
+			// Shrink window back to compact size (600x220 → 600x140)
 			await invoke('resize_window', { width: 600, height: 140 });
 			console.log('✅ Window shrunk back to 600x140');
 			
@@ -220,7 +220,11 @@ function App() {
 	return (
 		<div 
 			className="h-full flex flex-col px-4 py-3 rounded-xl border border-gray-200 shadow-lg"
-			style={{ backgroundColor: 'rgba(255, 255, 255, 0.95)', backdropFilter: 'blur(10px)' }}
+			style={{ 
+				backgroundColor: chatBoxOpen ? 'transparent' : 'rgba(255, 255, 255, 0.95)', 
+				backdropFilter: chatBoxOpen ? 'none' : 'blur(10px)',
+				borderColor: chatBoxOpen ? 'transparent' : 'rgb(229, 231, 235)'
+			}}
 		>
 			{/* Compact palette header */}
 			<div className="flex items-center justify-between mb-3">
