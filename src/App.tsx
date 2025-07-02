@@ -217,15 +217,15 @@ function App() {
 
 	return (
 		<div 
-			className="h-full flex flex-col px-4 py-3 rounded-xl border border-gray-200 shadow-lg"
+			className="h-full flex flex-col px-4 py-2 rounded-xl border border-gray-200 shadow-lg"
 			style={{ 
-				backgroundColor: chatBoxOpen ? 'transparent' : 'rgba(255, 255, 255, 0.95)', 
+				backgroundColor: chatBoxOpen ? 'transparent' : 'rgba(20, 20, 20, 0.1)', 
 				backdropFilter: chatBoxOpen ? 'none' : 'blur(10px)',
-				borderColor: chatBoxOpen ? 'transparent' : 'rgb(229, 231, 235)'
+				borderColor: chatBoxOpen ? 'transparent' : 'rgba(255, 255, 255, 0.2)'
 			}}
 		>
 			{/* Compact palette header */}
-			<div className="flex items-center justify-between mb-3">
+			<div className="flex items-center justify-between">
 				<div className="flex items-center space-x-3">
 					<div className="w-6 h-6 bg-primary-100 rounded-full flex items-center justify-center">
 						<svg className="w-4 h-4 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -252,7 +252,7 @@ function App() {
 					{/* Ask AI Button */}
 					<button
 						onClick={handleAskAI}
-						className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors text-sm flex items-center space-x-2"
+						className="bg-gray-500/20 hover:bg-gray-500/30 text-white px-4 py-2 rounded-lg transition-colors text-sm flex items-center space-x-2 backdrop-blur-sm border border-white/10"
 					>
 						<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
@@ -266,9 +266,9 @@ function App() {
 						disabled={isCreatingOverlay}
 						className={`${
 							isCreatingOverlay 
-								? 'bg-green-400 cursor-not-allowed' 
-								: 'bg-green-600 hover:bg-green-700'
-						} text-white px-4 py-2 rounded-lg transition-colors text-sm flex items-center space-x-2`}
+								? 'bg-gray-500/30 cursor-not-allowed' 
+								: 'bg-gray-500/20 hover:bg-gray-500/30'
+						} text-white px-4 py-2 rounded-lg transition-colors text-sm flex items-center space-x-2 backdrop-blur-sm border border-white/10`}
 					>
 						{isCreatingOverlay ? (
 							<>
@@ -287,11 +287,7 @@ function App() {
 				</div>
 			</div>
 
-			{/* 🔍 DEBUG PANEL (Updated for window-based chat) */}
-			<div className="mb-3 p-2 bg-gray-100 rounded text-xs">
-				<div>chatBoxOpen: {chatBoxOpen ? '✅' : '❌'}</div>
-				<div>aiResponse: {aiResponse || '❌ null'}</div>
-			</div>
+
 
 			{/* 🤖 AI RESPONSE (STEG 4) */}
 			{aiResponse && (
