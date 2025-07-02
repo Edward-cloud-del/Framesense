@@ -96,8 +96,8 @@ const DragOverlay: React.FC<DragOverlayProps> = ({ onSelectionComplete, onCancel
 
 			console.log(`🎯 Screen coordinates: ${screenWidth}x${screenHeight} at (${screenX}, ${screenY})`);
 
-			// Call our process_screen_selection command with absolute screen coordinates
-			await invoke('process_screen_selection', { 
+			// Call our optimized process_screen_selection command with absolute screen coordinates
+			await invoke('process_screen_selection_optimized', { 
 				bounds: {
 					x: screenX, 
 					y: screenY, 
@@ -106,7 +106,7 @@ const DragOverlay: React.FC<DragOverlayProps> = ({ onSelectionComplete, onCancel
 				}
 			});
 			
-			console.log('✅ Screen selection sent to Rust for processing!');
+			console.log('✅ Optimized screen selection sent to Rust for processing!');
 			// The result will come back via 'selection-result' event that App.tsx listens for
 			onSelectionComplete({ success: true });
 		} catch (error) {

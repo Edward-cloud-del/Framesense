@@ -12,29 +12,42 @@ function OverlayApp() {
 			root.style.backgroundColor = 'transparent';
 		}
 		console.log('🔍 Forced transparent background on all levels');
+		console.log('✅ OverlayApp loaded successfully!');
 	}, []);
 
 	const handleSelectionComplete = async (result: any) => {
 		console.log('✅ Overlay selection completed!', result);
 		
-		// Close the overlay window
+		// Close the overlay window - try optimized first, then regular
 		try {
-			await invoke('close_transparent_overlay');
-			console.log('✅ Overlay window closed');
+			await invoke('close_transparent_overlay_optimized');
+			console.log('✅ Optimized overlay window closed');
 		} catch (error) {
-			console.error('❌ Failed to close overlay:', error);
+			console.warn('⚠️ Optimized close failed, trying regular close:', error);
+			try {
+				await invoke('close_transparent_overlay');
+				console.log('✅ Regular overlay window closed');
+			} catch (fallbackError) {
+				console.error('❌ Both close methods failed:', fallbackError);
+			}
 		}
 	};
 
 	const handleSelectionCancel = async () => {
 		console.log('❌ Overlay selection cancelled');
 		
-		// Close the overlay window
+		// Close the overlay window - try optimized first, then regular
 		try {
-			await invoke('close_transparent_overlay');
-			console.log('✅ Overlay window closed');
+			await invoke('close_transparent_overlay_optimized');
+			console.log('✅ Optimized overlay window closed');
 		} catch (error) {
-			console.error('❌ Failed to close overlay:', error);
+			console.warn('⚠️ Optimized close failed, trying regular close:', error);
+			try {
+				await invoke('close_transparent_overlay');
+				console.log('✅ Regular overlay window closed');
+			} catch (fallbackError) {
+				console.error('❌ Both close methods failed:', fallbackError);
+			}
 		}
 	};
 

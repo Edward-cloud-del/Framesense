@@ -41,7 +41,7 @@ pub struct CaptureResult {
 }
 
 // App state that persists between window creations (like Raycast)
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Serialize)]
 pub struct AppState {
     pub screenshot_data: Option<String>,
     pub last_bounds: Option<CaptureBounds>,
@@ -55,79 +55,84 @@ type SharedOverlayManager = Arc<Mutex<OverlayManager>>;
 
 // Test screen capture capability
 #[tauri::command]
-async fn test_screen_capture() -> Result<AppResult, String> {
+async fn test_screen_capture() -> Result<CaptureResult, String> {
     println!("🧪 Testing screen capture capability...");
     
-    // Test if we can access screenshots library
     match screenshots::Screen::all() {
         Ok(screens) => {
-            println!("✅ Found {} screen(s)", screens.len());
             if let Some(screen) = screens.first() {
-                println!("📺 Primary screen: {}x{}", screen.display_info.width, screen.display_info.height);
-                
-                // Try to capture a small test area
-                match screen.capture_area(0, 0, 100, 100) {
-                    Ok(_image) => {
-                        println!("✅ Screen capture test successful!");
-                        Ok(AppResult {
-                            success: true,
-                            message: format!("Screen capture ready! {} screens available", screens.len()),
-                        })
-                    },
-                    Err(e) => {
-                        println!("❌ Screen capture test failed: {}", e);
-                        Ok(AppResult {
-                            success: false,
-                            message: format!("Screen capture failed: {}", e),
-                        })
-                    }
-                }
+                println!("✅ Screen access working. Available: {} screen(s)", screens.len());
+                Ok(CaptureResult {
+                    success: true,
+                    message: format!("Screen capture test successful! Found {} screen(s)", screens.len()),
+                    bounds: None,
+                    image_data: None,
+                })
             } else {
-                Ok(AppResult {
+                println!("❌ No screens available");
+                Ok(CaptureResult {
                     success: false,
-                    message: "No screens found".to_string(),
+                    message: "No screens available for capture".to_string(),
+                    bounds: None,
+                    image_data: None,
                 })
             }
         },
         Err(e) => {
-            println!("❌ Failed to get screens: {}", e);
-            Ok(AppResult {
+            println!("❌ Screen capture test failed: {}", e);
+            Ok(CaptureResult {
                 success: false,
-                message: format!("Failed to access screens: {}", e),
+                message: format!("Screen access failed: {}", e),
+                bounds: None,
+                image_data: None,
             })
         }
     }
 }
 
-// Capture screen area
+// Capture a specific area of the screen
 #[tauri::command]
 async fn capture_screen_area(bounds: CaptureBounds) -> Result<CaptureResult, String> {
-    println!("📸 Capturing screen area: {}x{} at ({}, {})", 
-             bounds.width, bounds.height, bounds.x, bounds.y);
+    println!("📸 Capturing screen area: {}x{} at ({}, {})", bounds.width, bounds.height, bounds.x, bounds.y);
     
     match screenshots::Screen::all() {
         Ok(screens) => {
             if let Some(screen) = screens.first() {
-                // Make sure bounds are within screen limits
-                let max_width = screen.display_info.width as i32;
-                let max_height = screen.display_info.height as i32;
+                let screen_width = screen.display_info.width;
+                let screen_height = screen.display_info.height;
                 
-                let safe_x = bounds.x.max(0).min(max_width - bounds.width as i32);
-                let safe_y = bounds.y.max(0).min(max_height - bounds.height as i32);
-                let safe_width = bounds.width.min((max_width - safe_x) as u32);
-                let safe_height = bounds.height.min((max_height - safe_y) as u32);
+                println!("📺 Screen dimensions: {}x{}", screen_width, screen_height);
                 
-                println!("📐 Adjusted bounds: {}x{} at ({}, {})", 
+                // 🔧 FIX: Validate and clamp coordinates to screen bounds
+                let safe_x = bounds.x.max(0).min((screen_width as i32) - (bounds.width as i32));
+                let safe_y = bounds.y.max(0).min((screen_height as i32) - (bounds.height as i32));
+                let safe_width = bounds.width.min((screen_width as u32) - (safe_x as u32));
+                let safe_height = bounds.height.min((screen_height as u32) - (safe_y as u32));
+                
+                println!("🔧 Adjusted coordinates: {}x{} at ({}, {}) → {}x{} at ({}, {})", 
+                         bounds.width, bounds.height, bounds.x, bounds.y,
                          safe_width, safe_height, safe_x, safe_y);
+                
+                // Ensure minimum size
+                if safe_width < 10 || safe_height < 10 {
+                    println!("❌ Adjusted area too small: {}x{}", safe_width, safe_height);
+                    return Ok(CaptureResult {
+                        success: false,
+                        message: format!("Capture area too small after adjustment: {}x{}", safe_width, safe_height),
+                        bounds: None,
+                        image_data: None,
+                    });
+                }
                 
                 match screen.capture_area(safe_x, safe_y, safe_width, safe_height) {
                     Ok(image) => {
-                        // Convert screenshots::Image to PNG bytes
+                        // Convert to PNG and then to base64
                         match image.to_png(None) {
-                            Ok(png_bytes) => {
-                                let base64_data = base64::engine::general_purpose::STANDARD.encode(&png_bytes);
-                                println!("✅ Screen capture successful! Image size: {} bytes", png_bytes.len());
+                            Ok(png_data) => {
+                                let base64_data = base64::engine::general_purpose::STANDARD.encode(&png_data);
+                                let full_data = format!("data:image/png;base64,{}", base64_data);
                                 
+                                println!("✅ Screen capture successful! Size: {}KB", png_data.len() / 1024);
                                 Ok(CaptureResult {
                                     success: true,
                                     message: "Screen area captured successfully!".to_string(),
@@ -137,14 +142,14 @@ async fn capture_screen_area(bounds: CaptureBounds) -> Result<CaptureResult, Str
                                         width: safe_width,
                                         height: safe_height,
                                     }),
-                                    image_data: Some(format!("data:image/png;base64,{}", base64_data)),
+                                    image_data: Some(full_data),
                                 })
                             },
                             Err(e) => {
-                                println!("❌ Failed to encode image as PNG: {}", e);
+                                println!("❌ PNG conversion failed: {}", e);
                                 Ok(CaptureResult {
                                     success: false,
-                                    message: format!("Failed to encode image as PNG: {}", e),
+                                    message: format!("PNG conversion failed: {}", e),
                                     bounds: None,
                                     image_data: None,
                                 })
@@ -162,9 +167,10 @@ async fn capture_screen_area(bounds: CaptureBounds) -> Result<CaptureResult, Str
                     }
                 }
             } else {
+                println!("❌ No screens available");
                 Ok(CaptureResult {
                     success: false,
-                    message: "No screens available".to_string(),
+                    message: "No screens available for capture".to_string(),
                     bounds: None,
                     image_data: None,
                 })
@@ -200,329 +206,9 @@ async fn check_permissions() -> Result<bool, String> {
     Ok(true)
 }
 
-// Create transparent fullscreen overlay for drag selection
-#[tauri::command]
-async fn start_fullscreen_selection(app: tauri::AppHandle) -> Result<(), String> {
-    println!("🎯 Creating transparent fullscreen overlay...");
-    
-    // Get actual screen dimensions  
-    let (screen_width, screen_height) = match screenshots::Screen::all() {
-        Ok(screens) => {
-            if let Some(screen) = screens.first() {
-                let width = screen.display_info.width as f64;
-                let height = screen.display_info.height as f64;
-                println!("📺 Fullscreen overlay using screen: {}x{}", width, height);
-                (width, height)
-            } else {
-                println!("⚠️ No screens found, using fallback 1920x1080");
-                (1920.0, 1080.0)
-            }
-        },
-        Err(e) => {
-            println!("❌ Failed to get screen info: {}, using fallback", e);
-            (1920.0, 1080.0)
-        }
-    };
-    
-    // Create enhanced transparent overlay HTML (matches React DragOverlay styling)
-    let overlay_html = r#"
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>FrameSense Selection</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            background: rgba(0, 0, 0, 0.2);
-            width: 100vw;
-            height: 100vh;
-            cursor: crosshair;
-            user-select: none;
-            overflow: hidden;
-            font-family: system-ui, -apple-system, sans-serif;
-        }
-        
-        #instructions {
-            position: absolute;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.8);
-            color: white;
-            padding: 12px 16px;
-            border-radius: 8px;
-            font-size: 14px;
-            pointer-events: none;
-            z-index: 1000;
-        }
-        
-        #close-button {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            width: 32px;
-            height: 32px;
-            background: #ef4444;
-            color: white;
-            border: none;
-            border-radius: 50%;
-            font-size: 18px;
-            font-weight: bold;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-        }
-        
-        #close-button:hover {
-             background: #dc2626;
-        }
-        
-        #selection-box {
-            position: absolute;
-            border: 2px solid #3b82f6;
-            background: rgba(59, 130, 246, 0.2);
-            display: none;
-            pointer-events: none;
-        }
-        
-        .corner {
-            position: absolute;
-            width: 12px;
-            height: 12px;
-            background: #3b82f6;
-            border-radius: 50%;
-        }
-        
-        .corner.top-left { top: -6px; left: -6px; }
-        .corner.top-right { top: -6px; right: -6px; }
-        .corner.bottom-left { bottom: -6px; left: -6px; }
-        .corner.bottom-right { bottom: -6px; right: -6px; }
-        
-        #size-indicator {
-            position: absolute;
-            bottom: -32px;
-            left: 0;
-            background: rgba(0, 0, 0, 0.8);
-            color: white;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 12px;
-            pointer-events: none;
-            display: none;
-        }
-    </style>
-</head>
-<body>
-    <div id="instructions">🖱️ Drag to select area • ⏹️ ESC to cancel</div>
-    <button id="close-button">×</button>
-    
-    <div id="selection-box">
-        <div class="corner top-left"></div>
-        <div class="corner top-right"></div>
-        <div class="corner bottom-left"></div>
-        <div class="corner bottom-right"></div>
-        <div id="size-indicator"></div>
-    </div>
-    
-    <script>
-        console.log('🚀 Enhanced transparent overlay loaded!');
-        
-        let dragging = false;
-        let startX = 0, startY = 0;
-        const selectionBox = document.getElementById('selection-box');
-        const sizeIndicator = document.getElementById('size-indicator');
-        const closeButton = document.getElementById('close-button');
-        
-        // Close button functionality
-        closeButton.addEventListener('click', (e) => {
-            e.stopPropagation();
-            console.log('❌ Close button clicked');
-            window.close();
-        });
-        
-        document.addEventListener('mousedown', (e) => {
-            if (e.target === closeButton) return; // Don't start drag on close button
-            
-            dragging = true;
-            startX = e.clientX;
-            startY = e.clientY;
-            
-            console.log('🖱️ Mouse down - starting drag at:', startX, startY);
-            
-            selectionBox.style.left = startX + 'px';
-            selectionBox.style.top = startY + 'px';
-            selectionBox.style.width = '0px';
-            selectionBox.style.height = '0px';
-            selectionBox.style.display = 'block';
-            sizeIndicator.style.display = 'block';
-        });
-        
-        document.addEventListener('mousemove', (e) => {
-            if (!dragging) return;
-            
-            const width = Math.abs(e.clientX - startX);
-            const height = Math.abs(e.clientY - startY);
-            const left = Math.min(startX, e.clientX);
-            const top = Math.min(startY, e.clientY);
-            
-            selectionBox.style.left = left + 'px';
-            selectionBox.style.top = top + 'px';
-            selectionBox.style.width = width + 'px';
-            selectionBox.style.height = height + 'px';
-            
-            // Update size indicator
-            sizeIndicator.textContent = Math.round(width) + ' × ' + Math.round(height);
-        });
-        
-        document.addEventListener('mouseup', (e) => {
-            if (!dragging) return;
-            dragging = false;
-            
-            const width = Math.abs(e.clientX - startX);
-            const height = Math.abs(e.clientY - startY);
-            const left = Math.min(startX, e.clientX);
-            const top = Math.min(startY, e.clientY);
-            
-            console.log('✅ Selection completed:', { left, top, width, height });
-            
-            if (width > 10 && height > 10) {
-                console.log('📸 Sending coordinates to main window...');
-                
-                // Send message to main window using postMessage
-                if (window.opener) {
-                    window.opener.postMessage({
-                        type: 'SCREEN_SELECTION',
-                        bounds: { x: left, y: top, width: width, height: height }
-                    }, '*');
-                    console.log('📤 Coordinates sent via postMessage');
-                } else {
-                    console.log('📤 Attempting direct Tauri invoke...');
-                    // Fallback: try direct invoke
-                    if (window.__TAURI__ && window.__TAURI__.invoke) {
-                        window.__TAURI__.invoke('process_screen_selection', {
-                            bounds: { x: left, y: top, width: width, height: height }
-                        }).then(() => {
-                            console.log('📸 Screen capture sent to Rust');
-                        }).catch(err => {
-                            console.error('❌ Failed to process selection:', err);
-                        });
-                    }
-                }
-                
-                // Close overlay after short delay
-                setTimeout(() => window.close(), 100);
-            } else {
-                console.log('⚠️ Selection too small, closing overlay');
-                window.close();
-            }
-        });
-        
-        // ESC to close
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                console.log('⏹️ Escape pressed - closing overlay');
-                window.close();
-            }
-        });
-        
-        // Hide size indicator when not dragging
-        document.addEventListener('mouseup', () => {
-            setTimeout(() => {
-                if (sizeIndicator) {
-                    sizeIndicator.style.display = 'none';
-                }
-            }, 2000);
-        });
-    </script>
-</body>
-</html>"#;
-    
-    // Create data URL
-    let data_url = format!("data:text/html;charset=utf-8,{}", urlencoding::encode(overlay_html));
-    
-    // Create transparent fullscreen overlay window
-    let _overlay = WebviewWindowBuilder::new(
-        &app,
-        "transparent-overlay",
-        WebviewUrl::External(data_url.parse().unwrap())
-    )
-    .title("FrameSense Selection")
-    .inner_size(screen_width, screen_height)
-    .position(0.0, 0.0)
-    .decorations(false)      // No window borders
-    .transparent(true)       // Make window transparent!
-    .always_on_top(true)     // Above all other windows
-    .skip_taskbar(true)      // Don't show in taskbar
-    .resizable(false)
-    .maximizable(false)
-    .minimizable(false)
-    .build()
-    .map_err(|e| format!("Failed to create overlay: {}", e))?;
-    
-    println!("✅ Transparent overlay created!");
-    Ok(())
-}
+// Removed problematic HTML/JS-based overlay function - using React overlays only
 
-// Process screen selection - capture and analyze
-#[tauri::command]
-async fn process_screen_selection(app: tauri::AppHandle, bounds: CaptureBounds) -> Result<(), String> {
-    println!("🎯 Processing screen selection: {}x{} at ({}, {})", 
-             bounds.width, bounds.height, bounds.x, bounds.y);
-    
-    // Capture the selected screen area
-    match capture_screen_area(bounds.clone()).await {
-        Ok(capture_result) => {
-            if capture_result.success && capture_result.image_data.is_some() {
-                let image_data = capture_result.image_data.unwrap();
-                println!("✅ Screen capture successful, analyzing content...");
-                
-                // For now, we'll just send the image data to React
-                // Later we can add text extraction and OCR here
-                if let Some(window) = app.get_webview_window("main") {
-                    let analysis_result = serde_json::json!({
-                        "type": "image",
-                        "bounds": bounds,
-                        "imageData": image_data,
-                        "text": null,
-                        "success": true,
-                        "message": "Screen area captured successfully!"
-                    });
-                    
-                    window.emit("selection-result", analysis_result).unwrap();
-                    println!("📤 Sent image data to React app");
-                } else {
-                    println!("❌ Main window not found");
-                }
-            } else {
-                println!("❌ Screen capture failed: {}", capture_result.message);
-                if let Some(window) = app.get_webview_window("main") {
-                    let error_result = serde_json::json!({
-                        "type": "error",
-                        "success": false,
-                        "message": capture_result.message
-                    });
-                    window.emit("selection-result", error_result).unwrap();
-                }
-            }
-        },
-        Err(e) => {
-            println!("❌ Failed to capture screen: {}", e);
-            if let Some(window) = app.get_webview_window("main") {
-                let error_result = serde_json::json!({
-                    "type": "error", 
-                    "success": false,
-                    "message": format!("Screen capture failed: {}", e)
-                });
-                window.emit("selection-result", error_result).unwrap();
-            }
-        }
-    }
-    
-    Ok(())
-}
+// Removed old process_screen_selection - using optimized version only
 
 // Get window position for coordinate conversion
 #[tauri::command]
@@ -547,19 +233,72 @@ async fn get_window_position(app: tauri::AppHandle) -> Result<serde_json::Value,
     }
 }
 
-// Create transparent overlay window for selection
+// Save app state to file for persistence (like Raycast)
+#[tauri::command]
+async fn save_app_state(
+    screenshot_data: Option<String>,
+    bounds: Option<CaptureBounds>,
+    app: tauri::AppHandle,
+    state: tauri::State<'_, SharedState>
+) -> Result<(), String> {
+    println!("💾 Saving app state...");
+    
+    // Update in-memory state
+    {
+        let mut app_state = state.lock().unwrap();
+        app_state.screenshot_data = screenshot_data.clone();
+        app_state.last_bounds = bounds.clone();
+        app_state.last_window_closed_time = Some(
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_secs()
+        );
+    }
+    
+    // Save to file for persistence
+    if let Some(app_data_dir) = app.path().app_data_dir().ok() {
+        let state_file = app_data_dir.join("app_state.json");
+        
+        // Ensure directory exists
+        if let Some(parent) = state_file.parent() {
+            if !parent.exists() {
+                match std::fs::create_dir_all(parent) {
+                    Ok(_) => println!("📁 Created app data directory"),
+                    Err(e) => println!("⚠️ Failed to create app data directory: {}", e),
+                }
+            }
+        }
+        
+        // Save current state
+        let current_state = state.lock().unwrap().clone();
+        match serde_json::to_string_pretty(&current_state) {
+            Ok(state_json) => {
+                match std::fs::write(&state_file, state_json) {
+                    Ok(_) => println!("✅ App state saved successfully"),
+                    Err(e) => println!("❌ Failed to write app state: {}", e),
+                }
+            },
+            Err(e) => println!("❌ Failed to serialize app state: {}", e),
+        }
+    }
+    
+    Ok(())
+}
+
+// Create transparent overlay window using React (not HTML)
 #[tauri::command]
 async fn create_transparent_overlay(app: tauri::AppHandle) -> Result<(), String> {
     // Close existing overlay if it exists
     if let Some(existing) = app.get_webview_window("overlay") {
-        println!("🗑️ Closing existing overlay window...");
+        println!("🗑️ Closing existing React overlay window...");
         match existing.close() {
             Ok(_) => {
-                println!("✅ Existing overlay close requested");
+                println!("✅ Existing React overlay close requested");
                 // Short delay to let window close
                 tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
             },
-            Err(e) => println!("⚠️ Failed to close existing overlay: {}", e),
+            Err(e) => println!("⚠️ Failed to close existing React overlay: {}", e),
         }
     }
     
@@ -582,13 +321,13 @@ async fn create_transparent_overlay(app: tauri::AppHandle) -> Result<(), String>
         }
     };
     
-    println!("🎯 Creating transparent overlay window...");
+    println!("🎯 Creating React-based transparent overlay window...");
     
-    // Create transparent fullscreen overlay window with React
+    // Create React-based fullscreen overlay window
     let _overlay = WebviewWindowBuilder::new(
         &app,
         "overlay",
-        WebviewUrl::App("overlay".into())  // Will load a separate React route
+        WebviewUrl::App("overlay".into())  // React route from OverlayApp.tsx
     )
     .title("FrameSense Overlay")
     .inner_size(screen_width, screen_height)
@@ -602,9 +341,9 @@ async fn create_transparent_overlay(app: tauri::AppHandle) -> Result<(), String>
     .maximizable(false)
     .minimizable(false)
     .build()
-    .map_err(|e| format!("Failed to create overlay: {}", e))?;
+    .map_err(|e| format!("Failed to create React overlay: {}", e))?;
     
-    println!("✅ Transparent overlay window created!");
+    println!("✅ React-based transparent overlay window created!");
     Ok(())
 }
 
@@ -614,73 +353,49 @@ async fn close_transparent_overlay(app: tauri::AppHandle) -> Result<(), String> 
     if let Some(overlay) = app.get_webview_window("overlay") {
         match overlay.close() {
             Ok(_) => {
-                println!("✅ Closed transparent overlay");
+                println!("✅ Closed React transparent overlay");
                 Ok(())
             },
             Err(e) => {
-                println!("❌ Failed to close overlay: {}", e);
-                Err(format!("Failed to close overlay: {}", e))
+                println!("❌ Failed to close React overlay: {}", e);
+                Err(format!("Failed to close React overlay: {}", e))
             }
         }
     } else {
-        println!("❌ Overlay window not found");
-        Err("Overlay window not found".to_string())
+        println!("❌ React overlay window not found");
+        Err("React overlay window not found".to_string())
     }
 }
 
-// 🚀 FAS 1: OPTIMIZED OVERLAY COMMANDS
+// 🚀 FAS 1: OPTIMIZED OVERLAY COMMANDS (React-based, no HTML/JS issues)
 
-// Create optimized overlay using OverlayManager pooling
+// Create optimized overlay using OverlayManager pooling with React
 #[tauri::command]
-fn create_transparent_overlay_optimized(
+async fn create_transparent_overlay_optimized(
     app: tauri::AppHandle,
     overlay_manager: tauri::State<'_, SharedOverlayManager>
 ) -> Result<(), String> {
-    println!("🚀 Creating optimized overlay with pooling...");
-    
-    let mut manager = overlay_manager.lock().map_err(|e| format!("Failed to lock overlay manager: {}", e))?;
-    
-    match manager.show_selection_overlay(&app) {
-        Ok(_) => {
-            println!("✅ Optimized overlay activated successfully!");
-            Ok(())
-        },
-        Err(e) => {
-            println!("❌ Failed to activate optimized overlay: {}", e);
-            Err(e)
-        }
-    }
+    let mut manager = overlay_manager.lock().unwrap();
+    manager.show_selection_overlay(&app)
 }
 
-// Close optimized overlay using OverlayManager pooling
+// Close optimized overlay using OverlayManager
 #[tauri::command] 
-fn close_transparent_overlay_optimized(
+async fn close_transparent_overlay_optimized(
     overlay_manager: tauri::State<'_, SharedOverlayManager>
 ) -> Result<(), String> {
-    println!("🔄 Hiding optimized overlay...");
-    
-    let mut manager = overlay_manager.lock().map_err(|e| format!("Failed to lock overlay manager: {}", e))?;
-    
-    match manager.hide_overlay() {
-        Ok(_) => {
-            println!("✅ Optimized overlay hidden successfully!");
-            Ok(())
-        },
-        Err(e) => {
-            println!("❌ Failed to hide optimized overlay: {}", e);
-            Err(e)
-        }
-    }
+    let mut manager = overlay_manager.lock().unwrap();
+    manager.hide_overlay()
 }
 
-// Process screen selection with optimized overlay (fallback-safe)
+// Process screen selection with React overlay (no HTML/JS execution issues)
 #[tauri::command]
 async fn process_screen_selection_optimized(
     app: tauri::AppHandle, 
     bounds: CaptureBounds,
     overlay_manager: tauri::State<'_, SharedOverlayManager>
 ) -> Result<(), String> {
-    println!("📸 Processing optimized screen selection: {}x{} at ({}, {})", 
+    println!("📸 Processing React-based screen selection: {}x{} at ({}, {})", 
              bounds.width, bounds.height, bounds.x, bounds.y);
     
     // Capture the selected screen area using existing function
@@ -688,7 +403,7 @@ async fn process_screen_selection_optimized(
         Ok(capture_result) => {
             if capture_result.success && capture_result.image_data.is_some() {
                 let image_data = capture_result.image_data.unwrap();
-                println!("✅ Optimized screen capture successful!");
+                println!("✅ React-based screen capture successful!");
                 
                 // Send result to React (same as original)
                 if let Some(window) = app.get_webview_window("main") {
@@ -698,38 +413,22 @@ async fn process_screen_selection_optimized(
                         "imageData": image_data,
                         "text": null,
                         "success": true,
-                        "message": "Optimized screen area captured successfully!"
+                        "message": "React-based screen area captured successfully!"
                     });
                     
                     window.emit("selection-result", analysis_result).unwrap();
-                    println!("📤 Sent optimized capture data to React app");
+                    println!("📤 Sent React capture data to main app");
                 }
                 
                 // Hide overlay using optimized manager
                 let _ = close_transparent_overlay_optimized(overlay_manager);
                 
             } else {
-                println!("❌ Optimized screen capture failed: {}", capture_result.message);
-                if let Some(window) = app.get_webview_window("main") {
-                    let error_result = serde_json::json!({
-                        "type": "error",
-                        "success": false,
-                        "message": format!("Optimized capture failed: {}", capture_result.message)
-                    });
-                    window.emit("selection-result", error_result).unwrap();
-                }
+                println!("❌ React capture failed: {}", capture_result.message);
             }
         },
         Err(e) => {
-            println!("❌ Failed to capture screen: {}", e);
-            if let Some(window) = app.get_webview_window("main") {
-                let error_result = serde_json::json!({
-                    "type": "error", 
-                    "success": false,
-                    "message": format!("Optimized screen capture failed: {}", e)
-                });
-                window.emit("selection-result", error_result).unwrap();
-            }
+            println!("❌ React capture error: {}", e);
         }
     }
     
@@ -886,35 +585,6 @@ async fn test_chatbox_position(app: tauri::AppHandle, x: f64, y: f64) -> Result<
     
     println!("🎯 Test ChatBox created at ({}, {}) - will auto-close in 3 seconds", x, y);
     Ok(())
-}
-
-
-
-// Save current app state before closing window (like Raycast)
-#[tauri::command]
-async fn save_app_state(app: tauri::AppHandle, screenshot_data: Option<String>) -> Result<(), String> {
-    if let Some(state) = app.try_state::<SharedState>() {
-        let mut app_state = state.lock().unwrap();
-        app_state.screenshot_data = screenshot_data;
-        println!("💾 App state saved with screenshot: {}", app_state.screenshot_data.is_some());
-    }
-    Ok(())
-}
-
-// Get saved app state when creating new window (like Raycast)
-#[tauri::command]
-async fn get_app_state(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
-    if let Some(state) = app.try_state::<SharedState>() {
-        let app_state = state.lock().unwrap();
-        let result = serde_json::json!({
-            "screenshot_data": app_state.screenshot_data,
-            "last_bounds": app_state.last_bounds
-        });
-        println!("📂 App state retrieved with screenshot: {}", app_state.screenshot_data.is_some());
-        Ok(result)
-    } else {
-        Ok(serde_json::json!({"screenshot_data": null, "last_bounds": null}))
-    }
 }
 
 // Create new main window on current Space (like Raycast/Spotlight)
@@ -1100,8 +770,8 @@ fn main() {
             check_permissions,
             test_screen_capture,
             capture_screen_area,
-            start_fullscreen_selection,
-            process_screen_selection,
+
+
             get_window_position,
             create_transparent_overlay,
             close_transparent_overlay,
@@ -1114,7 +784,6 @@ fn main() {
             debug_coordinates,
             test_chatbox_position,
             save_app_state,
-            get_app_state,
             create_main_window,
         ])
         .on_window_event(|window, event| match event {
