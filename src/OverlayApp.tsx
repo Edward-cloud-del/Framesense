@@ -21,7 +21,7 @@ function OverlayApp() {
 		// Close the overlay window - try optimized first, then regular
 		try {
 			await invoke('close_transparent_overlay_optimized');
-			console.log('✅ Optimized overlay window closed');
+			console.log('✅ Optimized overlay window closed and main window restored');
 		} catch (error) {
 			console.warn('⚠️ Optimized close failed, trying regular close:', error);
 			try {
@@ -39,7 +39,7 @@ function OverlayApp() {
 		// Close the overlay window - try optimized first, then regular
 		try {
 			await invoke('close_transparent_overlay_optimized');
-			console.log('✅ Optimized overlay window closed');
+			console.log('✅ Optimized overlay window closed and main window restored');
 		} catch (error) {
 			console.warn('⚠️ Optimized close failed, trying regular close:', error);
 			try {

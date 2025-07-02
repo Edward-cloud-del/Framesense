@@ -18,8 +18,6 @@ const DragOverlay: React.FC<DragOverlayProps> = ({ onSelectionComplete, onCancel
 	const [selectionBox, setSelectionBox] = useState<SelectionBox | null>(null);
 	const overlayRef = useRef<HTMLDivElement>(null);
 
-
-
 	const handleMouseDown = useCallback((e: React.MouseEvent) => {
 		e.preventDefault();
 		e.stopPropagation();
@@ -84,19 +82,17 @@ const DragOverlay: React.FC<DragOverlayProps> = ({ onSelectionComplete, onCancel
 		try {
 			console.log(`📐 Viewport selection: ${width}x${height} at (${viewportX}, ${viewportY})`);
 
-			// Get window position to convert viewport coords to screen coords
-			const windowPos = await invoke('get_window_position') as { x: number, y: number };
-			console.log(`🖥️ Window position: (${windowPos.x}, ${windowPos.y})`);
-
-			// Convert viewport coordinates to absolute screen coordinates
-			const screenX = Math.round(windowPos.x + viewportX);
-			const screenY = Math.round(windowPos.y + viewportY);
+			// 🔧 FIX: Since overlay window covers entire screen at position (0,0),
+			// viewport coordinates ARE already absolute screen coordinates!
+			// No need to get window position and add offsets.
+			const screenX = Math.round(viewportX);
+			const screenY = Math.round(viewportY);
 			const screenWidth = Math.round(width);
 			const screenHeight = Math.round(height);
 
 			console.log(`🎯 Screen coordinates: ${screenWidth}x${screenHeight} at (${screenX}, ${screenY})`);
 
-			// Call our optimized process_screen_selection command with absolute screen coordinates
+			// Call our optimized process_screen_selection command with corrected screen coordinates
 			await invoke('process_screen_selection_optimized', { 
 				bounds: {
 					x: screenX, 

@@ -63,11 +63,11 @@
         "label": "main",
         "title": "FrameSense",
         "width": 600,
-        "height": 140,
+        "height": 400,
         "center": true,
         "resizable": false,
         "decorations": false,
-        "y": 100
+        "y": 191
       }
     ],
     "trayIcon": {

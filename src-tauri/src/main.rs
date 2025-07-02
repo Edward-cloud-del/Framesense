@@ -20,6 +20,17 @@ use overlay::{OverlayManager, ScreenshotCache};
 mod system;
 use system::{PermissionCache, Permission};
 
+// OCR module for Tesseract integration
+mod ocr;
+use ocr::{OCRService, OCRResult};
+
+// OCR test module
+mod test_ocr;
+
+// Global OCR service (reuse instance for performance)
+static mut OCR_SERVICE: Option<std::sync::Mutex<OCRService>> = None;
+static OCR_INIT: std::sync::Once = std::sync::Once::new();
+
 // Note: macOS-specific imports removed since we're using native egui overlay
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -205,6 +216,80 @@ async fn test_command() -> Result<AppResult, String> {
         success: true,
         message: "FrameSense systemtray test".to_string(),
     })
+}
+
+// Test OCR functionality (Step 1B from AI.txt)
+#[tauri::command]
+async fn test_ocr() -> Result<AppResult, String> {
+    println!("🧪 Testing OCR (Tesseract) functionality...");
+    
+    match OCRService::test_ocr() {
+        Ok(message) => {
+            println!("✅ OCR test successful: {}", message);
+            Ok(AppResult {
+                success: true,
+                message,
+            })
+        },
+        Err(error) => {
+            println!("❌ OCR test failed: {}", error);
+            Ok(AppResult {
+                success: false,
+                message: error,
+            })
+        }
+    }
+}
+
+// Run comprehensive OCR verification tests
+#[tauri::command]
+async fn run_ocr_verification() -> Result<AppResult, String> {
+    println!("🚀 Running comprehensive OCR verification...");
+    
+    // Run all tests and capture output
+    test_ocr::run_all_tests();
+    
+    // If we get here, tests passed (would have panicked otherwise)
+    Ok(AppResult {
+        success: true,
+        message: "🎉 All OCR verification tests passed! Tesseract is working correctly.".to_string(),
+    })
+}
+
+// Extract text from image using OCR (Step 2-3 from AI.txt)
+#[tauri::command]
+async fn extract_text_ocr(image_data: String) -> Result<OCRResult, String> {
+    println!("📝 Extracting text from image using OCR...");
+    
+    unsafe {
+        OCR_INIT.call_once(|| {
+            if let Ok(service) = OCRService::new() {
+                OCR_SERVICE = Some(std::sync::Mutex::new(service));
+                println!("✅ OCR service initialized successfully");
+            } else {
+                println!("❌ Failed to initialize OCR service");
+            }
+        });
+        
+        if let Some(ref service_mutex) = OCR_SERVICE {
+            let service = service_mutex.lock().unwrap();
+            match service.extract_text(&image_data) {
+                Ok(result) => {
+                    println!("✅ OCR extraction successful - Text: '{}', Confidence: {:.2}%", 
+                             result.text, result.confidence * 100.0);
+                    Ok(result)
+                },
+                Err(error) => {
+                    println!("❌ OCR extraction failed: {}", error);
+                    Err(error)
+                }
+            }
+        } else {
+            let error_msg = "OCR service not initialized".to_string();
+            println!("❌ {}", error_msg);
+            Err(error_msg)
+        }
+    }
 }
 
 // Check permissions (simplified for now)
@@ -530,6 +615,16 @@ async fn create_transparent_overlay_optimized(
     app: tauri::AppHandle,
     overlay_manager: tauri::State<'_, SharedOverlayManager>
 ) -> Result<(), String> {
+    println!("🎯 Creating optimized overlay and hiding main window...");
+    
+    // 🔧 HIDE main window during capture mode
+    if let Some(main_window) = app.get_webview_window("main") {
+        match main_window.hide() {
+            Ok(_) => println!("👻 Main window hidden for capture mode"),
+            Err(e) => println!("⚠️ Failed to hide main window: {}", e),
+        }
+    }
+    
     let mut manager = overlay_manager.lock().unwrap();
     manager.show_selection_overlay(&app)
 }
@@ -537,10 +632,29 @@ async fn create_transparent_overlay_optimized(
 // Close optimized overlay using OverlayManager
 #[tauri::command] 
 async fn close_transparent_overlay_optimized(
+    app: tauri::AppHandle,
     overlay_manager: tauri::State<'_, SharedOverlayManager>
 ) -> Result<(), String> {
+    println!("🎯 Closing optimized overlay and showing main window...");
+    
     let mut manager = overlay_manager.lock().unwrap();
-    manager.hide_overlay()
+    let result = manager.hide_overlay();
+    
+    // 🔧 SHOW main window again after capture mode
+    if let Some(main_window) = app.get_webview_window("main") {
+        match main_window.show() {
+            Ok(_) => {
+                println!("👁️ Main window shown again after capture");
+                // Focus the window so it's ready for interaction
+                if let Err(e) = main_window.set_focus() {
+                    println!("⚠️ Failed to focus main window: {}", e);
+                }
+            },
+            Err(e) => println!("⚠️ Failed to show main window: {}", e),
+        }
+    }
+    
+    result
 }
 
 // Process screen selection with React overlay and optimized capture
@@ -577,7 +691,7 @@ async fn process_screen_selection_optimized(
         }
         
         // Hide overlay using optimized manager
-        let _ = close_transparent_overlay_optimized(overlay_manager);
+        let _ = close_transparent_overlay_optimized(app, overlay_manager);
         
     } else {
         println!("❌ Optimized capture failed: {}", capture_result.message);
@@ -653,6 +767,8 @@ async fn debug_coordinates(app: tauri::AppHandle) -> Result<serde_json::Value, S
         }
     }
     
+
+    
     // Screen info
     if let Ok(screens) = screenshots::Screen::all() {
         if let Some(screen) = screens.first() {
@@ -667,6 +783,8 @@ async fn debug_coordinates(app: tauri::AppHandle) -> Result<serde_json::Value, S
     println!("🔍 DEBUG INFO: {}", serde_json::to_string_pretty(&debug_info).unwrap());
     Ok(serde_json::Value::Object(debug_info))
 }
+
+
 
 // 🔧 TEST COMMAND - Position ChatBox at specific coordinates
 #[tauri::command]
@@ -756,7 +874,7 @@ async fn create_main_window(app: tauri::AppHandle) -> Result<(), String> {
     )
     .title("FrameSense")
     .inner_size(600.0, 50.0)
-    .position(0.0, 100.0) // Will auto-center
+    .position(0.0, 191.0) // 4/5 från botten = 1/5 från toppen på en 956px skärm
     .center()
     .resizable(false)
     .decorations(false)
@@ -768,6 +886,53 @@ async fn create_main_window(app: tauri::AppHandle) -> Result<(), String> {
     
     println!("✅ New main window created on current Space!");
     Ok(())
+}
+
+// 🔧 MOVE WINDOW COMMAND - Move window to correct Y position
+#[tauri::command]
+async fn move_window_to_position(app: tauri::AppHandle) -> Result<(), String> {
+    println!("📍 Moving window to correct position (4/5 from bottom, centered horizontally)...");
+    
+    if let Some(window) = app.get_webview_window("main") {
+        // Get current position and size for reference
+        let current_pos = window.outer_position().map_err(|e| format!("Failed to get current position: {}", e))?;
+        let window_size = window.outer_size().map_err(|e| format!("Failed to get window size: {}", e))?;
+        
+        // Get screen size to calculate center
+        let screen_size = match screenshots::Screen::all() {
+            Ok(screens) => {
+                if let Some(screen) = screens.first() {
+                    (screen.display_info.width as f64, screen.display_info.height as f64)
+                } else {
+                    return Err("No screens available".to_string());
+                }
+            },
+            Err(e) => return Err(format!("Failed to get screen info: {}", e)),
+        };
+        
+        // 🔧 HARDCODED: X position = half of screen
+        let centered_x = 400.0; // 
+        
+        // Set Y position: 4/5 from bottom = 191px from top (for 956px screen)
+        let new_y = 170.0;
+        
+        println!("📍 Moving from ({}, {}) to HARDCODED ({}, {})", current_pos.x, current_pos.y, centered_x, new_y);
+        println!("📏 Screen: {}×{}, Window: {}×{}", screen_size.0, screen_size.1, window_size.width, window_size.height);
+        
+        match window.set_position(tauri::LogicalPosition::new(centered_x, new_y)) {
+            Ok(_) => {
+                println!("✅ Window moved successfully to centered position: ({}, {})", centered_x, new_y);
+                Ok(())
+            },
+            Err(e) => {
+                println!("❌ Failed to move window: {}", e);
+                Err(format!("Failed to move window: {}", e))
+            }
+        }
+    } else {
+        println!("❌ Main window not found for repositioning");
+        Err("Main window not found".to_string())
+    }
 }
 
 fn main() {
@@ -926,6 +1091,9 @@ fn main() {
         })
         .invoke_handler(tauri::generate_handler![
             test_command,
+            test_ocr,
+            run_ocr_verification,
+            extract_text_ocr,
             check_permissions,
             test_screen_capture,
             capture_screen_area,
@@ -955,6 +1123,7 @@ fn main() {
             test_chatbox_position,
             save_app_state,
             create_main_window,
+            move_window_to_position,
         ])
         .on_window_event(|window, event| match event {
             WindowEvent::CloseRequested { api, .. } => {

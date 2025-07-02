@@ -17,6 +17,13 @@ interface AIMessage {
 	bounds?: any; // Future: CaptureBounds type
 }
 
+// OCR Result interface (matches Rust OCRResult)
+interface OCRResult {
+	text: string;
+	confidence: number;
+	has_text: boolean;
+}
+
 function App() {
 	const [isReady, setIsReady] = useState(false);
 	const [screenshotResult, setScreenshotResult] = useState<string | null>(null);
@@ -299,6 +306,42 @@ function App() {
 		console.log('🗑️ Image context cleared for new session');
 	};
 
+	// OCR Test function (Step 4-5 from AI.txt)
+	const testOCR = async () => {
+		if (!selectedImageForAI) {
+			console.log('❌ No image selected for OCR test');
+			setAiResponse('❌ **OCR Test Error**\n\nNo image selected. Please capture a screenshot first by clicking the Select button.');
+			return;
+		}
+
+		console.log('📝 Testing OCR functionality with selected image...');
+		
+		try {
+			const result = await invoke('extract_text_ocr', { imageData: selectedImageForAI }) as OCRResult;
+			console.log('📝 OCR Result:', result);
+			
+			if (result.has_text) {
+				setAiResponse(`📝 **OCR Results**\n\n**Text Found:** ${result.text}\n\n**Confidence:** ${Math.round(result.confidence * 100)}%\n\n**Status:** ${result.has_text ? '✅ Text detected successfully' : '❌ No text found'}\n\n*This is a test of the OCR functionality from Step 2-3 of AI.txt*`);
+			} else {
+				setAiResponse(`📝 **OCR Results**\n\n**Status:** No text detected in the selected area\n\n**Confidence:** ${Math.round(result.confidence * 100)}%\n\n**Suggestion:** Try selecting an area with clear text\n\n*This is a test of the OCR functionality from Step 2-3 of AI.txt*`);
+			}
+		} catch (error) {
+			console.error('❌ OCR failed:', error);
+			setAiResponse(`❌ **OCR Error**\n\n**Error:** ${error}\n\n**What to try:**\n• Make sure you have selected an image\n• Try selecting a different area\n• Check that Tesseract is working properly\n\n*This is a test of the OCR functionality from Step 2-3 of AI.txt*`);
+		}
+	};
+
+	const moveWindowToCorrectPosition = async () => {
+		try {
+			await invoke('move_window_to_position');
+			console.log('✅ Window moved to correct position (4/5 from bottom)');
+			alert('✅ Fönster flyttat till rätt position!');
+		} catch (error) {
+			console.error('❌ Failed to move window:', error);
+			alert('❌ Kunde inte flytta fönstret');
+		}
+	};
+
 	if (!isReady) {
 		return (
 			<div className="flex items-center justify-center h-screen bg-gray-50">
@@ -357,6 +400,28 @@ function App() {
 						<span>Ask AI</span>
 					</button>
 
+					{/* OCR Test Button (Step 4-5 from AI.txt) */}
+					<button
+						onClick={testOCR}
+						className="bg-blue-500/20 hover:bg-blue-500/30 text-white px-3 py-1.5 rounded-lg transition-colors text-xs flex items-center space-x-1.5 backdrop-blur-sm border border-white/10"
+					>
+						<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+						</svg>
+						<span>OCR</span>
+					</button>
+
+					{/* Move Window Button */}
+					<button
+						onClick={moveWindowToCorrectPosition}
+						className="bg-green-500/20 hover:bg-green-500/30 text-white px-3 py-1.5 rounded-lg transition-colors text-xs flex items-center space-x-1.5 backdrop-blur-sm border border-white/10"
+					>
+						<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+						</svg>
+						<span>Move</span>
+					</button>
+
 					{/* Interactive Selection Button - With loading state */}
 					<button
 						onClick={testScreenSelection}
@@ -383,8 +448,6 @@ function App() {
 					</button>
 				</div>
 			</div>
-
-
 
 			{/* 🤖 AI RESPONSE (STEG 4) */}
 			{aiResponse && (
