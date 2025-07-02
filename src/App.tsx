@@ -4,6 +4,8 @@ import { listen } from '@tauri-apps/api/event';
 import PermissionWizard from './components/PermissionWizard';
 import ResultOverlay from './components/ResultOverlay';
 import ProgressIndicator from './components/ProgressIndicator';
+import AIResponse from './components/AIResponse';
+import ChatBox from './components/ChatBox';
 
 import { useAppStore } from './stores/app-store';
 
@@ -11,6 +13,10 @@ function App() {
 	const [isReady, setIsReady] = useState(false);
 	const [screenshotResult, setScreenshotResult] = useState<string | null>(null);
 	const [isCreatingOverlay, setIsCreatingOverlay] = useState(false);
+	
+	// 🤖 CHAT FLOW STATE MANAGEMENT (STEG 2) - Updated for window-based chat
+	const [aiResponse, setAiResponse] = useState<string | null>(null);
+	const [chatBoxOpen, setChatBoxOpen] = useState(false);
 
 	const { 
 		hasPermissions, 
@@ -117,6 +123,87 @@ function App() {
 		}
 	};
 
+	// 🤖 CHAT FLOW HANDLERS (FAS 4: React-based approach)
+	const handleAskAI = async () => {
+		console.log('🤖 Ask AI clicked - React ChatBox approach');
+		console.log('📊 Current chatBoxOpen state:', chatBoxOpen);
+		
+		if (!chatBoxOpen) {
+			// Open ChatBox: Expand window + show ChatBox
+			console.log('🔄 Opening ChatBox - expanding window and showing component');
+			
+			try {
+				// Expand window for chat mode (600x140 → 600x300)
+				await invoke('resize_window', { width: 600, height: 300 });
+				console.log('✅ Window expanded to 600x300');
+				
+				// Set transparent background for chat mode
+				await invoke('set_transparent_background', { transparent: true });
+				console.log('✅ Transparent background enabled');
+				
+				// Show ChatBox React component
+				setChatBoxOpen(true);
+				console.log('✅ ChatBox component now visible');
+				
+			} catch (error) {
+				console.error('❌ Failed to expand window for chat:', error);
+				// Still show ChatBox even if window resize fails
+				setChatBoxOpen(true);
+			}
+		} else {
+			// Close ChatBox: Hide ChatBox + shrink window
+			console.log('🔄 Closing ChatBox - hiding component and shrinking window');
+			handleCloseChatBox();
+		}
+	};
+
+	// Handle ChatBox close (shrink window back to compact size)
+	const handleCloseChatBox = async () => {
+		console.log('🔄 Closing ChatBox and shrinking window');
+		
+		try {
+			// Hide ChatBox component first
+			setChatBoxOpen(false);
+			
+			// Shrink window back to compact size (600x300 → 600x140)
+			await invoke('resize_window', { width: 600, height: 140 });
+			console.log('✅ Window shrunk back to 600x140');
+			
+			// Disable transparent background
+			await invoke('set_transparent_background', { transparent: false });
+			console.log('✅ Transparent background disabled');
+			
+		} catch (error) {
+			console.error('❌ Failed to shrink window after chat close:', error);
+			// Still hide ChatBox even if window resize fails
+			setChatBoxOpen(false);
+		}
+	};
+
+	// Handle message sent from ChatBox
+	const handleSendMessage = async (message: string) => {
+		console.log('💬 Message sent from ChatBox:', message);
+		
+		// Close ChatBox and shrink window
+		await handleCloseChatBox();
+		
+		// Show AI response (mock for now)
+		const mockResponse = `AI Response to: "${message}"\n\nThis is a mock response from the AI system. In a real implementation, this would be processed by an actual AI service.`;
+		setAiResponse(mockResponse);
+		
+		console.log('✅ AI response shown and ChatBox closed');
+	};
+
+	const handleSelectWithChat = async () => {
+		console.log('🎯 Select with Chat - doing screen capture + showing chat box');
+		// First do screen capture
+		await testScreenSelection();
+		// Then show chat box using new React approach
+		if (!chatBoxOpen) {
+			handleAskAI(); // This will expand window and show ChatBox
+		}
+	};
+
 	if (!isReady) {
 		return (
 			<div className="flex items-center justify-center h-screen bg-gray-50">
@@ -162,7 +249,7 @@ function App() {
 				<div className="flex space-x-2">
 					{/* Ask AI Button */}
 					<button
-						onClick={() => console.log('🤖 Ask AI clicked!')} // Placeholder for now
+						onClick={handleAskAI}
 						className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors text-sm flex items-center space-x-2"
 					>
 						<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -198,11 +285,32 @@ function App() {
 				</div>
 			</div>
 
+			{/* 🔍 DEBUG PANEL (Updated for window-based chat) */}
+			<div className="mb-3 p-2 bg-gray-100 rounded text-xs">
+				<div>chatBoxOpen: {chatBoxOpen ? '✅' : '❌'}</div>
+				<div>aiResponse: {aiResponse || '❌ null'}</div>
+			</div>
+
+			{/* 🤖 AI RESPONSE (STEG 4) */}
+			{aiResponse && (
+				<AIResponse 
+					response={aiResponse}
+					onDismiss={() => setAiResponse(null)}
+				/>
+			)}
+
 			{/* Processing indicator */}
 			{isProcessing && <ProgressIndicator />}
 			
 			{/* Result overlay */}
 			{currentResult && <ResultOverlay result={currentResult} />}
+			
+			{/* 🤖 ChatBox Component (FAS 4: React-based) */}
+			<ChatBox 
+				isVisible={chatBoxOpen}
+				onSend={handleSendMessage}
+				onClose={handleCloseChatBox}
+			/>
 		</div>
 	);
 }
