@@ -1,80 +1,152 @@
-🚀 IMPLEMENTATIONSPLAN - AI CHAT FLÖDE (UPPDATERAD)
-📋 Exakt Flöde vi ska uppnå:
-State 1: Initial (kompakt fönster)
-Apply
-└─────────────────────────────────┘
-State 2: Chat-box aktiv (expanderat transparent fönster + dark chatbox)
-Apply
-└─────────────────────────────────┘
-State 3: AI-svar visat (chatbox ersätts med AI response)
-Apply
-└─────────────────────────────────┘
-State 4: Ny chat under AI-svar
-Apply
-└─────────────────────────────────┘
+🚀 FRAMESENSE SELECT + CHATBOX INTEGRATION PLAN
+=================================================
 
-🎯 NY APPROACH - REACT KOMPONENTER:
-Från: Separata Tauri-fönster (data URL-problem) ❌
-Till: React-komponenter + fönster expansion ✅
+📋 MÅLSÄTTNING:
+Integrera Select-flödet med ChatBox så att markerad skärmbild automatiskt 
+aktiverar ChatBox och bilden blir tillgänglig för AI-analys.
 
-📐 WINDOW BEHAVIOR:
-Initial: 600x140 (kompakt)
-Chat aktiv: 600x300 (expanderat) + transparent background
-ChatBox: Dark rounded component längst ner
+🎯 NUVARANDE STATE (SLUTFÖRT):
+✅ Ask AI → Expandera fönster + ChatBox (utan bild)
+✅ Select → Overlay + markera + visa "Captured" badge
+✅ ChatBox React komponent med perfekt styling
+✅ Window resize funktioner (600x140 ↔ 600x220)
+✅ Transparent background när chat aktiv
 
-🔧 IMPLEMENTATION FASER:
+🔄 NYTT FLÖDE SOM SKA IMPLEMENTERAS:
+State 1: Initial (600x140)
+State 2: Select overlay → markera område  
+State 3: Efter selection → Auto-aktivera ChatBox + behåll "Captured" badge
+State 4: ChatBox har screenshot-kontext för AI
+State 5: AI response med både text + bild-analys
 
-🗑️ FAS 1: RENSA TAURI CHATBOX-KOD
-- Ta bort toggle_chatbox funktion
-- Ta bort send_chat_message funktion  
-- Ta bort force_close_chatbox funktion
-- Ta bort ChatBox HTML-kod (data URL)
-- Rensa invoke_handler från chatbox-funktioner
+📐 TEKNISK INTEGRATION PLAN:
 
-✨ FAS 2: LÄGG TILL WINDOW RESIZE FUNKTIONER
-- Skapa resize_window Tauri-kommando
-- Skapa set_transparent_background Tauri-kommando
-- Registrera nya kommandon i invoke_handler
+🔧 STEG 1: MODIFIERA SELECTION-RESULT EVENT LISTENER
+Plats: App.tsx - selection-result listener
+Funktion: Efter screenshot → automatiskt aktivera ChatBox
+Kontext: Spara screenshot data för AI-användning
 
-🎨 FAS 3: SKAPA REACT CHATBOX KOMPONENT
-- src/components/ChatBox.tsx
-- Dark/transparent styling (samma som innan)
-- Rounded corners, backdrop-blur
-- Input + Send button
-- Position: absolute bottom
+// Nuvarande kod:
+if (result.success && result.type === 'image' && result.imageData) {
+    setScreenshotResult(result.imageData); // ← Behåll denna!
+    // + Lägg till ChatBox activation
+}
 
-🔄 FAS 4: UPPDATERA APP.TSX HANDLERS
-- handleAskAI: Expandera fönster + visa ChatBox
-- handleSend: Dölj ChatBox + visa AI response + krympa fönster
-- State management för chatBoxOpen
+🔧 STEG 2: SCREENSHOT STATE MANAGEMENT  
+Ny state: selectedImageForAI (separerad från screenshotResult)
+screenshotResult: För "Captured" badge visualization (behåll oförändrad)
+selectedImageForAI: För AI-kontext i ChatBox
 
-🎯 FAS 5: STYLING OCH POSITIONING
-- Transparent background när chat aktiv
-- ChatBox positionering (bottom-4 left-4 right-4)
-- Same visual appearance som Tauri-version
-- Smooth transitions
+🔧 STEG 3: CHATBOX CONTEXT ENHANCEMENT
+Prop: imageContext?: string (base64 image data)
+Visuell indikator: Liten bild-ikon i ChatBox när bild finns
+Placeholder: "Ask about the selected area..." istället för "chat with ai"
 
-🧪 FAS 6: TESTA COMPLETE FLOW
-- Ask AI → Fönster expanderar + ChatBox visas
-- Skriv meddelande → Send fungerar
-- AI response visas → ChatBox döljs
-- Fönster krymper tillbaka
+🔧 STEG 4: AI MESSAGE PREPARATION
+Struktur: { text: string, imageData?: string }
+Nuvarande: Bara text meddelande till AI
+Nytt: Text + screenshot data kombinerat
 
-📊 EXAKT SAMMA VISUALS SOM INNAN:
-✅ Mörk transparent ChatBox med rounded corners
-✅ "chat with ai" placeholder
-✅ Send-knapp som enableas/disableas  
-✅ Samma positioning och storlek
-✅ Samma dark/blur styling
-✅ Bara INGEN data URL-problem!
+📊 DATA FLOW DESIGN:
 
-🎯 TEKNISK SKILLNAD:
-Innan: Main Window + Separat ChatBox Window
-Nu: Main Window (expanderar) + ChatBox React Component
+1. USER → Click "Select"
+2. SYSTEM → Show overlay
+3. USER → Drag selection
+4. RUST → Capture area → emit selection-result
+5. REACT → setScreenshotResult (badge) + setSelectedImageForAI (AI)
+6. REACT → Auto-trigger handleAskAI() med image context
+7. SYSTEM → Expand window + show ChatBox
+8. CHATBOX → Visa med image indicator
+9. USER → Type message
+10. SYSTEM → Send {text + imageData} till AI
+11. AI → Respond med kombinerad analys
+12. SYSTEM → Visa response + shrink window
 
-💡 FÖRDELAR:
-✅ Inga data URL-problem
-✅ Enklare state management
-✅ Snabbare implementation  
-✅ Mindre komplexitet
-✅ Samma visuella resultat
+🎨 UI/UX FÖRBÄTTRINGAR:
+
+CHATBOX MED BILD:
+- Liten thumbnail högst upp i ChatBox
+- Placeholder: "Ask about the selected area..."
+- Gränssnitt visar att AI har visuell kontext
+
+CAPTURED BADGE (behålls):
+- Exakt samma styling och placering
+- Visar att screenshot finns tillgängligt
+- Klickbar för preview (future feature)
+
+🔮 AI IMPLEMENTATION READINESS:
+
+MESSAGE STRUKTUR:
+```typescript
+interface AIMessage {
+  text: string;
+  imageData?: string;  // base64 PNG data
+  timestamp: number;
+  bounds?: CaptureBounds;
+}
+```
+
+API ENDPOINT PREPARATION:
+```typescript
+const sendToAI = async (message: AIMessage) => {
+  // Future: Skicka till OpenAI Vision API eller liknande
+  // Nuvarande: Mock response som hanterar både text + bild
+}
+```
+
+MOCK AI RESPONSES:
+- Text-only: "AI Response to: [text]"
+- Text + Image: "AI Analysis: [text] + Visual: [bildanalys]"
+
+🛠️ IMPLEMENTATION ORDNING:
+
+STEG A: Modifiera selection-result listener
+✓ Behåll setScreenshotResult för badge
+✓ Lägg till setSelectedImageForAI
+✓ Auto-trigger handleAskAI efter screenshot
+
+STEG B: Enhance ChatBox för image context
+✓ Ny prop imageContext
+✓ Visuell indikator för bild
+✓ Ändra placeholder text
+
+STEG C: Uppdatera handleSendMessage
+✓ Kombinera text + imageData
+✓ Skicka till AI med båda
+
+STEG D: Mock AI responses
+✓ Hantera text + bild scenarios
+✓ Förbered för riktig AI integration
+
+🧪 TEST SCENARIOS:
+
+SCENARIO 1: Ask AI (endast text)
+1. Click "Ask AI" → ChatBox utan bild
+2. Type "Hello" → AI svarar text-only
+
+SCENARIO 2: Select + Ask (text + bild)  
+1. Click "Select" → Markera område
+2. Auto-ChatBox med bild-kontext
+3. Type "What's in this image?" → AI svarar med bildanalys
+
+SCENARIO 3: Kombinerat workflow
+1. Select område → ChatBox aktiveras
+2. Type meddelande → AI response
+3. Click "Ask AI" igen → Ny session utan bild
+
+📋 SUCCESS CRITERIA:
+
+✅ "Captured" badge behålls oförändrad
+✅ Select → Auto-aktiverar ChatBox  
+✅ ChatBox visar bild-kontext visuellt
+✅ AI får både text + imageData
+✅ Smooth transitions mellan states
+✅ Prepared för riktig AI integration
+
+🎯 FUTURE AI INTEGRATION:
+När riktig AI implementeras behövs bara:
+1. Ersätt mock sendToAI med riktig API
+2. Hantera OpenAI Vision API calls
+3. Process real image analysis responses
+
+DENNA PLAN GÖR AI-INTEGRATIONEN TRIVIAL! 🚀
