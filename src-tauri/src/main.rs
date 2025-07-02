@@ -621,9 +621,49 @@ async fn close_transparent_overlay(app: tauri::AppHandle) -> Result<(), String> 
     }
 }
 
+// 🆕 FAS 2: WINDOW RESIZE FUNCTIONS
 
+// Resize main window for chat expansion/contraction
+#[tauri::command]
+async fn resize_window(app: tauri::AppHandle, width: f64, height: f64) -> Result<(), String> {
+    println!("📏 Resizing main window to {}x{}", width, height);
+    
+    if let Some(window) = app.get_webview_window("main") {
+        match window.set_size(tauri::LogicalSize::new(width, height)) {
+            Ok(_) => {
+                println!("✅ Window resized successfully to {}x{}", width, height);
+                Ok(())
+            },
+            Err(e) => {
+                println!("❌ Failed to resize window: {}", e);
+                Err(format!("Failed to resize window: {}", e))
+            }
+        }
+    } else {
+        println!("❌ Main window not found for resize");
+        Err("Main window not found".to_string())
+    }
+}
 
-
+// Set transparent background for chat mode
+#[tauri::command]
+async fn set_transparent_background(app: tauri::AppHandle, transparent: bool) -> Result<(), String> {
+    println!("🎨 Setting window transparency: {}", transparent);
+    
+    if let Some(window) = app.get_webview_window("main") {
+        // Note: Tauri doesn't support runtime transparency changes on all platforms
+        // This is mainly for future use or platform-specific implementations
+        // For now, we'll just log the action and return success
+        println!("🔧 Transparency change requested: {} (implementation varies by platform)", transparent);
+        
+        // On macOS, we could potentially use additional APIs here
+        // For now, we'll rely on CSS transparency in React components
+        Ok(())
+    } else {
+        println!("❌ Main window not found for transparency change");
+        Err("Main window not found".to_string())
+    }
+}
 
 // 🔧 DEBUG COMMAND - Get detailed coordinate info
 #[tauri::command]
@@ -950,6 +990,8 @@ fn main() {
             get_window_position,
             create_transparent_overlay,
             close_transparent_overlay,
+            resize_window,
+            set_transparent_background,
             debug_coordinates,
             test_chatbox_position,
             save_app_state,
