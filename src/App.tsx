@@ -217,44 +217,44 @@ function App() {
 
 	return (
 		<div 
-			className="h-full flex flex-col px-4 py-2 rounded-xl border border-gray-200 shadow-lg"
+			className="h-full flex flex-col px-4 py-1 rounded-xl border border-gray-200 shadow-lg"
 			style={{ 
-				backgroundColor: chatBoxOpen ? 'transparent' : 'rgba(20, 20, 20, 0.1)', 
+				backgroundColor: chatBoxOpen ? 'transparent' : 'rgba(20, 20, 20, 0.5)', 
 				backdropFilter: chatBoxOpen ? 'none' : 'blur(10px)',
 				borderColor: chatBoxOpen ? 'transparent' : 'rgba(255, 255, 255, 0.2)'
 			}}
 		>
 			{/* Compact palette header */}
 			<div className="flex items-center justify-between">
-				<div className="flex items-center space-x-3">
-					<div className="w-6 h-6 bg-primary-100 rounded-full flex items-center justify-center">
-						<svg className="w-4 h-4 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+				<div className="flex items-center space-x-2">
+					<div className="w-5 h-5 bg-primary-100 rounded-full flex items-center justify-center">
+						<svg className="w-3 h-3 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 616 0z" />
 						</svg>
 					</div>
-					<span className="text-sm font-medium text-gray-900">FrameSense</span>
+					<span className="text-xs font-medium text-white">FrameSense</span>
 					
 					{/* Screenshot result - BETWEEN LOGO AND BUTTON */}
 					{screenshotResult && (
-						<div className="flex items-center space-x-2 px-2 py-1 bg-green-50 rounded border border-green-200">
-							<span className="text-xs text-green-700 font-medium">✅ Captured</span>
+						<div className="flex items-center space-x-2 px-2 py-1 bg-green-500/20 rounded border border-green-400/30 backdrop-blur-sm">
+							<span className="text-xs text-green-200 font-medium">✅ Captured</span>
 							<img 
 								src={screenshotResult} 
 								alt="Screenshot" 
-								className="w-8 h-6 object-cover rounded border border-green-300"
+								className="w-6 h-4 object-cover rounded border border-green-400/50"
 							/>
 						</div>
 					)}
 				</div>
 				
 				{/* Action Buttons */}
-				<div className="flex space-x-2">
+				<div className="flex space-x-1.5">
 					{/* Ask AI Button */}
 					<button
 						onClick={handleAskAI}
-						className="bg-gray-500/20 hover:bg-gray-500/30 text-white px-4 py-2 rounded-lg transition-colors text-sm flex items-center space-x-2 backdrop-blur-sm border border-white/10"
+						className="bg-gray-500/20 hover:bg-gray-500/30 text-white px-3 py-1.5 rounded-lg transition-colors text-xs flex items-center space-x-1.5 backdrop-blur-sm border border-white/10"
 					>
-						<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
 						</svg>
 						<span>Ask AI</span>
@@ -268,16 +268,16 @@ function App() {
 							isCreatingOverlay 
 								? 'bg-gray-500/30 cursor-not-allowed' 
 								: 'bg-gray-500/20 hover:bg-gray-500/30'
-						} text-white px-4 py-2 rounded-lg transition-colors text-sm flex items-center space-x-2 backdrop-blur-sm border border-white/10`}
+						} text-white px-3 py-1.5 rounded-lg transition-colors text-xs flex items-center space-x-1.5 backdrop-blur-sm border border-white/10`}
 					>
 						{isCreatingOverlay ? (
 							<>
-								<div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+								<div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
 								<span>Creating...</span>
 							</>
 						) : (
 							<>
-								<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
 								</svg>
 								<span>Select</span>
