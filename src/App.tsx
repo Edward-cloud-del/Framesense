@@ -9,6 +9,14 @@ import ChatBox from './components/ChatBox';
 
 import { useAppStore } from './stores/app-store';
 
+// STEG 4: AI Message interface for complete AI integration
+interface AIMessage {
+	text: string;
+	imageData?: string;  // base64 PNG data
+	timestamp: number;
+	bounds?: any; // Future: CaptureBounds type
+}
+
 function App() {
 	const [isReady, setIsReady] = useState(false);
 	const [screenshotResult, setScreenshotResult] = useState<string | null>(null);
@@ -17,6 +25,9 @@ function App() {
 	// 🤖 CHAT FLOW STATE MANAGEMENT (STEG 2) - Updated for window-based chat
 	const [aiResponse, setAiResponse] = useState<string | null>(null);
 	const [chatBoxOpen, setChatBoxOpen] = useState(false);
+	
+	// 🖼️ STEG 2: Separate state for AI image context (independent from badge)
+	const [selectedImageForAI, setSelectedImageForAI] = useState<string | null>(null);
 
 	const { 
 		hasPermissions, 
@@ -24,6 +35,23 @@ function App() {
 		currentResult, 
 		setPermissions 
 	} = useAppStore();
+
+	// STEG 4: AI integration function (ready for OpenAI Vision API)
+	const sendToAI = async (aiMessage: AIMessage): Promise<string> => {
+		// Future implementation:
+		// - Send to OpenAI Vision API if imageData exists
+		// - Send to regular text API if only text
+		// - Handle real AI responses
+		console.log('🔮 Future AI endpoint ready:', aiMessage);
+		
+		// STEG 4: Enhanced mock implementation demonstrating full message preparation
+		if (aiMessage.imageData) {
+			const imageSize = Math.round(aiMessage.imageData.length * 0.75 / 1024); // Approximate KB size
+			return `🤖 **AI Visual Analysis** 📸\n\n**Your question:** "${aiMessage.text}"\n\n**Image Analysis:** I can see the selected area from your screen. This appears to be a screenshot (${imageSize}KB) that contains various visual elements. In a real implementation, I would analyze the image content, text, UI elements, and provide specific insights about what's shown.\n\n**Technical Details:**\n• Timestamp: ${new Date(aiMessage.timestamp).toLocaleTimeString()}\n• Image format: Base64 PNG\n• Message type: Text + Visual\n\n**Combined Response:** Based on both your question and the visual content, I would provide a comprehensive analysis combining text understanding with computer vision capabilities.`;
+		} else {
+			return `🤖 **AI Text Response** 💬\n\n**Your question:** "${aiMessage.text}"\n\n**Technical Details:**\n• Timestamp: ${new Date(aiMessage.timestamp).toLocaleTimeString()}\n• Message type: Text only\n• Context: No image provided\n\nThis is a text-only response since no image was provided. In a real implementation, this would be processed by a language model to provide helpful and accurate information based on your question.`;
+		}
+	};
 
 	useEffect(() => {
 		// Check permissions on app start
@@ -44,12 +72,23 @@ function App() {
 			const result = event.payload;
 			
 			if (result.success && result.type === 'image' && result.imageData) {
+				// STEG 1: Behåll screenshot for badge (oförändrad)
 				setScreenshotResult(result.imageData);
-				console.log('✅ Screen selection image loaded!');
+				console.log('✅ Screen selection image loaded for badge!');
 				
-				// Show alert with bounds info
+				// STEG 1: Save screenshot for AI context  
+				setSelectedImageForAI(result.imageData);
+				console.log('✅ Screenshot saved for AI analysis!');
+				
+				// STEG 1: Auto-activate ChatBox after screenshot
+				console.log('🔄 Auto-activating ChatBox with image context...');
+				if (!chatBoxOpen) {
+					handleAskAI(); // This will expand window and show ChatBox
+				}
+				
+				// Show brief success message (remove later)
 				const bounds = result.bounds;
-				alert(`Selection Complete!\n\nBounds: ${bounds.width}x${bounds.height} at (${bounds.x}, ${bounds.y})\n\nImage captured and displayed below!`);
+				console.log(`📸 Selection: ${bounds.width}x${bounds.height} at (${bounds.x}, ${bounds.y}) - ChatBox activated!`);
 			} else if (result.type === 'error') {
 				console.error('❌ Selection failed:', result.message);
 				alert(`Selection failed: ${result.message}`);
@@ -104,22 +143,31 @@ function App() {
 		}
 		
 		setIsCreatingOverlay(true);
-		console.log('🚀 Starting transparent overlay selection...');
+		console.log('🚀 FAS 1: Starting optimized overlay selection...');
 		
 		try {
-			// Create separate transparent overlay window
-			await invoke('create_transparent_overlay');
-			console.log('✅ Transparent overlay window created');
+			// FAS 1: Use optimized overlay with pooling
+			await invoke('create_transparent_overlay_optimized');
+			console.log('✅ Optimized overlay window activated (pooled)');
 			
 			// Main window stays normal - no changes needed
 		} catch (error) {
-			console.error('❌ Failed to create overlay:', error);
-			alert(`Failed to create overlay: ${error}`);
+			console.error('❌ Failed to create optimized overlay:', error);
+			console.log('🔄 Falling back to original overlay...');
+			
+			// Fallback to original overlay if optimized fails
+			try {
+				await invoke('create_transparent_overlay');
+				console.log('✅ Fallback overlay window created');
+			} catch (fallbackError) {
+				console.error('❌ Both overlay methods failed:', fallbackError);
+				alert(`Failed to create overlay: ${error}`);
+			}
 		} finally {
-			// Reset after delay to prevent rapid clicks
+			// FAS 1: Faster reset (overlay pooling is quicker)
 			setTimeout(() => {
 				setIsCreatingOverlay(false);
-			}, 1000);
+			}, 500); // Reduced from 1000ms
 		}
 	};
 
@@ -127,15 +175,16 @@ function App() {
 	const handleAskAI = async () => {
 		console.log('🤖 Ask AI clicked - React ChatBox approach');
 		console.log('📊 Current chatBoxOpen state:', chatBoxOpen);
+		console.log('🖼️ Image context:', selectedImageForAI ? 'Present' : 'None');
 		
 		if (!chatBoxOpen) {
 			// Open ChatBox: Expand window + show ChatBox
 			console.log('🔄 Opening ChatBox - expanding window and showing component');
 			
 			try {
-				// Expand window for chat mode (600x140 → 600x220) - hälften så stor expansion
-				await invoke('resize_window', { width: 600, height: 220 });
-				console.log('✅ Window expanded to 600x220');
+				// Expand window for chat mode (600x50 → 600x130) - kompakt till expanderat  
+				await invoke('resize_window', { width: 600, height: 130 });
+				console.log('✅ Window expanded to 600x130');
 				
 				// Enable CSS transparency - window is transparent, React controls background
 				console.log('✅ Window transparency enabled via CSS');
@@ -164,9 +213,16 @@ function App() {
 			// Hide ChatBox component first
 			setChatBoxOpen(false);
 			
-			// Shrink window back to compact size (600x220 → 600x140)
-			await invoke('resize_window', { width: 600, height: 140 });
-			console.log('✅ Window shrunk back to 600x140');
+			// STEG 2: Clear image context when closing ChatBox
+			clearImageContext();
+			
+			// Only shrink if no AI response is showing
+			if (!aiResponse) {
+				await invoke('resize_window', { width: 600, height: 50 });
+				console.log('✅ Window shrunk back to 600x50');
+			} else {
+				console.log('✅ Keeping window expanded - AI response visible');
+			}
 			
 			// Restore CSS background - window shows white background again
 			console.log('✅ Background restored, transparency disabled');
@@ -178,28 +234,69 @@ function App() {
 		}
 	};
 
+	// Handle AI response dismissal (shrink window back to compact)
+	const handleDismissAiResponse = async () => {
+		console.log('🔄 Dismissing AI response and shrinking window');
+		
+		// Hide AI response
+		setAiResponse(null);
+		
+		// STEG 2: Clear image context when dismissing AI response  
+		clearImageContext();
+		
+		try {
+			// Shrink window back to compact size
+			await invoke('resize_window', { width: 600, height: 50 });
+			console.log('✅ Window shrunk back to 600x50 after AI response dismissed');
+		} catch (error) {
+			console.error('❌ Failed to shrink window after AI response dismiss:', error);
+		}
+	};
+
 	// Handle message sent from ChatBox
 	const handleSendMessage = async (message: string) => {
 		console.log('💬 Message sent from ChatBox:', message);
+		console.log('🖼️ Image context available:', !!selectedImageForAI);
 		
-		// Close ChatBox and shrink window
-		await handleCloseChatBox();
+		// Hide ChatBox but keep window expanded for AI response
+		setChatBoxOpen(false);
 		
-		// Show AI response (mock for now)
-		const mockResponse = `AI Response to: "${message}"\n\nThis is a mock response from the AI system. In a real implementation, this would be processed by an actual AI service.`;
-		setAiResponse(mockResponse);
+		// Restore CSS background but keep window size for AI response
+		console.log('✅ ChatBox hidden, keeping window expanded for AI response');
 		
-		console.log('✅ AI response shown and ChatBox closed');
+		// STEG 4: Create comprehensive AI message with text and image data
+		const aiMessage: AIMessage = {
+			text: message,
+			imageData: selectedImageForAI || undefined,
+			timestamp: Date.now(),
+			bounds: undefined // Future: Add capture bounds if needed
+		};
+		
+		console.log('📤 STEG 4: Complete AI message prepared:', {
+			text: aiMessage.text,
+			hasImage: !!aiMessage.imageData,
+			imageSize: aiMessage.imageData ? `${Math.round(aiMessage.imageData.length * 0.75 / 1024)}KB` : 'N/A',
+			timestamp: aiMessage.timestamp,
+			formattedTime: new Date(aiMessage.timestamp).toLocaleTimeString(),
+			bounds: aiMessage.bounds || 'Not available'
+		});
+		
+		// STEG 4: Send to AI (mock for now, ready for real API)
+		try {
+			const aiResponse = await sendToAI(aiMessage);
+			setAiResponse(aiResponse);
+		} catch (error) {
+			console.error('❌ AI request failed:', error);
+			setAiResponse('❌ Sorry, I encountered an error processing your request. Please try again.');
+		}
+		
+		console.log('✅ AI response generated:', selectedImageForAI ? 'Text + Image' : 'Text only');
 	};
 
-	const handleSelectWithChat = async () => {
-		console.log('🎯 Select with Chat - doing screen capture + showing chat box');
-		// First do screen capture
-		await testScreenSelection();
-		// Then show chat box using new React approach
-		if (!chatBoxOpen) {
-			handleAskAI(); // This will expand window and show ChatBox
-		}
+	// STEG 2: Clear image context when starting new session
+	const clearImageContext = () => {
+		setSelectedImageForAI(null);
+		console.log('🗑️ Image context cleared for new session');
 	};
 
 	if (!isReady) {
@@ -217,7 +314,7 @@ function App() {
 
 	return (
 		<div 
-			className="h-full flex flex-col px-4 py-1 rounded-xl border border-gray-200 shadow-lg"
+			className="h-full flex flex-col px-4 py-0 rounded-xl border border-gray-200 shadow-lg"
 			style={{ 
 				backgroundColor: chatBoxOpen ? 'transparent' : 'rgba(20, 20, 20, 0.5)', 
 				backdropFilter: chatBoxOpen ? 'none' : 'blur(10px)',
@@ -229,7 +326,7 @@ function App() {
 				<div className="flex items-center space-x-2">
 					<div className="w-5 h-5 bg-primary-100 rounded-full flex items-center justify-center">
 						<svg className="w-3 h-3 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 616 0z" />
+							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
 						</svg>
 					</div>
 					<span className="text-xs font-medium text-white">FrameSense</span>
@@ -293,7 +390,7 @@ function App() {
 			{aiResponse && (
 				<AIResponse 
 					response={aiResponse}
-					onDismiss={() => setAiResponse(null)}
+					onDismiss={handleDismissAiResponse}
 				/>
 			)}
 
@@ -308,6 +405,7 @@ function App() {
 				isVisible={chatBoxOpen}
 				onSend={handleSendMessage}
 				onClose={handleCloseChatBox}
+				imageContext={selectedImageForAI || undefined}
 			/>
 		</div>
 	);

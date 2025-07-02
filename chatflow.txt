@@ -1,152 +1,653 @@
-🚀 FRAMESENSE SELECT + CHATBOX INTEGRATION PLAN
-=================================================
+🚀 FRAMESENSE AI + OCR INTEGRATION MASTER PLAN
+===================================================
 
-📋 MÅLSÄTTNING:
-Integrera Select-flödet med ChatBox så att markerad skärmbild automatiskt 
-aktiverar ChatBox och bilden blir tillgänglig för AI-analys.
+📋 NUVARANDE STATUS:
+✅ Select + ChatBox integration komplett
+✅ Image context + text handling
+✅ Mock AI responses
+✅ TypeScript AIMessage interface
+✅ Future-ready sendToAI funktion
 
-🎯 NUVARANDE STATE (SLUTFÖRT):
-✅ Ask AI → Expandera fönster + ChatBox (utan bild)
-✅ Select → Overlay + markera + visa "Captured" badge
-✅ ChatBox React komponent med perfekt styling
-✅ Window resize funktioner (600x140 ↔ 600x220)
-✅ Transparent background när chat aktiv
+🎯 MÅLSÄTTNING:
+Implementera komplett AI analys (OpenAI Vision) + OCR (Tesseract) för att:
+1. Analysera skärmbilder visuellt med AI
+2. Extrahera text från bilder med OCR  
+3. Kombinera båda för intelligent analys
+4. Hantera alla edge cases och fel-scenarion
 
-🔄 NYTT FLÖDE SOM SKA IMPLEMENTERAS:
-State 1: Initial (600x140)
-State 2: Select overlay → markera område  
-State 3: Efter selection → Auto-aktivera ChatBox + behåll "Captured" badge
-State 4: ChatBox har screenshot-kontext för AI
-State 5: AI response med både text + bild-analys
+🏗️ ARKITEKTUR BESLUT:
 
-📐 TEKNISK INTEGRATION PLAN:
+🔧 BACKEND vs FRONTEND:
+- **AI API calls:** Frontend (Tauri kan hantera HTTPS)
+- **OCR processing:** Hybrid (Tesseract kan köras lokalt via Tauri/Rust)
+- **Image preprocessing:** Frontend (Canvas API)
+- **Caching:** Local storage (Tauri persistent storage)
 
-🔧 STEG 1: MODIFIERA SELECTION-RESULT EVENT LISTENER
-Plats: App.tsx - selection-result listener
-Funktion: Efter screenshot → automatiskt aktivera ChatBox
-Kontext: Spara screenshot data för AI-användning
+📐 SÄKERHET & PRIVACY:
+- API keys: Tauri secure storage (ej localStorage)
+- Image data: Aldrig permanent sparning
+- Requests: Direkta API calls (ej server mellanhånd)
+- Privacy: Användaren kontrollerar vad som skickas
 
-// Nuvarande kod:
-if (result.success && result.type === 'image' && result.imageData) {
-    setScreenshotResult(result.imageData); // ← Behåll denna!
-    // + Lägg till ChatBox activation
-}
+===============================================
+🎯 FAS 1: AI INTEGRATION (OpenAI Vision API)
+===============================================
 
-🔧 STEG 2: SCREENSHOT STATE MANAGEMENT  
-Ny state: selectedImageForAI (separerad från screenshotResult)
-screenshotResult: För "Captured" badge visualization (behåll oförändrad)
-selectedImageForAI: För AI-kontext i ChatBox
+🔧 1.1: API KEY MANAGEMENT
+─────────────────────────
 
-🔧 STEG 3: CHATBOX CONTEXT ENHANCEMENT
-Prop: imageContext?: string (base64 image data)
-Visuell indikator: Liten bild-ikon i ChatBox när bild finns
-Placeholder: "Ask about the selected area..." istället för "chat with ai"
+IMPLEMENTATION:
+• Tauri secure storage för API key
+• Settings UI för API key input
+• Key validation och test endpoint
+• Encryption av lokal key storage
 
-🔧 STEG 4: AI MESSAGE PREPARATION
-Struktur: { text: string, imageData?: string }
-Nuvarande: Bara text meddelande till AI
-Nytt: Text + screenshot data kombinerat
+FILES TO CREATE:
+```
+src/stores/settings-store.ts       // API key management
+src/components/SettingsDialog.tsx  // API key UI
+src/tauri/secure-storage.ts        // Encrypted storage
+```
 
-📊 DATA FLOW DESIGN:
+RUST COMMANDS:
+```rust
+#[tauri::command]
+async fn store_api_key(key: String) -> Result<(), String>
 
-1. USER → Click "Select"
-2. SYSTEM → Show overlay
-3. USER → Drag selection
-4. RUST → Capture area → emit selection-result
-5. REACT → setScreenshotResult (badge) + setSelectedImageForAI (AI)
-6. REACT → Auto-trigger handleAskAI() med image context
-7. SYSTEM → Expand window + show ChatBox
-8. CHATBOX → Visa med image indicator
-9. USER → Type message
-10. SYSTEM → Send {text + imageData} till AI
-11. AI → Respond med kombinerad analys
-12. SYSTEM → Visa response + shrink window
+#[tauri::command] 
+async fn get_api_key() -> Result<Option<String>, String>
 
-🎨 UI/UX FÖRBÄTTRINGAR:
+#[tauri::command]
+async fn test_api_key(key: String) -> Result<bool, String>
+```
 
-CHATBOX MED BILD:
-- Liten thumbnail högst upp i ChatBox
-- Placeholder: "Ask about the selected area..."
-- Gränssnitt visar att AI har visuell kontext
+ERROR SCENARIOS:
+❌ Invalid API key format
+❌ Network connection fails during validation
+❌ Storage encryption fails
+❌ Key leakage i logs
 
-CAPTURED BADGE (behålls):
-- Exakt samma styling och placering
-- Visar att screenshot finns tillgängligt
-- Klickbar för preview (future feature)
+SOLUTIONS:
+✅ Format validation med regex
+✅ Retry logic med exponential backoff
+✅ Fallback till unencrypted storage
+✅ Sanitize logs från API keys
 
-🔮 AI IMPLEMENTATION READINESS:
+🔧 1.2: OPENAI API INTEGRATION
+─────────────────────────────
 
-MESSAGE STRUKTUR:
+IMPLEMENTATION:
+• OpenAI GPT-4 Vision API integration
+• Request formatting och validation
+• Response parsing och error handling
+• Rate limiting och retry logic
+
+API ENDPOINT:
+```
+POST https://api.openai.com/v1/chat/completions
+Headers: Authorization: Bearer YOUR_API_KEY
+Content-Type: application/json
+```
+
+REQUEST STRUCTURE:
 ```typescript
-interface AIMessage {
+interface OpenAIRequest {
+  model: "gpt-4-vision-preview";
+  messages: [
+    {
+      role: "user";
+      content: [
+        { type: "text", text: string },
+        { type: "image_url", image_url: { url: string } }
+      ]
+    }
+  ];
+  max_tokens: number;
+  temperature?: number;
+}
+```
+
+IMPLEMENTATION FILES:
+```
+src/services/openai-api.ts         // API client
+src/types/openai-types.ts          // TypeScript interfaces  
+src/utils/image-processing.ts      // Image compression/format
+src/utils/retry-logic.ts           // Exponential backoff
+```
+
+ERROR SCENARIOS & SOLUTIONS:
+❌ 401 Unauthorized → ✅ Show API key setup dialog
+❌ 429 Rate Limited → ✅ Queue requests, show wait time
+❌ 413 Image too large → ✅ Auto-compress images
+❌ 400 Invalid format → ✅ Validate before sending
+❌ Network timeout → ✅ Retry med exponential backoff
+❌ Cost overrun → ✅ Daily usage tracking + warnings
+
+🔧 1.3: IMAGE PREPROCESSING
+─────────────────────────
+
+REQUIREMENTS:
+• Max size: 20MB (OpenAI limit)
+• Formats: PNG, JPEG, GIF, WebP
+• Compression: Auto-compress stora bilder
+• Quality: Behåll läsbarhet efter compression
+
+IMPLEMENTATION:
+```typescript
+interface ImageProcessor {
+  compress(imageData: string, maxSizeKB: number): Promise<string>;
+  validateFormat(imageData: string): boolean;
+  getImageDimensions(imageData: string): {width: number, height: number};
+  convertToJPEG(imageData: string, quality: number): string;
+}
+```
+
+PROCESSING PIPELINE:
+1. Validate image format
+2. Check file size
+3. If > 10MB: Compress to 5MB
+4. If still > 20MB: Error + user notification
+5. Convert PNG to JPEG if needed (smaller size)
+
+ERROR SCENARIOS:
+❌ Corrupt image data → ✅ Validate headers
+❌ Unsupported format → ✅ Format conversion
+❌ Compression fails → ✅ Fallback to lower quality
+❌ Memory overflow on large images → ✅ Streaming processing
+
+🔧 1.4: REQUEST OPTIMIZATION
+──────────────────────────
+
+COST OPTIMIZATION:
+• Image compression för att minska costs
+• Intelligent prompting för better results
+• Caching av liknande requests
+• Usage tracking och budget alerts
+
+PERFORMANCE OPTIMIZATION:
+• Parallel processing av multiple requests
+• Request queuing under rate limits
+• Progressive loading av responses
+• Abort controllers för cancelled requests
+
+CACHE STRATEGY:
+• Cache key: Image hash + prompt hash
+• TTL: 1 hour for repeated requests
+• Storage: IndexedDB för large cache
+• Cleanup: LRU eviction policy
+
+===============================================
+🎯 FAS 2: OCR INTEGRATION (Tesseract.js)
+===============================================
+
+🔧 2.1: TESSERACT SETUP
+─────────────────────
+
+INSTALLATION:
+```bash
+npm install tesseract.js
+npm install @types/tesseract.js
+```
+
+BASIC IMPLEMENTATION:
+```typescript
+import { createWorker } from 'tesseract.js';
+
+interface OCRResult {
   text: string;
-  imageData?: string;  // base64 PNG data
-  timestamp: number;
-  bounds?: CaptureBounds;
+  confidence: number;
+  words: Array<{
+    text: string;
+    confidence: number;
+    bbox: { x0: number, y0: number, x1: number, y1: number };
+  }>;
+}
+
+class OCRService {
+  private worker: Tesseract.Worker | null = null;
+  
+  async initialize(language: string = 'eng'): Promise<void>;
+  async extractText(imageData: string): Promise<OCRResult>;
+  async dispose(): Promise<void>;
 }
 ```
 
-API ENDPOINT PREPARATION:
+LANGUAGES TO SUPPORT:
+• English (eng) - Default
+• Swedish (swe) - Nordic support
+• German (deu) - EU support  
+• French (fra) - EU support
+• Spanish (spa) - Global support
+
+🔧 2.2: OCR PREPROCESSING
+───────────────────────
+
+IMAGE ENHANCEMENT för better OCR:
 ```typescript
-const sendToAI = async (message: AIMessage) => {
-  // Future: Skicka till OpenAI Vision API eller liknande
-  // Nuvarande: Mock response som hanterar både text + bild
+interface ImageEnhancer {
+  // Contrast/brightness optimization
+  enhanceContrast(imageData: string, factor: number): string;
+  
+  // Noise reduction
+  denoise(imageData: string): string;
+  
+  // Text sharpening
+  sharpenText(imageData: string): string;
+  
+  // Deskew for rotated text
+  deskew(imageData: string): string;
+  
+  // Binarization (black/white för text)
+  binarize(imageData: string, threshold: number): string;
 }
 ```
 
-MOCK AI RESPONSES:
-- Text-only: "AI Response to: [text]"
-- Text + Image: "AI Analysis: [text] + Visual: [bildanalys]"
+PREPROCESSING PIPELINE:
+1. Detect if image contains text (ML model)
+2. If text detected: Apply enhancement
+3. Multiple processing passes för better accuracy
+4. Confidence scoring för quality assessment
 
-🛠️ IMPLEMENTATION ORDNING:
+ERROR SCENARIOS:
+❌ Low quality image → ✅ Enhancement pipeline
+❌ Rotated text → ✅ Auto-rotation detection
+❌ Multiple languages → ✅ Language detection
+❌ Handwriting → ✅ Fallback to AI vision
+❌ Complex layouts → ✅ Region segmentation
 
-STEG A: Modifiera selection-result listener
-✓ Behåll setScreenshotResult för badge
-✓ Lägg till setSelectedImageForAI
-✓ Auto-trigger handleAskAI efter screenshot
+🔧 2.3: INTELLIGENT TEXT EXTRACTION
+────────────────────────────────
 
-STEG B: Enhance ChatBox för image context
-✓ Ny prop imageContext
-✓ Visuell indikator för bild
-✓ Ändra placeholder text
+EXTRACTION STRATEGIES:
+• **Quick OCR:** Fast, basic text extraction
+• **Detailed OCR:** Enhanced preprocessing + multiple passes
+• **Hybrid Mode:** OCR + AI Vision validation
+• **AI-Only Mode:** Complex layouts, handwriting
 
-STEG C: Uppdatera handleSendMessage
-✓ Kombinera text + imageData
-✓ Skicka till AI med båda
+ACCURACY OPTIMIZATION:
+```typescript
+interface OCROptimizer {
+  // Multiple passes med different settings
+  multiPassOCR(image: string, languages: string[]): Promise<OCRResult[]>;
+  
+  // Confidence-based result selection
+  selectBestResult(results: OCRResult[]): OCRResult;
+  
+  // Text post-processing
+  correctCommonErrors(text: string): string;
+  
+  // Spell checking integration
+  spellCheck(text: string, language: string): string;
+}
+```
 
-STEG D: Mock AI responses
-✓ Hantera text + bild scenarios
-✓ Förbered för riktig AI integration
+QUALITY METRICS:
+• Character confidence scores
+• Word-level confidence
+• Line-level confidence
+• Overall document confidence
+• Manual validation triggers
 
-🧪 TEST SCENARIOS:
+===============================================
+🎯 FAS 3: HYBRID AI + OCR PROCESSING
+===============================================
 
-SCENARIO 1: Ask AI (endast text)
-1. Click "Ask AI" → ChatBox utan bild
-2. Type "Hello" → AI svarar text-only
+🔧 3.1: INTELLIGENT PROCESSING ROUTER
+────────────────────────────────────
 
-SCENARIO 2: Select + Ask (text + bild)  
-1. Click "Select" → Markera område
-2. Auto-ChatBox med bild-kontext
-3. Type "What's in this image?" → AI svarar med bildanalys
+DECISION LOGIC:
+```typescript
+interface ProcessingRouter {
+  analyzeImageContent(imageData: string): Promise<ContentAnalysis>;
+  selectOptimalStrategy(analysis: ContentAnalysis): ProcessingStrategy;
+  executeStrategy(strategy: ProcessingStrategy, imageData: string, query: string): Promise<ProcessingResult>;
+}
 
-SCENARIO 3: Kombinerat workflow
-1. Select område → ChatBox aktiveras
-2. Type meddelande → AI response
-3. Click "Ask AI" igen → Ny session utan bild
+interface ContentAnalysis {
+  hasText: boolean;
+  textDensity: number;        // 0-1
+  textQuality: number;        // 0-1  
+  visualComplexity: number;   // 0-1
+  estimatedLanguage: string;
+  imageType: 'screenshot' | 'photo' | 'document' | 'diagram';
+}
 
-📋 SUCCESS CRITERIA:
+type ProcessingStrategy = 
+  | 'ocr-only'           // High text density, good quality
+  | 'ai-only'            // Complex visuals, little text
+  | 'hybrid-sequential'  // OCR först, then AI med context
+  | 'hybrid-parallel'    // Both simultaneously, merge results
+  | 'ai-with-ocr-fallback'; // AI först, OCR if text requested
+```
 
-✅ "Captured" badge behålls oförändrad
-✅ Select → Auto-aktiverar ChatBox  
-✅ ChatBox visar bild-kontext visuellt
-✅ AI får både text + imageData
-✅ Smooth transitions mellan states
-✅ Prepared för riktig AI integration
+STRATEGY SELECTION:
+• **OCR-Only:** Clear text, documents, high contrast
+• **AI-Only:** Complex UI, diagrams, photos, handwriting  
+• **Hybrid-Sequential:** Screenshots med både text och visuals
+• **Hybrid-Parallel:** Unknown content, best accuracy needed
+• **AI-with-Fallback:** User specifically asks for text
 
-🎯 FUTURE AI INTEGRATION:
-När riktig AI implementeras behövs bara:
-1. Ersätt mock sendToAI med riktig API
-2. Hantera OpenAI Vision API calls
-3. Process real image analysis responses
+🔧 3.2: RESULT MERGING & SYNTHESIS
+────────────────────────────────
 
-DENNA PLAN GÖR AI-INTEGRATIONEN TRIVIAL! 🚀
+COMBINING RESULTS:
+```typescript
+interface ResultSynthesizer {
+  mergeOCRandAI(ocrResult: OCRResult, aiResult: string, query: string): string;
+  validateConsistency(ocrText: string, aiDescription: string): ConsistencyReport;
+  generateComprehensiveResponse(merged: MergedResult, originalQuery: string): string;
+}
+
+interface MergedResult {
+  extractedText: string;
+  visualDescription: string;
+  confidence: number;
+  inconsistencies: string[];
+  recommendations: string[];
+}
+```
+
+SYNTHESIS STRATEGIES:
+• **Text Priority:** Use OCR för text content, AI för context
+• **Visual Priority:** Use AI för analysis, OCR för quotes/details
+• **Balanced:** Equal weight, highlight discrepancies
+• **User-Directed:** Let user choose focus
+
+===============================================
+🎯 FAS 4: ADVANCED FEATURES
+===============================================
+
+🔧 4.1: BATCH PROCESSING
+──────────────────────
+
+MULTIPLE IMAGE ANALYSIS:
+```typescript
+interface BatchProcessor {
+  processMultipleImages(images: string[], query: string): Promise<BatchResult>;
+  compareImages(images: string[]): Promise<ComparisonResult>;
+  generateSummaryReport(results: BatchResult[]): string;
+}
+```
+
+USE CASES:
+• Compare screenshots before/after
+• Analyze multiple documents
+• Extract data från multiple sources
+• Workflow documentation
+
+🔧 4.2: CONTEXT AWARENESS
+───────────────────────
+
+CONVERSATION MEMORY:
+```typescript
+interface ContextManager {
+  maintainConversationContext(messages: ConversationMessage[]): ConversationContext;
+  referencePreiviousImages(currentQuery: string, history: ConversationHistory): ContextualPrompt;
+  suggestFollowupQuestions(analysis: AnalysisResult): string[];
+}
+```
+
+FEATURES:
+• Remember previous images in session
+• Reference tidigare analyses
+• Build på previous conversations
+• Suggest related questions
+
+🔧 4.3: SPECIALIZED ANALYSIS MODES
+────────────────────────────────
+
+MODE IMPLEMENTATIONS:
+```typescript
+interface SpecializedAnalyzers {
+  // Code screenshot analysis
+  analyzeCode(imageData: string): Promise<CodeAnalysis>;
+  
+  // UI/UX analysis
+  analyzeUserInterface(imageData: string): Promise<UIAnalysis>;
+  
+  // Data extraction från tables/charts
+  extractStructuredData(imageData: string): Promise<StructuredData>;
+  
+  // Accessibility analysis
+  analyzeAccessibility(imageData: string): Promise<A11yReport>;
+  
+  // Security analysis
+  identifySecurityIssues(imageData: string): Promise<SecurityReport>;
+}
+```
+
+===============================================
+🎯 FAS 5: ERROR HANDLING & RESILIENCE
+===============================================
+
+🔧 5.1: COMPREHENSIVE ERROR SCENARIOS
+────────────────────────────────────
+
+API FAILURES:
+❌ OpenAI API down → ✅ Fallback till OCR-only mode
+❌ API key expired → ✅ Notify user + settings dialog
+❌ Rate limit exceeded → ✅ Queue requests + ETA display
+❌ Cost limit reached → ✅ Block requests + upgrade prompt
+❌ Invalid response format → ✅ Retry med fallback prompt
+
+OCR FAILURES:
+❌ Tesseract crashes → ✅ Restart worker + retry
+❌ Language not supported → ✅ Auto-detect + download
+❌ Image too complex → ✅ Fallback till AI vision
+❌ Memory exhaustion → ✅ Image compression + retry
+❌ Text detection fails → ✅ Switch till AI-only mode
+
+NETWORK ISSUES:
+❌ Offline mode → ✅ Local OCR only + queue AI requests
+❌ Slow connection → ✅ Progressive loading + timeouts
+❌ Connection drops → ✅ Resume requests + persistence
+❌ Proxy issues → ✅ Alternative endpoints + diagnostics
+
+🔧 5.2: RECOVERY STRATEGIES
+─────────────────────────
+
+AUTO-RECOVERY:
+```typescript
+interface RecoveryManager {
+  detectFailureMode(error: ProcessingError): FailureMode;
+  executeRecoveryStrategy(mode: FailureMode, context: ProcessingContext): Promise<RecoveryResult>;
+  learnFromFailures(failures: ProcessingError[]): void;
+}
+
+type FailureMode = 
+  | 'api-unavailable'
+  | 'image-processing-failed'  
+  | 'ocr-engine-crashed'
+  | 'network-disconnected'
+  | 'rate-limited'
+  | 'cost-exceeded'
+  | 'image-too-large'
+  | 'unsupported-content';
+```
+
+GRACEFUL DEGRADATION:
+• AI fails → Fall back till OCR + basic analysis
+• OCR fails → AI-only med text extraction prompts
+• Both fail → Show error + manual text input option
+• Network fails → Local processing only
+
+===============================================
+🎯 FAS 6: PERFORMANCE & OPTIMIZATION
+===============================================
+
+🔧 6.1: CACHING STRATEGIES
+────────────────────────
+
+MULTI-LEVEL CACHING:
+```typescript
+interface CacheManager {
+  // Level 1: In-memory cache (session)
+  memoryCache: Map<string, CachedResult>;
+  
+  // Level 2: IndexedDB cache (persistent)  
+  persistentCache: PersistentCache;
+  
+  // Level 3: Compressed archive cache
+  archiveCache: ArchiveCache;
+  
+  getCached(imageHash: string, query: string): Promise<CachedResult | null>;
+  setCached(key: string, result: ProcessingResult, ttl: number): Promise<void>;
+  invalidateCache(pattern: string): Promise<void>;
+}
+```
+
+CACHE KEYS:
+• Image content hash (SHA-256)
+• Query normalization
+• Processing mode
+• Model version
+• Timestamp
+
+🔧 6.2: RESOURCE MANAGEMENT
+─────────────────────────
+
+MEMORY OPTIMIZATION:
+• Image streaming processing
+• Worker thread isolation
+• Garbage collection triggers
+• Memory usage monitoring
+
+CPU OPTIMIZATION:
+• Web Workers för heavy processing
+• Task prioritization
+• Background processing queues
+• Progressive enhancement
+
+BATTERY OPTIMIZATION:
+• Adaptive quality settings
+• Processing deferral on low battery
+• Network awareness
+• Background throttling
+
+===============================================
+🎯 FAS 7: SECURITY & PRIVACY
+===============================================
+
+🔧 7.1: DATA PROTECTION
+─────────────────────
+
+PRIVACY MEASURES:
+```typescript
+interface PrivacyManager {
+  sanitizeImageData(imageData: string): string;
+  removePersonalInfo(text: string): string;
+  encryptSensitiveData(data: any): EncryptedData;
+  auditDataUsage(operation: ProcessingOperation): AuditLog;
+}
+```
+
+DATA LIFECYCLE:
+• Capture → Immediate processing
+• Processing → Temporary memory only
+• Results → User-controlled persistence  
+• Cache → Automatic expiration
+• Logs → Sanitized, no sensitive data
+
+🔧 7.2: SECURE API COMMUNICATION
+──────────────────────────────
+
+SECURITY MEASURES:
+• API key encryption at rest
+• TLS 1.3 för all communication
+• Request signing för integrity
+• Rate limiting för abuse prevention
+• Input validation för injection attacks
+
+===============================================
+🎯 FAS 8: USER EXPERIENCE & INTERFACE
+===============================================
+
+🔧 8.1: PROGRESSIVE DISCLOSURE
+────────────────────────────
+
+UI ENHANCEMENT:
+```typescript
+interface UXManager {
+  showProcessingProgress(stage: ProcessingStage, progress: number): void;
+  displayResultsProgressively(partialResults: PartialResult[]): void;
+  handleUserInterruption(currentOperation: Operation): void;
+  provideFeedbackMechanisms(result: ProcessingResult): FeedbackUI;
+}
+```
+
+PROCESSING STAGES:
+1. "Analyzing image..." (0-20%)
+2. "Extracting text..." (20-60%) 
+3. "Generating analysis..." (60-90%)
+4. "Finalizing results..." (90-100%)
+
+🔧 8.2: ADVANCED UI FEATURES
+──────────────────────────
+
+ENHANCED INTERACTION:
+• Real-time processing preview
+• Interactive result highlighting
+• Text selection från OCR results
+• Visual annotation tools
+• Export options (PDF, text, JSON)
+
+===============================================
+🎯 IMPLEMENTATION TIMELINE
+===============================================
+
+🗓️ VECKA 1-2: FAS 1 (AI Integration)
+• API key management
+• OpenAI integration
+• Basic error handling
+• Image preprocessing
+
+🗓️ VECKA 3-4: FAS 2 (OCR Integration)  
+• Tesseract setup
+• OCR preprocessing
+• Multi-language support
+• Accuracy optimization
+
+🗓️ VECKA 5-6: FAS 3 (Hybrid Processing)
+• Processing router
+• Result synthesis
+• Strategy optimization
+• Quality metrics
+
+🗓️ VECKA 7-8: FAS 4-6 (Advanced Features)
+• Batch processing
+• Context awareness
+• Performance optimization
+• Caching implementation
+
+🗓️ VECKA 9-10: FAS 7-8 (Security & UX)
+• Security hardening
+• Privacy compliance
+• UI/UX polish
+• Documentation
+
+===============================================
+🎯 SUCCESS METRICS
+===============================================
+
+TECHNICAL METRICS:
+• Response time < 5 seconds (95th percentile)
+• OCR accuracy > 95% för clear text
+• AI relevance score > 4.5/5
+• Error rate < 1%
+• Cache hit rate > 60%
+
+USER METRICS:
+• Task completion rate > 90%
+• User satisfaction > 4.5/5
+• Feature adoption > 70%
+• Support ticket reduction > 50%
+
+BUSINESS METRICS:
+• API cost per request < $0.10
+• Processing success rate > 98%
+• User retention > 85%
+• Feature usage growth > 20% monthly
+
+===============================================
+🚀 DENNA PLAN GÖR AI+OCR INTEGRATION TRIVIAL!
+=============================================== 

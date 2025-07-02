@@ -115,10 +115,11 @@ impl InteractiveOverlay {
         let (tx, rx) = mpsc::channel::<SelectionResult>();
         
         // Store the sender in the app state so it can be accessed by Tauri commands
-        {
-            let state = app_handle.state::<crate::AppState>();
-            *state.overlay_sender.lock().unwrap() = Some(tx);
-        }
+        // TODO: Remove this when fully migrated to OverlayManager
+        // {
+        //     let state = app_handle.state::<crate::AppState>();
+        //     *state.overlay_sender.lock().unwrap() = Some(tx);
+        // }
         
         // Show the overlay window
         overlay_window.show().map_err(|e| format!("Failed to show overlay: {}", e))?;
@@ -145,10 +146,11 @@ impl InteractiveOverlay {
         }).await.map_err(|e| format!("Task error: {}", e))?;
         
         // Clean up: remove sender from state and close the overlay window
-        {
-            let state = app_handle.state::<crate::AppState>();
-            *state.overlay_sender.lock().unwrap() = None;
-        }
+        // TODO: Remove this when fully migrated to OverlayManager
+        // {
+        //     let state = app_handle.state::<crate::AppState>();
+        //     *state.overlay_sender.lock().unwrap() = None;
+        // }
         
         overlay_window.close().map_err(|e| format!("Failed to close overlay: {}", e))?;
         

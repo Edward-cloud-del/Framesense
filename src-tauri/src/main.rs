@@ -12,6 +12,10 @@ use serde::{Deserialize, Serialize};
 use base64::Engine;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+// Import optimized overlay manager
+mod overlay;
+use overlay::OverlayManager;
+
 // Note: macOS-specific imports removed since we're using native egui overlay
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -45,6 +49,9 @@ pub struct AppState {
 }
 
 type SharedState = Arc<Mutex<AppState>>;
+
+// FAS 1: Optimized overlay manager for pooling
+type SharedOverlayManager = Arc<Mutex<OverlayManager>>;
 
 // Test screen capture capability
 #[tauri::command]
@@ -621,6 +628,126 @@ async fn close_transparent_overlay(app: tauri::AppHandle) -> Result<(), String> 
     }
 }
 
+// 🚀 FAS 1: OPTIMIZED OVERLAY COMMANDS
+
+// Create optimized overlay using OverlayManager pooling
+#[tauri::command]
+fn create_transparent_overlay_optimized(
+    app: tauri::AppHandle,
+    overlay_manager: tauri::State<'_, SharedOverlayManager>
+) -> Result<(), String> {
+    println!("🚀 Creating optimized overlay with pooling...");
+    
+    let mut manager = overlay_manager.lock().map_err(|e| format!("Failed to lock overlay manager: {}", e))?;
+    
+    match manager.show_selection_overlay(&app) {
+        Ok(_) => {
+            println!("✅ Optimized overlay activated successfully!");
+            Ok(())
+        },
+        Err(e) => {
+            println!("❌ Failed to activate optimized overlay: {}", e);
+            Err(e)
+        }
+    }
+}
+
+// Close optimized overlay using OverlayManager pooling
+#[tauri::command] 
+fn close_transparent_overlay_optimized(
+    overlay_manager: tauri::State<'_, SharedOverlayManager>
+) -> Result<(), String> {
+    println!("🔄 Hiding optimized overlay...");
+    
+    let mut manager = overlay_manager.lock().map_err(|e| format!("Failed to lock overlay manager: {}", e))?;
+    
+    match manager.hide_overlay() {
+        Ok(_) => {
+            println!("✅ Optimized overlay hidden successfully!");
+            Ok(())
+        },
+        Err(e) => {
+            println!("❌ Failed to hide optimized overlay: {}", e);
+            Err(e)
+        }
+    }
+}
+
+// Process screen selection with optimized overlay (fallback-safe)
+#[tauri::command]
+async fn process_screen_selection_optimized(
+    app: tauri::AppHandle, 
+    bounds: CaptureBounds,
+    overlay_manager: tauri::State<'_, SharedOverlayManager>
+) -> Result<(), String> {
+    println!("📸 Processing optimized screen selection: {}x{} at ({}, {})", 
+             bounds.width, bounds.height, bounds.x, bounds.y);
+    
+    // Capture the selected screen area using existing function
+    match capture_screen_area(bounds.clone()).await {
+        Ok(capture_result) => {
+            if capture_result.success && capture_result.image_data.is_some() {
+                let image_data = capture_result.image_data.unwrap();
+                println!("✅ Optimized screen capture successful!");
+                
+                // Send result to React (same as original)
+                if let Some(window) = app.get_webview_window("main") {
+                    let analysis_result = serde_json::json!({
+                        "type": "image",
+                        "bounds": bounds,
+                        "imageData": image_data,
+                        "text": null,
+                        "success": true,
+                        "message": "Optimized screen area captured successfully!"
+                    });
+                    
+                    window.emit("selection-result", analysis_result).unwrap();
+                    println!("📤 Sent optimized capture data to React app");
+                }
+                
+                // Hide overlay using optimized manager
+                let _ = close_transparent_overlay_optimized(overlay_manager);
+                
+            } else {
+                println!("❌ Optimized screen capture failed: {}", capture_result.message);
+                if let Some(window) = app.get_webview_window("main") {
+                    let error_result = serde_json::json!({
+                        "type": "error",
+                        "success": false,
+                        "message": format!("Optimized capture failed: {}", capture_result.message)
+                    });
+                    window.emit("selection-result", error_result).unwrap();
+                }
+            }
+        },
+        Err(e) => {
+            println!("❌ Failed to capture screen: {}", e);
+            if let Some(window) = app.get_webview_window("main") {
+                let error_result = serde_json::json!({
+                    "type": "error", 
+                    "success": false,
+                    "message": format!("Optimized screen capture failed: {}", e)
+                });
+                window.emit("selection-result", error_result).unwrap();
+            }
+        }
+    }
+    
+    Ok(())
+}
+
+// Cleanup old overlays periodically
+#[tauri::command]
+fn cleanup_overlay_manager(overlay_manager: tauri::State<'_, SharedOverlayManager>) -> Result<(), String> {
+    println!("🗑️ Running overlay cleanup...");
+    
+    let mut manager = overlay_manager.lock().map_err(|e| format!("Failed to lock overlay manager: {}", e))?;
+    manager.cleanup_if_old();
+    
+    println!("✅ Overlay cleanup completed");
+    Ok(())
+}
+
 // 🆕 FAS 2: WINDOW RESIZE FUNCTIONS
 
 // Resize main window for chat expansion/contraction
@@ -807,7 +934,7 @@ async fn create_main_window(app: tauri::AppHandle) -> Result<(), String> {
         WebviewUrl::App("/".into())
     )
     .title("FrameSense")
-    .inner_size(600.0, 140.0)
+    .inner_size(600.0, 50.0)
     .position(0.0, 100.0) // Will auto-center
     .center()
     .resizable(false)
@@ -826,8 +953,12 @@ fn main() {
     // Initialize shared state for Raycast-style persistence
     let shared_state: SharedState = Arc::new(Mutex::new(AppState::default()));
     
+    // FAS 1: Initialize optimized overlay manager for pooling
+    let shared_overlay_manager: SharedOverlayManager = Arc::new(Mutex::new(OverlayManager::new()));
+    
     tauri::Builder::default()
         .manage(shared_state)
+        .manage(shared_overlay_manager)
         .plugin(tauri_plugin_global_shortcut::Builder::new()
             .with_handler(|app, shortcut, event| {
                 println!("🔥 GLOBAL SHORTCUT: {:?} - State: {:?}", shortcut, event.state());
@@ -974,6 +1105,11 @@ fn main() {
             get_window_position,
             create_transparent_overlay,
             close_transparent_overlay,
+            // FAS 1: Optimized overlay commands
+            create_transparent_overlay_optimized,
+            close_transparent_overlay_optimized,
+            process_screen_selection_optimized,
+            cleanup_overlay_manager,
             resize_window,
             debug_coordinates,
             test_chatbox_position,
