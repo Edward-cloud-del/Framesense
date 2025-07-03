@@ -40,7 +40,7 @@ export class OpenAIServiceBackend implements IAIService {
     // 🔮 FUTURE: Get from Rust backend
     return {
       requestCount: 0,
-      dailyLimit: 50,
+      dailyLimit: 100,
       remaining: 50,
       lastReset: new Date().toDateString()
     };

@@ -158,7 +158,7 @@ export class OpenAIServiceFrontend implements IAIService {
     // Reset daily counter
     return {
       requestCount: 0,
-      dailyLimit: 50, // Conservative limit for frontend testing
+      dailyLimit: 100, // Conservative limit for frontend testing
       lastReset: today
     };
   }

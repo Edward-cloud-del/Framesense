@@ -11,6 +11,8 @@ use std::sync::{Arc, Mutex};
 use serde::{Deserialize, Serialize};
 use base64::Engine;
 use std::time::{SystemTime, UNIX_EPOCH};
+use std::fs;
+use std::path::PathBuf;
 
 // Import optimized overlay manager
 mod overlay;
@@ -863,9 +865,24 @@ async fn create_main_window(app: tauri::AppHandle) -> Result<(), String> {
     if let Some(existing) = app.get_webview_window("main") {
         let _ = existing.close();
     }
-    
     println!("🎯 Creating new main window on current Space...");
-    
+
+    // Get screen size
+    let (screen_width, screen_height) = match screenshots::Screen::all() {
+        Ok(screens) => {
+            if let Some(screen) = screens.first() {
+                (screen.display_info.width as f64, screen.display_info.height as f64)
+            } else {
+                (1440.0, 900.0) // fallback
+            }
+        },
+        Err(_) => (1440.0, 900.0),
+    };
+    let window_width = 600.0;
+    let window_height = 50.0;
+    let x = (screen_width - window_width) / 2.0;
+    let y = screen_height * 0.2 - window_height / 2.0;
+
     // Create fresh window that will appear on current Space
     let _window = WebviewWindowBuilder::new(
         &app,
@@ -873,55 +890,68 @@ async fn create_main_window(app: tauri::AppHandle) -> Result<(), String> {
         WebviewUrl::App("/".into())
     )
     .title("FrameSense")
-    .inner_size(600.0, 50.0)
-    .position(0.0, 191.0) // 4/5 från botten = 1/5 från toppen på en 956px skärm
-    .center()
+    .inner_size(window_width, window_height)
+    .position(x, y)
     .resizable(false)
     .decorations(false)
-    .transparent(true)    // 🔧 FIX: Enable window transparency!
+    .transparent(true)
     .always_on_top(true)
     .skip_taskbar(true)
     .build()
     .map_err(|e| format!("Failed to create main window: {}", e))?;
-    
-    println!("✅ New main window created on current Space!");
+
+    println!("✅ New main window created on current Space at ({}, {})!", x, y);
     Ok(())
 }
 
 // 🔧 MOVE WINDOW COMMAND - Move window to correct Y position
 #[tauri::command]
 async fn move_window_to_position(app: tauri::AppHandle) -> Result<(), String> {
-    println!("📍 Moving window to correct position (4/5 from bottom, centered horizontally)...");
-    
+    use std::fs;
+    use std::path::PathBuf;
+
+    println!("📍 Cycling window position (1/3, 2/3, center)...");
     if let Some(window) = app.get_webview_window("main") {
-        // Get current position and size for reference
-        let current_pos = window.outer_position().map_err(|e| format!("Failed to get current position: {}", e))?;
-        let window_size = window.outer_size().map_err(|e| format!("Failed to get window size: {}", e))?;
-        
-        // Get screen size to calculate center
-        let screen_size = match screenshots::Screen::all() {
+        // Get screen size
+        let (screen_width, screen_height) = match screenshots::Screen::all() {
             Ok(screens) => {
                 if let Some(screen) = screens.first() {
                     (screen.display_info.width as f64, screen.display_info.height as f64)
                 } else {
-                    return Err("No screens available".to_string());
+                    (1440.0, 900.0)
                 }
             },
-            Err(e) => return Err(format!("Failed to get screen info: {}", e)),
+            Err(_) => (1440.0, 900.0),
         };
-        
-        // 🔧 HARDCODED: X position = half of screen
-        let centered_x = 400.0; // 
-        
-        // Set Y position: 4/5 from bottom = 191px from top (for 956px screen)
-        let new_y = 170.0;
-        
-        println!("📍 Moving from ({}, {}) to HARDCODED ({}, {})", current_pos.x, current_pos.y, centered_x, new_y);
-        println!("📏 Screen: {}×{}, Window: {}×{}", screen_size.0, screen_size.1, window_size.width, window_size.height);
-        
-        match window.set_position(tauri::LogicalPosition::new(centered_x, new_y)) {
+        let window_width = 600.0;
+        let window_height = 50.0;
+        let y = screen_height * 0.2 - window_height / 2.0;
+
+        // Cykel-index lagras i fil i hemkatalogen
+        let mut cycle_index = 0;
+        let mut cycle_path = dirs::home_dir().unwrap_or(PathBuf::from("/tmp"));
+        cycle_path.push(".framesense_window_pos_cycle");
+        if let Ok(contents) = fs::read_to_string(&cycle_path) {
+            if let Ok(idx) = contents.trim().parse::<u8>() {
+                cycle_index = idx;
+            }
+        }
+        // Nästa position
+        cycle_index = (cycle_index + 1) % 3;
+        // Spara för nästa gång
+        let _ = fs::write(&cycle_path, format!("{}", cycle_index));
+
+        // Räkna ut x-positioner
+        let x = match cycle_index {
+            0 => (screen_width - window_width) / 2.0, // center
+            1 => screen_width / 3.0 - window_width / 2.0, // 1/3 från vänster
+            2 => 2.0 * screen_width / 3.0 - window_width / 2.0, // 2/3 från vänster
+            _ => (screen_width - window_width) / 2.0,
+        };
+        println!("📍 Moving window to x={}, y={}", x, y);
+        match window.set_position(tauri::LogicalPosition::new(x, y)) {
             Ok(_) => {
-                println!("✅ Window moved successfully to centered position: ({}, {})", centered_x, new_y);
+                println!("✅ Window moved to cycled position: ({}, {})", x, y);
                 Ok(())
             },
             Err(e) => {

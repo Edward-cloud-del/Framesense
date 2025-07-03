@@ -1272,6 +1272,7 @@ dependencies = [
  "base64 0.21.7",
  "cocoa",
  "dbus",
+ "dirs",
  "image 0.24.9",
  "objc",
  "screenshots",
