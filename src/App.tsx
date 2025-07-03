@@ -70,7 +70,7 @@ function App() {
 		}
 
 		// Update thinking stage for prompt optimization
-		setAiProcessingStage('🧠 Optimizing AI prompt...');
+		setAiProcessingStage('Optimizing AI prompt...');
 
 		console.log('🤖 Sending request to real OpenAI API...', {
 			hasImage: !!aiMessage.imageData,
@@ -334,7 +334,7 @@ function App() {
 		
 		// Start thinking animation
 		setIsAiThinking(true);
-		setAiProcessingStage('📸 Analyzing screenshot...');
+		setAiProcessingStage('Analyzing screenshot...');
 		
 		// Hide ChatBox but keep window expanded for AI response
 		setChatBoxOpen(false);
@@ -343,7 +343,7 @@ function App() {
 		console.log('✅ ChatBox hidden, keeping window expanded for AI response');
 		
 		// 🔍 Enhanced message with OCR context if available
-		setAiProcessingStage('🔍 Processing OCR context...');
+		setAiProcessingStage('Processing OCR context...');
 		
 		const enhancedMessage = ocrContext?.has_text 
 			? `${message}\n\n[OCR Context - Text found in image: "${ocrContext.text}" (Confidence: ${Math.round(ocrContext.confidence * 100)}%)]`
@@ -369,11 +369,11 @@ function App() {
 		});
 		
 		// STEG 4: Send to AI (mock for now, ready for real API)
-		setAiProcessingStage('🤖 Sending to OpenAI...');
+		setAiProcessingStage('Sending to OpenAI...');
 		
 		try {
 			const aiResponse = await sendToAI(aiMessage);
-			setAiProcessingStage('✨ Generating response...');
+			setAiProcessingStage('Generating response...');
 			
 			// Short delay to show final stage
 			setTimeout(() => {
