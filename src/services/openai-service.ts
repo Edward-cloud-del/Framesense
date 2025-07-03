@@ -52,25 +52,17 @@ export class OpenAIServiceFrontend implements IAIService {
     }
 
     try {
-      // 🧠 Smart prompt optimization based on question type and context
+      // ⚡ SIMPLE PROMPT for short answers
       const ocrMatch = request.message.match(/\[OCR Context - Text found in image: "(.+?)" \(Confidence: (\d+)%\)\]/);
       const ocrText = ocrMatch ? ocrMatch[1] : undefined;
-      const ocrConfidence = ocrMatch ? parseInt(ocrMatch[2]) / 100 : undefined;
       const cleanMessage = request.message.replace(/\[OCR Context[^\]]*\]/, '').trim();
       
-      const promptContext: PromptContext = {
-        message: cleanMessage,
-        hasImage: !!request.imageData,
-        hasOCR: !!ocrText,
-        ocrText,
-        ocrConfidence: ocrConfidence || 0.7, // Use real OCR confidence or default
-        imageSize: request.imageData ? request.imageData.length : undefined
-      };
-
-      const optimizedPrompt = PromptOptimizer.optimizePrompt(promptContext);
+      // Simple prompt - just question + OCR context if available
+      const simplePrompt = ocrText 
+        ? `${cleanMessage}\n\nText in image: "${ocrText}"`
+        : cleanMessage;
       
-      console.log(`🧠 Smart prompt optimization: ${optimizedPrompt.reasoning}`);
-      console.log(`📊 Optimized: ${optimizedPrompt.maxTokens} tokens, temp ${optimizedPrompt.temperature}`);
+      console.log(`⚡ Simple prompt mode for short answers`);
 
       // ⚡ SPEED OPTIMIZATION: Skip image processing for fast responses
       if (request.imageData) {
@@ -84,7 +76,7 @@ export class OpenAIServiceFrontend implements IAIService {
           content: request.imageData ? [
             { 
               type: "text", 
-              text: optimizedPrompt.prompt
+              text: simplePrompt
             },
             { 
               type: "image_url", 
@@ -93,7 +85,7 @@ export class OpenAIServiceFrontend implements IAIService {
           ] : [
             {
               type: "text",
-              text: optimizedPrompt.prompt
+              text: simplePrompt
             }
           ]
         }
@@ -102,8 +94,8 @@ export class OpenAIServiceFrontend implements IAIService {
       const response = await this.client.chat.completions.create({
         model: this.config.model!,
         messages,
-        max_tokens: optimizedPrompt.maxTokens,
-        temperature: optimizedPrompt.temperature,
+        max_tokens: 150, // Short answers
+        temperature: 0.3, // Concise but not robotic
         stream: false // Set to true for streaming in future
       });
 
@@ -111,7 +103,7 @@ export class OpenAIServiceFrontend implements IAIService {
       this.usageTracker.requestCount++;
       this.saveUsageTracker();
 
-      const content = response.choices[0].message.content;
+      const content = response.choices[0]?.message?.content;
       if (!content) {
         throw new Error("No response from OpenAI");
       }
