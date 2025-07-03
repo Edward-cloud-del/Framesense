@@ -589,10 +589,12 @@ function App() {
 
 			{/* 🤖 AI RESPONSE (STEG 4) */}
 			{aiResponse && (
-				<AIResponse 
-					response={aiResponse}
-					onDismiss={handleDismissAiResponse}
-				/>
+				<div className="mx-2 mb-2">
+					<AIResponse 
+						response={aiResponse}
+						onDismiss={handleDismissAiResponse}
+					/>
+				</div>
 			)}
 
 			{/* Processing indicator */}

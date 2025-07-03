@@ -8,8 +8,8 @@ interface AIResponseProps {
 export default function AIResponse({ response, onDismiss }: AIResponseProps) {
 	return (
 		<div 
-			className="p-3 rounded-lg border border-white/10 backdrop-blur-sm"
-			style={{ backgroundColor: 'rgba(20, 20, 20, 0.7)' }}
+			className="p-3 rounded-xl border border-white/10 backdrop-blur-sm overflow-hidden"
+			style={{ backgroundColor: 'rgba(20, 20, 20, 0.9)' }}
 		>
 			<div className="flex items-start justify-between">
 				<div className="flex-1">
