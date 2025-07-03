@@ -9,6 +9,11 @@ import ChatBox from './components/ChatBox';
 
 import { useAppStore } from './stores/app-store';
 
+// 🤖 Real OpenAI Integration
+import { createAIService } from './services/openai-service';
+import { getApiKey } from './config/api-config';
+import type { IAIService, AIRequest } from './types/ai-types';
+
 // STEG 4: AI Message interface for complete AI integration
 interface AIMessage {
 	text: string;
@@ -35,6 +40,12 @@ function App() {
 	
 	// 🖼️ STEG 2: Separate state for AI image context (independent from badge)
 	const [selectedImageForAI, setSelectedImageForAI] = useState<string | null>(null);
+	
+	// 🔍 OCR Context state for automatic text extraction
+	const [ocrContext, setOcrContext] = useState<OCRResult | null>(null);
+	
+	// 🤖 Real OpenAI service state
+	const [aiService, setAiService] = useState<IAIService | null>(null);
 
 	const { 
 		hasPermissions, 
@@ -43,20 +54,50 @@ function App() {
 		setPermissions 
 	} = useAppStore();
 
-	// STEG 4: AI integration function (ready for OpenAI Vision API)
+	// 🤖 REAL OpenAI integration function - replaces mock
 	const sendToAI = async (aiMessage: AIMessage): Promise<string> => {
-		// Future implementation:
-		// - Send to OpenAI Vision API if imageData exists
-		// - Send to regular text API if only text
-		// - Handle real AI responses
-		console.log('🔮 Future AI endpoint ready:', aiMessage);
+		if (!aiService) {
+			throw new Error('AI service not initialized. Please check your API key.');
+		}
+
+		console.log('🤖 Sending request to real OpenAI API...', {
+			hasImage: !!aiMessage.imageData,
+			messageLength: aiMessage.text.length,
+			hasOCRContext: aiMessage.text.includes('[OCR Context')
+		});
 		
-		// STEG 4: Enhanced mock implementation demonstrating full message preparation
-		if (aiMessage.imageData) {
-			const imageSize = Math.round(aiMessage.imageData.length * 0.75 / 1024); // Approximate KB size
-			return `🤖 **AI Visual Analysis** 📸\n\n**Your question:** "${aiMessage.text}"\n\n**Image Analysis:** I can see the selected area from your screen. This appears to be a screenshot (${imageSize}KB) that contains various visual elements. In a real implementation, I would analyze the image content, text, UI elements, and provide specific insights about what's shown.\n\n**Technical Details:**\n• Timestamp: ${new Date(aiMessage.timestamp).toLocaleTimeString()}\n• Image format: Base64 PNG\n• Message type: Text + Visual\n\n**Combined Response:** Based on both your question and the visual content, I would provide a comprehensive analysis combining text understanding with computer vision capabilities.`;
-		} else {
-			return `🤖 **AI Text Response** 💬\n\n**Your question:** "${aiMessage.text}"\n\n**Technical Details:**\n• Timestamp: ${new Date(aiMessage.timestamp).toLocaleTimeString()}\n• Message type: Text only\n• Context: No image provided\n\nThis is a text-only response since no image was provided. In a real implementation, this would be processed by a language model to provide helpful and accurate information based on your question.`;
+		try {
+			const request: AIRequest = {
+				message: aiMessage.text,
+				imageData: aiMessage.imageData,
+				imageType: 'image/png'
+			};
+
+			const response = await aiService.analyzeImageWithText(request);
+			
+			console.log('✅ OpenAI API response received:', {
+				contentLength: response.content.length,
+				tokensUsed: response.tokensUsed,
+				model: response.model
+			});
+
+			return response.content;
+
+		} catch (error: any) {
+			console.error('❌ OpenAI API error:', error);
+			
+			// User-friendly error messages
+			if (error.message.includes('Invalid API key')) {
+				return '❌ **API Key Error**\n\nThe OpenAI API key is invalid. Please check your API key configuration.';
+			} else if (error.message.includes('Rate limit')) {
+				return '❌ **Rate Limited**\n\nToo many requests. Please wait a moment and try again.';
+			} else if (error.message.includes('Daily limit')) {
+				return '❌ **Daily Limit Reached**\n\nYou\'ve reached the daily request limit. Limit will reset tomorrow.';
+			} else if (error.message.includes('Image too large')) {
+				return '❌ **Image Too Large**\n\nThe selected image is too large. Please select a smaller area and try again.';
+			} else {
+				return `❌ **AI Error**\n\nSomething went wrong: ${error.message}\n\nPlease try again or select a different area.`;
+			}
 		}
 	};
 
@@ -66,6 +107,16 @@ function App() {
 		
 		// Restore app state when window is created (Raycast-style)
 		restoreAppState();
+		
+		// 🤖 Initialize AI service with API key
+		const apiKey = getApiKey();
+		if (apiKey) {
+			const service = createAIService(apiKey);
+			setAiService(service);
+			console.log('✅ AI service initialized with real OpenAI');
+		} else {
+			console.warn('⚠️ No API key found - AI service disabled');
+		}
 		
 		// Listen for save-state-and-close event from Rust (Raycast-style)
 		const unlistenSave = listen('save-state-and-close', () => {
@@ -86,6 +137,9 @@ function App() {
 				// STEG 1: Save screenshot for AI context  
 				setSelectedImageForAI(result.imageData);
 				console.log('✅ Screenshot saved for AI analysis!');
+				
+				// 🔍 NEW: Run automatic OCR in background (SILENT)
+				runAutomaticOCR(result.imageData);
 				
 				// STEG 1: Auto-activate ChatBox after screenshot
 				console.log('🔄 Auto-activating ChatBox with image context...');
@@ -264,6 +318,7 @@ function App() {
 	const handleSendMessage = async (message: string) => {
 		console.log('💬 Message sent from ChatBox:', message);
 		console.log('🖼️ Image context available:', !!selectedImageForAI);
+		console.log('🔍 OCR context available:', !!ocrContext?.has_text);
 		
 		// Hide ChatBox but keep window expanded for AI response
 		setChatBoxOpen(false);
@@ -271,21 +326,28 @@ function App() {
 		// Restore CSS background but keep window size for AI response
 		console.log('✅ ChatBox hidden, keeping window expanded for AI response');
 		
-		// STEG 4: Create comprehensive AI message with text and image data
+		// 🔍 Enhanced message with OCR context if available
+		const enhancedMessage = ocrContext?.has_text 
+			? `${message}\n\n[OCR Context - Text found in image: "${ocrContext.text}"]`
+			: message;
+		
+		// STEG 4: Create comprehensive AI message with text, image, and OCR data
 		const aiMessage: AIMessage = {
-			text: message,
+			text: enhancedMessage,
 			imageData: selectedImageForAI || undefined,
 			timestamp: Date.now(),
 			bounds: undefined // Future: Add capture bounds if needed
 		};
 		
-		console.log('📤 STEG 4: Complete AI message prepared:', {
-			text: aiMessage.text,
+		console.log('📤 Enhanced AI message prepared:', {
+			originalText: message,
+			enhancedText: enhancedMessage,
 			hasImage: !!aiMessage.imageData,
+			hasOCR: !!ocrContext?.has_text,
+			ocrText: ocrContext?.has_text ? `"${ocrContext.text.substring(0, 30)}..."` : 'None',
 			imageSize: aiMessage.imageData ? `${Math.round(aiMessage.imageData.length * 0.75 / 1024)}KB` : 'N/A',
 			timestamp: aiMessage.timestamp,
-			formattedTime: new Date(aiMessage.timestamp).toLocaleTimeString(),
-			bounds: aiMessage.bounds || 'Not available'
+			formattedTime: new Date(aiMessage.timestamp).toLocaleTimeString()
 		});
 		
 		// STEG 4: Send to AI (mock for now, ready for real API)
@@ -297,39 +359,41 @@ function App() {
 			setAiResponse('❌ Sorry, I encountered an error processing your request. Please try again.');
 		}
 		
-		console.log('✅ AI response generated:', selectedImageForAI ? 'Text + Image' : 'Text only');
+		const contextTypes = [
+			selectedImageForAI ? 'Image' : null,
+			ocrContext?.has_text ? 'OCR' : null
+		].filter(Boolean).join(' + ') || 'Text only';
+		
+		console.log('✅ AI response generated with context:', contextTypes);
+	};
+
+	// 🔍 Automatic OCR function - runs silently after screenshot
+	const runAutomaticOCR = async (imageData: string) => {
+		console.log('🔍 Running automatic OCR in background...');
+		
+		try {
+			const ocrResult = await invoke('extract_text_ocr', { imageData }) as OCRResult;
+			setOcrContext(ocrResult);
+			
+			if (ocrResult.has_text) {
+				console.log(`✅ OCR completed silently - Found text: "${ocrResult.text.substring(0, 50)}..." (${Math.round(ocrResult.confidence * 100)}% confidence)`);
+			} else {
+				console.log('🔍 OCR completed silently - No text detected');
+			}
+		} catch (error) {
+			console.log('🔍 OCR failed silently, continuing without text context:', error);
+			setOcrContext(null);
+		}
 	};
 
 	// STEG 2: Clear image context when starting new session
 	const clearImageContext = () => {
 		setSelectedImageForAI(null);
-		console.log('🗑️ Image context cleared for new session');
+		setOcrContext(null); // Also clear OCR context
+		console.log('🗑️ Image and OCR context cleared for new session');
 	};
 
-	// OCR Test function (Step 4-5 from AI.txt)
-	const testOCR = async () => {
-		if (!selectedImageForAI) {
-			console.log('❌ No image selected for OCR test');
-			setAiResponse('❌ **OCR Test Error**\n\nNo image selected. Please capture a screenshot first by clicking the Select button.');
-			return;
-		}
 
-		console.log('📝 Testing OCR functionality with selected image...');
-		
-		try {
-			const result = await invoke('extract_text_ocr', { imageData: selectedImageForAI }) as OCRResult;
-			console.log('📝 OCR Result:', result);
-			
-			if (result.has_text) {
-				setAiResponse(`📝 **OCR Results**\n\n**Text Found:** ${result.text}\n\n**Confidence:** ${Math.round(result.confidence * 100)}%\n\n**Status:** ${result.has_text ? '✅ Text detected successfully' : '❌ No text found'}\n\n*This is a test of the OCR functionality from Step 2-3 of AI.txt*`);
-			} else {
-				setAiResponse(`📝 **OCR Results**\n\n**Status:** No text detected in the selected area\n\n**Confidence:** ${Math.round(result.confidence * 100)}%\n\n**Suggestion:** Try selecting an area with clear text\n\n*This is a test of the OCR functionality from Step 2-3 of AI.txt*`);
-			}
-		} catch (error) {
-			console.error('❌ OCR failed:', error);
-			setAiResponse(`❌ **OCR Error**\n\n**Error:** ${error}\n\n**What to try:**\n• Make sure you have selected an image\n• Try selecting a different area\n• Check that Tesseract is working properly\n\n*This is a test of the OCR functionality from Step 2-3 of AI.txt*`);
-		}
-	};
 
 	const moveWindowToCorrectPosition = async () => {
 		try {
@@ -400,16 +464,7 @@ function App() {
 						<span>Ask AI</span>
 					</button>
 
-					{/* OCR Test Button (Step 4-5 from AI.txt) */}
-					<button
-						onClick={testOCR}
-						className="bg-blue-500/20 hover:bg-blue-500/30 text-white px-3 py-1.5 rounded-lg transition-colors text-xs flex items-center space-x-1.5 backdrop-blur-sm border border-white/10"
-					>
-						<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-						</svg>
-						<span>OCR</span>
-					</button>
+
 
 					{/* Move Window Button */}
 					<button
