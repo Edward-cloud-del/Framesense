@@ -7,6 +7,7 @@ import ProgressIndicator from './components/ProgressIndicator';
 import AIResponse from './components/AIResponse';
 import ChatBox from './components/ChatBox';
 import SettingsDialog from './components/SettingsDialog';
+import ThinkingAnimation from './components/ThinkingAnimation';
 
 import { useAppStore } from './stores/app-store';
 
@@ -50,6 +51,10 @@ function App() {
 	
 	// ⚙️ Settings UI state
 	const [settingsOpen, setSettingsOpen] = useState(false);
+	
+	// 🎭 Thinking Animation state
+	const [isAiThinking, setIsAiThinking] = useState(false);
+	const [aiProcessingStage, setAiProcessingStage] = useState<string>('');
 
 	const { 
 		hasPermissions, 
@@ -63,6 +68,9 @@ function App() {
 		if (!aiService) {
 			throw new Error('AI service not initialized. Please check your API key.');
 		}
+
+		// Update thinking stage for prompt optimization
+		setAiProcessingStage('🧠 Optimizing AI prompt...');
 
 		console.log('🤖 Sending request to real OpenAI API...', {
 			hasImage: !!aiMessage.imageData,
@@ -324,6 +332,10 @@ function App() {
 		console.log('🖼️ Image context available:', !!selectedImageForAI);
 		console.log('🔍 OCR context available:', !!ocrContext?.has_text);
 		
+		// Start thinking animation
+		setIsAiThinking(true);
+		setAiProcessingStage('📸 Analyzing screenshot...');
+		
 		// Hide ChatBox but keep window expanded for AI response
 		setChatBoxOpen(false);
 		
@@ -331,6 +343,8 @@ function App() {
 		console.log('✅ ChatBox hidden, keeping window expanded for AI response');
 		
 		// 🔍 Enhanced message with OCR context if available
+		setAiProcessingStage('🔍 Processing OCR context...');
+		
 		const enhancedMessage = ocrContext?.has_text 
 			? `${message}\n\n[OCR Context - Text found in image: "${ocrContext.text}" (Confidence: ${Math.round(ocrContext.confidence * 100)}%)]`
 			: message;
@@ -355,12 +369,23 @@ function App() {
 		});
 		
 		// STEG 4: Send to AI (mock for now, ready for real API)
+		setAiProcessingStage('🤖 Sending to OpenAI...');
+		
 		try {
 			const aiResponse = await sendToAI(aiMessage);
-			setAiResponse(aiResponse);
+			setAiProcessingStage('✨ Generating response...');
+			
+			// Short delay to show final stage
+			setTimeout(() => {
+				setAiResponse(aiResponse);
+				setIsAiThinking(false);
+				setAiProcessingStage('');
+			}, 500);
 		} catch (error) {
 			console.error('❌ AI request failed:', error);
 			setAiResponse('❌ Sorry, I encountered an error processing your request. Please try again.');
+			setIsAiThinking(false);
+			setAiProcessingStage('');
 		}
 		
 		const contextTypes = [
@@ -572,6 +597,12 @@ function App() {
 				onClose={handleCloseSettings}
 				aiService={aiService}
 				onApiKeyUpdate={handleApiKeyUpdate}
+			/>
+
+			{/* 🎭 Thinking Animation */}
+			<ThinkingAnimation
+				isVisible={isAiThinking}
+				currentStage={aiProcessingStage}
 			/>
 		</div>
 	);
