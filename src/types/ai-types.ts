@@ -31,7 +31,12 @@ export interface AIError {
 export interface IAIService {
   analyzeImageWithText(request: AIRequest): Promise<AIResponse>;
   getRemainingRequests?(): number;
-  getUsageStats?(): any;
+  getUsageStats?(): {
+    requestCount: number;
+    dailyLimit: number;
+    remaining: number;
+    lastReset: string;
+  };
 }
 
 // Cost protection settings

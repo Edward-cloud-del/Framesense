@@ -6,6 +6,7 @@ import ResultOverlay from './components/ResultOverlay';
 import ProgressIndicator from './components/ProgressIndicator';
 import AIResponse from './components/AIResponse';
 import ChatBox from './components/ChatBox';
+import SettingsDialog from './components/SettingsDialog';
 
 import { useAppStore } from './stores/app-store';
 
@@ -46,6 +47,9 @@ function App() {
 	
 	// 🤖 Real OpenAI service state
 	const [aiService, setAiService] = useState<IAIService | null>(null);
+	
+	// ⚙️ Settings UI state
+	const [settingsOpen, setSettingsOpen] = useState(false);
 
 	const { 
 		hasPermissions, 
@@ -328,7 +332,7 @@ function App() {
 		
 		// 🔍 Enhanced message with OCR context if available
 		const enhancedMessage = ocrContext?.has_text 
-			? `${message}\n\n[OCR Context - Text found in image: "${ocrContext.text}"]`
+			? `${message}\n\n[OCR Context - Text found in image: "${ocrContext.text}" (Confidence: ${Math.round(ocrContext.confidence * 100)}%)]`
 			: message;
 		
 		// STEG 4: Create comprehensive AI message with text, image, and OCR data
@@ -384,6 +388,30 @@ function App() {
 			console.log('🔍 OCR failed silently, continuing without text context:', error);
 			setOcrContext(null);
 		}
+	};
+
+	// ⚙️ Settings handlers
+	const handleApiKeyUpdate = (newApiKey: string) => {
+		if (newApiKey && newApiKey.startsWith('sk-')) {
+			// Update service with new API key
+			const service = createAIService(newApiKey);
+			setAiService(service);
+			console.log('✅ AI service updated with new API key');
+		} else {
+			// Remove API key
+			setAiService(null);
+			console.log('🔐 API key removed - AI service disabled');
+		}
+	};
+
+	const handleOpenSettings = () => {
+		setSettingsOpen(true);
+		console.log('⚙️ Opening settings dialog');
+	};
+
+	const handleCloseSettings = () => {
+		setSettingsOpen(false);
+		console.log('⚙️ Settings dialog closed');
 	};
 
 	// STEG 2: Clear image context when starting new session
@@ -453,6 +481,18 @@ function App() {
 				
 				{/* Action Buttons */}
 				<div className="flex space-x-1.5">
+					{/* Settings Button */}
+					<button
+						onClick={handleOpenSettings}
+						className="bg-gray-500/20 hover:bg-gray-500/30 text-white px-3 py-1.5 rounded-lg transition-colors text-xs flex items-center space-x-1.5 backdrop-blur-sm border border-white/10"
+					>
+						<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+						</svg>
+						<span>Settings</span>
+					</button>
+
 					{/* Ask AI Button */}
 					<button
 						onClick={handleAskAI}
@@ -524,6 +564,14 @@ function App() {
 				onSend={handleSendMessage}
 				onClose={handleCloseChatBox}
 				imageContext={selectedImageForAI || undefined}
+			/>
+
+			{/* ⚙️ Settings Dialog */}
+			<SettingsDialog
+				isOpen={settingsOpen}
+				onClose={handleCloseSettings}
+				aiService={aiService}
+				onApiKeyUpdate={handleApiKeyUpdate}
 			/>
 		</div>
 	);

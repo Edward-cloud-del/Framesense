@@ -8,6 +8,8 @@
 
 import OpenAI from 'openai';
 import type { IAIService, AIRequest, AIResponse, AIServiceConfig, UsageTracker } from '../types/ai-types';
+import { PromptOptimizer, type PromptContext } from './prompt-optimizer';
+import { ImageOptimizer } from '../utils/image-optimizer';
 
 export class OpenAIServiceFrontend implements IAIService {
   private client: OpenAI;
@@ -50,22 +52,59 @@ export class OpenAIServiceFrontend implements IAIService {
     }
 
     try {
+      // 🧠 Smart prompt optimization based on question type and context
+      const ocrMatch = request.message.match(/\[OCR Context - Text found in image: "(.+?)" \(Confidence: (\d+)%\)\]/);
+      const ocrText = ocrMatch ? ocrMatch[1] : undefined;
+      const ocrConfidence = ocrMatch ? parseInt(ocrMatch[2]) / 100 : undefined;
+      const cleanMessage = request.message.replace(/\[OCR Context[^\]]*\]/, '').trim();
+      
+      const promptContext: PromptContext = {
+        message: cleanMessage,
+        hasImage: !!request.imageData,
+        hasOCR: !!ocrText,
+        ocrText,
+        ocrConfidence: ocrConfidence || 0.7, // Use real OCR confidence or default
+        imageSize: request.imageData ? request.imageData.length : undefined
+      };
+
+      const optimizedPrompt = PromptOptimizer.optimizePrompt(promptContext);
+      
+      console.log(`🧠 Smart prompt optimization: ${optimizedPrompt.reasoning}`);
+      console.log(`📊 Optimized: ${optimizedPrompt.maxTokens} tokens, temp ${optimizedPrompt.temperature}`);
+
+      // 🖼️ Smart image optimization based on detected question type
+      let finalImageData = request.imageData;
+      if (request.imageData) {
+        const questionTypeMatch = optimizedPrompt.reasoning.match(/Detected: (\w+)/);
+        const questionType = questionTypeMatch ? questionTypeMatch[1] : 'general';
+        
+        try {
+          const optimizedImage = await ImageOptimizer.optimizeForQuestionType(request.imageData, questionType);
+          finalImageData = optimizedImage.dataUrl;
+          
+          console.log(`🖼️ Image optimized: ${Math.round(optimizedImage.optimization.originalSize)}KB → ${Math.round(optimizedImage.optimization.compressedSize)}KB (${Math.round(optimizedImage.optimization.compressionRatio * 100)}% compression)`);
+        } catch (error) {
+          console.warn('⚠️ Image optimization failed, using original:', error);
+          // Continue with original image if optimization fails
+        }
+      }
+
       const messages: any[] = [
         {
           role: "user",
-          content: request.imageData ? [
+          content: finalImageData ? [
             { 
               type: "text", 
-              text: request.message
+              text: optimizedPrompt.prompt
             },
             { 
               type: "image_url", 
-              image_url: { url: request.imageData }
+              image_url: { url: finalImageData }
             }
           ] : [
             {
               type: "text",
-              text: request.message
+              text: optimizedPrompt.prompt
             }
           ]
         }
@@ -74,8 +113,9 @@ export class OpenAIServiceFrontend implements IAIService {
       const response = await this.client.chat.completions.create({
         model: this.config.model!,
         messages,
-        max_tokens: this.config.maxTokens,
-        temperature: this.config.temperature
+        max_tokens: optimizedPrompt.maxTokens,
+        temperature: optimizedPrompt.temperature,
+        stream: false // Set to true for streaming in future
       });
 
       // Update usage tracking
