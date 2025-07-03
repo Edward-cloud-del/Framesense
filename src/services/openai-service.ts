@@ -72,34 +72,23 @@ export class OpenAIServiceFrontend implements IAIService {
       console.log(`🧠 Smart prompt optimization: ${optimizedPrompt.reasoning}`);
       console.log(`📊 Optimized: ${optimizedPrompt.maxTokens} tokens, temp ${optimizedPrompt.temperature}`);
 
-      // 🖼️ Smart image optimization based on detected question type
-      let finalImageData = request.imageData;
+      // ⚡ SPEED OPTIMIZATION: Skip image processing for fast responses
       if (request.imageData) {
-        const questionTypeMatch = optimizedPrompt.reasoning.match(/Detected: (\w+)/);
-        const questionType = questionTypeMatch ? questionTypeMatch[1] : 'general';
-        
-        try {
-          const optimizedImage = await ImageOptimizer.optimizeForQuestionType(request.imageData, questionType);
-          finalImageData = optimizedImage.dataUrl;
-          
-          console.log(`🖼️ Image optimized: ${Math.round(optimizedImage.optimization.originalSize)}KB → ${Math.round(optimizedImage.optimization.compressedSize)}KB (${Math.round(optimizedImage.optimization.compressionRatio * 100)}% compression)`);
-        } catch (error) {
-          console.warn('⚠️ Image optimization failed, using original:', error);
-          // Continue with original image if optimization fails
-        }
+        const imageSizeKB = (request.imageData.length * 0.75) / 1024;
+        console.log(`⚡ Fast mode: Using ${Math.round(imageSizeKB)}KB image directly (no compression)`);
       }
 
       const messages: any[] = [
         {
           role: "user",
-          content: finalImageData ? [
+          content: request.imageData ? [
             { 
               type: "text", 
               text: optimizedPrompt.prompt
             },
             { 
               type: "image_url", 
-              image_url: { url: finalImageData }
+              image_url: { url: request.imageData }
             }
           ] : [
             {
