@@ -375,8 +375,26 @@ function App() {
 			const aiResponse = await sendToAI(aiMessage);
 			setAiProcessingStage('Generating response...');
 			
-			// Short delay to show final stage
-			setTimeout(() => {
+			// Calculate window height based on response length
+			const getWindowHeight = (textLength: number) => {
+				if (textLength < 200) return 130;      // Short answer
+				if (textLength < 500) return 200;      // Medium answer  
+				if (textLength < 1000) return 300;     // Long answer
+				return 400;                            // Very long answer
+			};
+			
+			const windowHeight = getWindowHeight(aiResponse.length);
+			console.log(`📏 AI response length: ${aiResponse.length} chars → window height: ${windowHeight}px`);
+			
+			// Short delay to show final stage then resize and show response
+			setTimeout(async () => {
+				try {
+					await invoke('resize_window', { width: 600, height: windowHeight });
+					console.log('✅ Window resized for AI response');
+				} catch (error) {
+					console.warn('⚠️ Failed to resize window:', error);
+				}
+				
 				setAiResponse(aiResponse);
 				setIsAiThinking(false);
 				setAiProcessingStage('');
