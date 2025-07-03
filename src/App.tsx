@@ -210,6 +210,10 @@ function App() {
 	};
 
 	const testScreenSelection = async () => {
+		// Always close previous chat/AI response when switching
+		setAiResponse(null);
+		setChatBoxOpen(false);
+		
 		if (isCreatingOverlay) {
 			console.log('⏳ Already creating overlay, ignoring click');
 			return;
@@ -246,6 +250,10 @@ function App() {
 
 	// 🤖 CHAT FLOW HANDLERS (FAS 4: React-based approach)
 	const handleAskAI = async () => {
+		// Always close previous chat/AI response when switching
+		setAiResponse(null);
+		setChatBoxOpen(false);
+		
 		console.log('🤖 Ask AI clicked - React ChatBox approach');
 		console.log('📊 Current chatBoxOpen state:', chatBoxOpen);
 		console.log('🖼️ Image context:', selectedImageForAI ? 'Present' : 'None');
@@ -255,9 +263,9 @@ function App() {
 			console.log('🔄 Opening ChatBox - expanding window and showing component');
 			
 			try {
-				// Expand window for chat mode (600x50 → 600x130) - kompakt till expanderat  
-				await invoke('resize_window', { width: 600, height: 130 });
-				console.log('✅ Window expanded to 600x130');
+				// Expand window for chat mode with better height calculation
+				await invoke('resize_window', { width: 600, height: 120 });
+				console.log('✅ Window expanded to 600x120 for chat');
 				
 				// Show ChatBox with consistent background
 				console.log('✅ ChatBox opened with consistent background');
@@ -377,10 +385,19 @@ function App() {
 			
 			// Calculate window height based on response length
 			const getWindowHeight = (textLength: number) => {
-				if (textLength < 200) return 130;      // Short answer
-				if (textLength < 500) return 200;      // Medium answer  
-				if (textLength < 1000) return 300;     // Long answer
-				return 400;                            // Very long answer
+				const screenHeight = window.screen?.height || 900;
+				const baseHeight = 80; // Header + padding
+				const maxContentHeight = Math.floor(screenHeight * 0.6); // Use more conservative 60% of screen
+				
+				// Calculate needed height based on text length
+				let contentHeight;
+				if (textLength < 100) contentHeight = 80;
+				else if (textLength < 300) contentHeight = 120;
+				else if (textLength < 600) contentHeight = 160;
+				else if (textLength < 1000) contentHeight = 220;
+				else contentHeight = maxContentHeight;
+				
+				return Math.min(baseHeight + contentHeight, maxContentHeight);
 			};
 			
 			const windowHeight = getWindowHeight(aiResponse.length);
@@ -398,7 +415,7 @@ function App() {
 				setAiResponse(aiResponse);
 				setIsAiThinking(false);
 				setAiProcessingStage('');
-			}, 500);
+			}, 100);
 		} catch (error) {
 			console.error('❌ AI request failed:', error);
 			setAiResponse('❌ Sorry, I encountered an error processing your request. Please try again.');
@@ -464,8 +481,6 @@ function App() {
 		console.log('🗑️ Image and OCR context cleared for new session');
 	};
 
-
-
 	const moveWindowToCorrectPosition = async () => {
 		try {
 			await invoke('move_window_to_position');
@@ -476,6 +491,24 @@ function App() {
 			alert('❌ Kunde inte flytta fönstret');
 		}
 	};
+
+	// Add effect to resize window when thinking
+	useEffect(() => {
+		if (isAiThinking) {
+			invoke('resize_window', { width: 600, height: 100 });
+		}
+	}, [isAiThinking]);
+
+	const [aiResponseVisible, setAiResponseVisible] = useState(false);
+
+	useEffect(() => {
+		if (aiResponse) {
+			setAiResponseVisible(false);
+			setTimeout(() => setAiResponseVisible(true), 10); // trigger animation
+		} else {
+			setAiResponseVisible(false);
+		}
+	}, [aiResponse]);
 
 	if (!isReady) {
 		return (
@@ -492,7 +525,7 @@ function App() {
 
 	return (
 		<div 
-			className="h-full flex flex-col px-4 py-0 rounded-xl border border-gray-200 shadow-lg"
+			className="h-full flex flex-col px-4 py-2 rounded-xl border border-gray-200 shadow-lg relative overflow-hidden"
 			style={{ 
 				backgroundColor: 'rgba(20, 20, 20, 0.5)', 
 				backdropFilter: 'blur(10px)',
@@ -500,7 +533,7 @@ function App() {
 			}}
 		>
 			{/* Compact palette header */}
-			<div className="flex items-center justify-between">
+			<div className="flex items-center justify-between flex-shrink-0">
 				<div className="flex items-center space-x-2">
 					<div className="w-5 h-5 bg-primary-100 rounded-full flex items-center justify-center">
 						<svg className="w-3 h-3 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -511,12 +544,12 @@ function App() {
 					
 					{/* Screenshot result - BETWEEN LOGO AND BUTTON */}
 					{screenshotResult && (
-						<div className="flex items-center space-x-2 px-2 py-1 bg-green-500/20 rounded border border-green-400/30 backdrop-blur-sm">
-							<span className="text-xs text-green-200 font-medium">✅ Captured</span>
+						<div className="flex items-center space-x-2 px-2 py-1 bg-gray-500/20 rounded border border-white/10 backdrop-blur-sm">
+							<span className="text-xs text-white font-medium">Captured</span>
 							<img 
 								src={screenshotResult} 
 								alt="Screenshot" 
-								className="w-6 h-4 object-cover rounded border border-green-400/50"
+								className="w-6 h-4 object-cover rounded border border-white/20"
 							/>
 						</div>
 					)}
@@ -546,8 +579,6 @@ function App() {
 						</svg>
 						<span>Ask AI</span>
 					</button>
-
-
 
 					{/* Move Window Button */}
 					<button
@@ -587,15 +618,18 @@ function App() {
 				</div>
 			</div>
 
-			{/* 🤖 AI RESPONSE (STEG 4) */}
-			{aiResponse && (
-				<div className="mx-2 mb-2">
-					<AIResponse 
-						response={aiResponse}
-						onDismiss={handleDismissAiResponse}
-					/>
-				</div>
-			)}
+			{/* Main content area - flex-grow takes available space */}
+			<div className="flex-grow flex flex-col justify-end min-h-0">
+				{/* 🤖 AI RESPONSE (FIXED POSITIONING) */}
+				{aiResponse && (
+					<div className={`mb-2 transition-all duration-300 ease-out ${aiResponseVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
+						<AIResponse 
+							response={aiResponse}
+							onDismiss={handleDismissAiResponse}
+						/>
+					</div>
+				)}
+			</div>
 
 			{/* Processing indicator */}
 			{isProcessing && <ProgressIndicator />}
@@ -603,7 +637,7 @@ function App() {
 			{/* Result overlay */}
 			{currentResult && <ResultOverlay result={currentResult} />}
 			
-			{/* 🤖 ChatBox Component (FAS 4: React-based) */}
+			{/* 🤖 ChatBox Component (FAS 4: React-based) - positioned at bottom */}
 			<ChatBox 
 				isVisible={chatBoxOpen}
 				onSend={handleSendMessage}

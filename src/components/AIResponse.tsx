@@ -8,15 +8,19 @@ interface AIResponseProps {
 export default function AIResponse({ response, onDismiss }: AIResponseProps) {
 	return (
 		<div 
-			className="p-3 rounded-xl border border-white/10 backdrop-blur-sm overflow-hidden"
-			style={{ backgroundColor: 'rgba(20, 20, 20, 0.9)' }}
+			className="p-3 rounded-xl border border-white/10 backdrop-blur-sm overflow-y-auto"
+			style={{
+				backgroundColor: 'rgba(20, 20, 20, 0.7)',
+				maxHeight: 'calc(100vh - 120px)',
+				minHeight: 60,
+			}}
 		>
 			<div className="flex items-start justify-between">
-				<div className="flex-1">
+				<div className="flex-1 min-w-0">
 					<h3 className="text-xs font-medium text-gray-300 mb-2">
 						AI Response
 					</h3>
-					<div className="text-xs text-gray-300 leading-relaxed">
+					<div className="text-xs text-gray-300 leading-relaxed whitespace-pre-wrap break-words">
 						{response}
 					</div>
 				</div>

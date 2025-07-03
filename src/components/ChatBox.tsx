@@ -12,6 +12,17 @@ export default function ChatBox({ onSend, onClose, isVisible = true, imageContex
   const [isSending, setIsSending] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Animation state
+  const [boxVisible, setBoxVisible] = useState(false);
+  useEffect(() => {
+    if (isVisible) {
+      setBoxVisible(false);
+      setTimeout(() => setBoxVisible(true), 10);
+    } else {
+      setBoxVisible(false);
+    }
+  }, [isVisible]);
+
   // Auto-focus input when component becomes visible
   useEffect(() => {
     if (isVisible && inputRef.current) {
@@ -49,26 +60,13 @@ export default function ChatBox({ onSend, onClose, isVisible = true, imageContex
   const placeholder = imageContext ? "Ask about the selected area..." : "chat with ai";
 
   return (
-    <div className="absolute bottom-3 left-3 right-3 z-50">
-      {/* Blue indicator for image ready - positioned outside main chat */}
-      {imageContext && (
-        <div className="absolute -top-8 right-0 z-10">
-          <div className="flex items-center space-x-1 px-2 py-1 bg-blue-500/90 rounded-md border border-blue-400/50 backdrop-blur-sm">
-            <svg className="w-3 h-3 text-blue-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-            <span className="text-xs text-blue-100 font-medium">Image ready</span>
-          </div>
-        </div>
-      )}
-      
+    <div className={`relative z-50 transition-all duration-300 ease-out ${boxVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
       <div 
-        className="bg-gray-900/95 backdrop-blur-[20px] border border-white/10 rounded-lg p-3"
+        className="bg-gray-900/95 backdrop-blur-[20px] border border-white/10 rounded-2xl p-2 mt-2 mb-1 h-12"
         style={{
           background: 'rgba(20, 20, 20, 0.95)',
         }}
       >
-        
         <form onSubmit={handleSubmit} className="flex gap-2 items-center">
           <input
             ref={inputRef}
@@ -78,16 +76,29 @@ export default function ChatBox({ onSend, onClose, isVisible = true, imageContex
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
             disabled={isSending}
-            className="flex-1 bg-transparent border border-white/20 rounded-md px-3 py-1.5 text-white/90 text-sm placeholder:text-white/50 placeholder:font-light outline-none transition-all duration-200 focus:bg-white/5 focus:border-white/40 focus:shadow-[0_0_0_1px_rgba(255,255,255,0.1)] disabled:opacity-50"
+            className="flex-1 bg-transparent border-0 px-2 py-1 text-white/90 text-xs placeholder:text-white/30 placeholder:font-light outline-none focus:bg-transparent focus:shadow-none disabled:opacity-50"
             autoComplete="off"
+            style={{ borderRadius: 0 }}
           />
-          
           <button
             type="submit"
             disabled={!message.trim() || isSending}
-            className="bg-transparent border border-white/20 rounded-md px-3 py-1.5 text-white/80 text-sm font-medium cursor-pointer transition-all duration-200 hover:bg-white/10 hover:border-white/40 hover:text-white disabled:bg-transparent disabled:border-white/10 disabled:text-white/30 disabled:cursor-not-allowed disabled:hover:bg-transparent min-w-[60px]"
+            className={`flex items-center justify-center w-7 h-7 rounded-full transition-all duration-200
+              ${!message.trim() || isSending
+                ? 'bg-white/10 text-white/30 cursor-not-allowed'
+                : 'bg-white/20 hover:bg-white/30 text-white/80 hover:text-white shadow-sm'}
+            `}
+            style={{ minWidth: 27, minHeight: 27 }}
           >
-            {isSending ? 'Sending...' : 'Send'}
+            {isSending ? (
+              <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+              </svg>
+            ) : (
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M12 5l7 7-7 7" />
+              </svg>
+            )}
           </button>
         </form>
       </div>

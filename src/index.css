@@ -2,6 +2,19 @@
 @tailwind components;
 @tailwind utilities;
 
+@keyframes pulse-harmonic {
+  0%, 100% {
+    color: #d1d5db; /* text-gray-300 */
+  }
+  50% {
+    color: #f3f4f6; /* text-gray-100 */
+  }
+}
+
+.animate-pulse-harmonic {
+  animation: pulse-harmonic 1.5s cubic-bezier(0.4,0,0.6,1) infinite;
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -10,6 +23,7 @@
 
 html {
   background-color: transparent !important;
+  height: 100%;
 }
 
 body {
@@ -20,28 +34,34 @@ body {
   -moz-osx-font-smoothing: grayscale;
   background-color: transparent !important;
   overflow: hidden;
+  height: 100%;
+  margin: 0;
+  padding: 0;
 }
 
 #root {
   width: 100vw;
   height: 100vh;
   background-color: transparent !important;
+  display: flex;
+  flex-direction: column;
 }
 
-/* Custom scrollbar */
+/* Custom scrollbar for AI Response overflow */
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
-  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
+  background: rgba(255, 255, 255, 0.5);
 } 
