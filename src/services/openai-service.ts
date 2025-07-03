@@ -20,7 +20,7 @@ export class OpenAIServiceFrontend implements IAIService {
     this.config = {
       model: 'gpt-4o',
       maxTokens: 1000,
-      temperature: 0.7,
+      temperature: 0.2,
       ...config
     };
 

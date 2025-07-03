@@ -11,9 +11,9 @@ export const TEMP_OPENAI_API_KEY = 'sk-proj-bAHJHRDECqNLb6WUOvBjDHTdEscSgWJ533aD
 
 // 🔮 FUTURE: These will be moved to backend/environment
 export const AI_CONFIG = {
-  model: 'gpt-4-vision-preview',
+  model: 'gpt-3.5-turbo',
   maxTokens: 1000,
-  temperature: 0.7,
+  temperature: 0.2,
   dailyLimit: 50, // Conservative limit for testing
 };
 
