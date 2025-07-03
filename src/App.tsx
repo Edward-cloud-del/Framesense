@@ -618,17 +618,33 @@ function App() {
 				</div>
 			</div>
 
-			{/* Main content area - flex-grow takes available space */}
-			<div className="flex-grow flex flex-col justify-end min-h-0">
-				{/* 🤖 AI RESPONSE (FIXED POSITIONING) */}
-				{aiResponse && (
-					<div className={`mb-2 transition-all duration-300 ease-out ${aiResponseVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
-						<AIResponse 
-							response={aiResponse}
-							onDismiss={handleDismissAiResponse}
-						/>
-					</div>
-				)}
+			{/* Main content area with fixed top and bottom margins */}
+			<div className="flex flex-col justify-between h-full overflow-hidden">
+				{/* Top margin from header to AI Response */}
+				<div className="mt-3 flex-shrink-0">
+					{aiResponse && (
+						<div className={`transition-all duration-300 ease-out pb-4 ${aiResponseVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}> {/* pb-4 = 16px bottom padding */}
+							<AIResponse 
+								response={aiResponse}
+								onDismiss={handleDismissAiResponse}
+							/>
+						</div>
+					)}
+				</div>
+
+				{/* Bottom elements with fixed margin from AI Response */}
+				<div className="flex flex-col flex-shrink-0 mt-2"> {/* mt-2 = 8px top margin */}
+					<ThinkingAnimation
+						isVisible={isAiThinking}
+						currentStage={aiProcessingStage}
+					/>
+					<ChatBox 
+						isVisible={chatBoxOpen}
+						onSend={handleSendMessage}
+						onClose={handleCloseChatBox}
+						imageContext={selectedImageForAI || undefined}
+					/>
+				</div>
 			</div>
 
 			{/* Processing indicator */}
@@ -637,26 +653,12 @@ function App() {
 			{/* Result overlay */}
 			{currentResult && <ResultOverlay result={currentResult} />}
 			
-			{/* 🤖 ChatBox Component (FAS 4: React-based) - positioned at bottom */}
-			<ChatBox 
-				isVisible={chatBoxOpen}
-				onSend={handleSendMessage}
-				onClose={handleCloseChatBox}
-				imageContext={selectedImageForAI || undefined}
-			/>
-
 			{/* ⚙️ Settings Dialog */}
 			<SettingsDialog
 				isOpen={settingsOpen}
 				onClose={handleCloseSettings}
 				aiService={aiService}
 				onApiKeyUpdate={handleApiKeyUpdate}
-			/>
-
-			{/* 🎭 Thinking Animation */}
-			<ThinkingAnimation
-				isVisible={isAiThinking}
-				currentStage={aiProcessingStage}
 			/>
 		</div>
 	);

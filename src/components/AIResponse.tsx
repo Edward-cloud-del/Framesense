@@ -11,7 +11,7 @@ export default function AIResponse({ response, onDismiss }: AIResponseProps) {
 			className="p-3 rounded-xl border border-white/10 backdrop-blur-sm overflow-y-auto"
 			style={{
 				backgroundColor: 'rgba(20, 20, 20, 0.7)',
-				maxHeight: 'calc(100vh - 120px)',
+				maxHeight: 'calc(100vh - 220px)',
 				minHeight: 60,
 			}}
 		>
