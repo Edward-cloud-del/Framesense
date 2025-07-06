@@ -1016,39 +1016,17 @@ fn main() {
                             
                             println!("🗑️ Window closed (Raycast-style)");
                         } else {
-                            // No window exists - check if we should quit or create window
+                            // No window exists - always create new window (remove quit logic)
                             println!("✨ No window exists...");
-                            
-                            // Check if we recently closed a window (within 3 seconds)
-                            let should_quit = if let Some(state) = app_clone.try_state::<SharedState>() {
-                                let app_state = state.lock().unwrap();
-                                if let Some(last_closed) = app_state.last_window_closed_time {
-                                    let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
-                                    let time_since_closed = now - last_closed;
-                                    println!("⏱️ {} seconds since last window closed", time_since_closed);
-                                    time_since_closed < 3 // Quit if less than 3 seconds
+                            println!("🆕 Creating new window on current Space...");
+                            let rt = tokio::runtime::Runtime::new().unwrap();
+                            rt.block_on(async {
+                                if let Err(e) = create_main_window(app_clone).await {
+                                    println!("❌ Failed to create window: {}", e);
                                 } else {
-                                    false // No previous close time, don't quit
+                                    println!("✅ New window created successfully!");
                                 }
-                            } else {
-                                false
-                            };
-                            
-                            if should_quit {
-                                println!("🚪 Alt+Space pressed twice quickly - quitting application...");
-                                std::process::exit(0);
-                            } else {
-                                // Create new window on current Space
-                                println!("🆕 Creating new window on current Space...");
-                                let rt = tokio::runtime::Runtime::new().unwrap();
-                                rt.block_on(async {
-                                    if let Err(e) = create_main_window(app_clone).await {
-                                        println!("❌ Failed to create window: {}", e);
-                                    } else {
-                                        println!("✅ New window created successfully!");
-                                    }
-                                });
-                            }
+                            });
                         }
                     });
                 } else {
