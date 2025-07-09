@@ -41,8 +41,14 @@ async function handleDownload(platform) {
             // Direct download
             window.open(downloadUrl, '_blank')
         } else {
-            // Fallback to releases page
-            window.open('https://github.com/Edward-cloud-del/Framesense/releases/latest', '_blank')
+            // Fallback to releases page or build instructions
+            if (release.assets && release.assets.length > 0) {
+                window.open('https://github.com/Edward-cloud-del/Framesense/releases/latest', '_blank')
+            } else {
+                // No releases yet - show build instructions
+                alert('FrameSense is still building! Check back in a few minutes or visit: https://github.com/Edward-cloud-del/Framesense/releases')
+                window.open('https://github.com/Edward-cloud-del/Framesense/releases', '_blank')
+            }
         }
     } catch (error) {
         console.error('Download error:', error)
