@@ -8,10 +8,14 @@ on:
 
 permissions:
   contents: write
+  pull-requests: read
 
 jobs:
   build-and-publish-tauri:
     environment: framesense
+    permissions:
+      contents: write
+      pull-requests: read
     strategy:
       fail-fast: false
       matrix:
