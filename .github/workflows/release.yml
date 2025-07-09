@@ -69,13 +69,13 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
-          tagName: app-v__VERSION__
-          releaseName: 'FrameSense v__VERSION__'
+          tagName: ${{ github.ref_name }}
+          releaseName: 'FrameSense ${{ github.ref_name }}'
           releaseBody: |
-            🎉 **FrameSense v__VERSION__ is here!**
+            🎉 **FrameSense ${{ github.ref_name }} is here!**
             
             ## ✨ Features
-            - AI-powered screen capture with instant insights
+            - AI-powered screen analysis with instant insights
             - Smart contextual analysis using GPT-4 Vision
             - Lightning-fast native performance
             - Note: OCR functionality available in local builds
@@ -88,4 +88,5 @@ jobs:
             Built with ❤️ using Tauri + React + Rust
           releaseDraft: false
           prerelease: false
+          includeUpdaterJson: true
           args: ${{ matrix.args }} 
