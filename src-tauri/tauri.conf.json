@@ -48,9 +48,9 @@
   "plugins": {
     "updater": {
       "endpoints": [
-        "https://github.com/framesense/releases"
+        "https://github.com/Edward-cloud-del/Framesense/releases"
       ],
-      "pubkey": ""
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEMwQjM4MUUzNDlFNTc2MTMKUldRVGR1Vko0NEd6d0FsL0VMTm9ERjRJNVlSZGd2MDE1S1ZmNkNzS0oyTURNMWE3ci9MMVV2TVoK"
     }
   },
   "app": {
