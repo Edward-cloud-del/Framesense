@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  release:
+  publish-tauri:
     permissions:
       contents: write
     strategy:
@@ -16,79 +16,57 @@ jobs:
         include:
           - platform: 'macos-latest'
             args: '--target aarch64-apple-darwin'
-            rust-target: 'aarch64-apple-darwin'
-          - platform: 'macos-latest' 
+          - platform: 'macos-latest'
             args: '--target x86_64-apple-darwin'
-            rust-target: 'x86_64-apple-darwin'
           - platform: 'ubuntu-22.04'
             args: ''
-            rust-target: ''
           - platform: 'windows-latest'
             args: ''
-            rust-target: ''
 
     runs-on: ${{ matrix.platform }}
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      # =================== SYSTEM DEPENDENCIES ===================
-      
-      - name: Install system dependencies (Linux)
+      - name: install dependencies (ubuntu only)
         if: matrix.platform == 'ubuntu-22.04'
         run: |
           sudo apt-get update
-          sudo apt-get install -y \
-            libwebkit2gtk-4.1-dev \
-            libappindicator3-dev \
-            librsvg2-dev \
-            patchelf
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
 
-      # =================== RUST SETUP ===================
+      - name: setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: 'pnpm'
 
-      - name: Rust setup
+      - name: setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.10.0
+
+      - name: install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.rust-target }}
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
       - name: Rust cache
         uses: swatinem/rust-cache@v2
         with:
           workspaces: './src-tauri -> target'
-          key: ${{ matrix.platform }}-${{ matrix.rust-target }}
 
-      # =================== NODE.JS SETUP ===================
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10.10.0
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 'lts/*'
-          cache: 'pnpm'
-
-      - name: Install frontend dependencies
+      - name: install frontend dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build frontend
-        run: pnpm build
-
-      # =================== TAURI BUILD ===================
-
-      - name: Build Tauri app
-        uses: tauri-apps/tauri-action@v0
+      - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: ${{ github.ref_name }}
+          tagName: app-v__VERSION__
           releaseName: 'FrameSense v__VERSION__'
           releaseBody: |
             🎉 **FrameSense v__VERSION__ is here!**
             
-            ## ✨ What's New
+            ## ✨ Features
             - AI-powered screen capture with instant insights
             - Smart contextual analysis using GPT-4 Vision
             - Lightning-fast native performance
@@ -99,14 +77,7 @@ jobs:
             - **Windows**: Download the `.msi` file  
             - **Linux**: Download the `.AppImage` file
             
-            ## 🚀 Quick Start
-            1. Download the app for your platform
-            2. Install and launch FrameSense
-            3. Use the global shortcut to capture any screen area
-            4. Ask questions about what you see!
-            
             Built with ❤️ using Tauri + React + Rust
           releaseDraft: false
           prerelease: false
-          args: ${{ matrix.args }}
-          includeUpdaterJson: true 
+          args: ${{ matrix.args }} 
