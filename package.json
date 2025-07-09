@@ -24,6 +24,7 @@
     "dev": "tauri dev",
     "start": "vite",
     "build": "vite build",
+    "build:tauri": "tauri build",
     "preview": "vite preview",
     "test": "jest",
     "test:e2e": "playwright test"

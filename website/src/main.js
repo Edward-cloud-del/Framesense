@@ -5,15 +5,75 @@ import { createIcons } from 'lucide'
 createIcons()
 
 // Download functionality
-function handleDownload(platform) {
-    // For now, redirect to GitHub releases
-    // Later you can implement direct download links
-    const githubReleases = 'https://github.com/Edward-cloud-del/Framesense/releases'
-    window.open(githubReleases, '_blank')
+async function handleDownload(platform) {
+    try {
+        // Get latest release from GitHub API
+        const response = await fetch('https://api.github.com/repos/Edward-cloud-del/Framesense/releases/latest')
+        if (!response.ok) {
+            throw new Error('Failed to fetch release info')
+        }
+        
+        const release = await response.json()
+        const assets = release.assets
+        
+        // Find the right asset for the platform
+        let downloadUrl = null
+        
+        if (platform === 'mac') {
+            // Look for .dmg or .app.tar.gz file
+            const macAsset = assets.find(asset => 
+                asset.name.includes('.dmg') || 
+                asset.name.includes('darwin') ||
+                asset.name.includes('macos')
+            )
+            downloadUrl = macAsset?.browser_download_url
+        } else if (platform === 'windows') {
+            // Look for .msi or .exe file
+            const winAsset = assets.find(asset => 
+                asset.name.includes('.msi') || 
+                asset.name.includes('.exe') ||
+                asset.name.includes('windows')
+            )
+            downloadUrl = winAsset?.browser_download_url
+        }
+        
+        if (downloadUrl) {
+            // Direct download
+            window.open(downloadUrl, '_blank')
+        } else {
+            // Fallback to releases page
+            window.open('https://github.com/Edward-cloud-del/Framesense/releases/latest', '_blank')
+        }
+    } catch (error) {
+        console.error('Download error:', error)
+        // Fallback to releases page
+        window.open('https://github.com/Edward-cloud-del/Framesense/releases', '_blank')
+    }
+}
+
+// Get and display latest version
+async function updateLatestVersion() {
+    try {
+        const response = await fetch('https://api.github.com/repos/Edward-cloud-del/Framesense/releases/latest')
+        if (response.ok) {
+            const release = await response.json()
+            const version = release.tag_name || 'v0.1.0'
+            
+            // Update version displays
+            document.querySelectorAll('.latest-version').forEach(element => {
+                element.textContent = version
+            })
+        }
+    } catch (error) {
+        console.log('Could not fetch latest version:', error)
+        // Keep default version if API fails
+    }
 }
 
 // Add event listeners when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
+    // Update version info
+    updateLatestVersion()
     // Download buttons
     document.getElementById('download-mac')?.addEventListener('click', () => handleDownload('mac'))
     document.getElementById('download-windows')?.addEventListener('click', () => handleDownload('windows'))
