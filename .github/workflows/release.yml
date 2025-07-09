@@ -42,38 +42,7 @@ jobs:
             libwebkit2gtk-4.1-dev \
             libappindicator3-dev \
             librsvg2-dev \
-            patchelf \
-            libtesseract-dev \
-            libleptonica-dev \
-            tesseract-ocr \
-            tesseract-ocr-eng
-          # Verify Tesseract installation
-          tesseract --version
-          pkg-config --cflags --libs tesseract
-
-      - name: Install system dependencies (macOS)
-        if: matrix.platform == 'macos-latest'
-        run: |
-          # Install Tesseract via Homebrew
-          brew install tesseract leptonica
-          # Verify installation
-          tesseract --version
-          # Set environment variables for Rust compilation
-          echo "TESSERACT_INCLUDE_PATHS=$(brew --prefix tesseract)/include" >> $GITHUB_ENV
-          echo "TESSERACT_LINK_PATHS=$(brew --prefix tesseract)/lib" >> $GITHUB_ENV
-          echo "LEPTONICA_INCLUDE_PATHS=$(brew --prefix leptonica)/include" >> $GITHUB_ENV
-          echo "LEPTONICA_LINK_PATHS=$(brew --prefix leptonica)/lib" >> $GITHUB_ENV
-
-      - name: Install system dependencies (Windows)
-        if: matrix.platform == 'windows-latest'
-        shell: pwsh
-        run: |
-          # Install Tesseract via vcpkg
-          vcpkg install tesseract:x64-windows-static-md leptonica:x64-windows-static-md
-          # Set environment variables
-          echo "VCPKG_ROOT=C:\vcpkg" >> $env:GITHUB_ENV
-          echo "TESSERACT_INCLUDE_PATHS=C:\vcpkg\installed\x64-windows-static-md\include" >> $env:GITHUB_ENV
-          echo "TESSERACT_LINK_PATHS=C:\vcpkg\installed\x64-windows-static-md\lib" >> $env:GITHUB_ENV
+            patchelf
 
       # =================== RUST SETUP ===================
 
@@ -110,16 +79,9 @@ jobs:
       # =================== TAURI BUILD ===================
 
       - name: Build Tauri app
-        uses: tauri-apps/tauri-action@v0.5
+        uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Tesseract environment variables
-          TESSERACT_INCLUDE_PATHS: ${{ env.TESSERACT_INCLUDE_PATHS }}
-          TESSERACT_LINK_PATHS: ${{ env.TESSERACT_LINK_PATHS }}
-          LEPTONICA_INCLUDE_PATHS: ${{ env.LEPTONICA_INCLUDE_PATHS }}
-          LEPTONICA_LINK_PATHS: ${{ env.LEPTONICA_LINK_PATHS }}
-          # Windows specific
-          VCPKG_ROOT: ${{ env.VCPKG_ROOT }}
         with:
           tagName: ${{ github.ref_name }}
           releaseName: 'FrameSense v__VERSION__'
@@ -128,9 +90,9 @@ jobs:
             
             ## ✨ What's New
             - AI-powered screen capture with instant insights
-            - OCR text extraction from any screen content  
             - Smart contextual analysis using GPT-4 Vision
             - Lightning-fast native performance
+            - Note: OCR functionality available in local builds
             
             ## 📥 Download for your platform:
             - **macOS**: Download the `.dmg` file

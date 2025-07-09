@@ -34,8 +34,8 @@ objc = "0.2"
 # URL encoding for inline HTML
 urlencoding = "2.1"
 
-# OCR using system Tesseract libraries
-tesseract = "0.13"
+# OCR using system Tesseract libraries (disabled for GitHub Actions)
+# tesseract = "0.13"
 dirs = "6.0.0"
 
 [target.'cfg(target_os = "linux")'.dependencies]
