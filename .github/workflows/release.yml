@@ -7,9 +7,10 @@ on:
   workflow_dispatch:
 
 jobs:
-  publish-tauri:
+  build-and-publish-tauri:
     permissions:
       contents: write
+    environment: framesense
     strategy:
       fail-fast: false
       matrix:
