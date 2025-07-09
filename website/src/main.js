@@ -8,7 +8,7 @@ createIcons()
 async function handleDownload(platform) {
     try {
         // Get latest release from GitHub API
-        const response = await fetch('https://api.github.com/repos/Edward-cloud-del/Framesense/releases/latest')
+        const response = await fetch('https://api.github.com/repos/Edward-cloud-del/framesense/releases/latest')
         if (!response.ok) {
             throw new Error('Failed to fetch release info')
         }
@@ -20,21 +20,28 @@ async function handleDownload(platform) {
         let downloadUrl = null
         
         if (platform === 'mac') {
-            // Look for .dmg or .app.tar.gz file
+            // Look for .dmg file - prefer x64 (Intel) for better compatibility
             const macAsset = assets.find(asset => 
-                asset.name.includes('.dmg') || 
-                asset.name.includes('darwin') ||
-                asset.name.includes('macos')
+                asset.name.includes('.dmg') && (
+                    asset.name.includes('x64') || 
+                    asset.name.includes('x86_64') ||
+                    asset.name.includes('aarch64')
+                )
             )
             downloadUrl = macAsset?.browser_download_url
         } else if (platform === 'windows') {
-            // Look for .msi or .exe file
+            // Look for .msi file first (preferred), then .exe
             const winAsset = assets.find(asset => 
                 asset.name.includes('.msi') || 
-                asset.name.includes('.exe') ||
-                asset.name.includes('windows')
+                asset.name.includes('-setup.exe')
             )
             downloadUrl = winAsset?.browser_download_url
+        } else if (platform === 'linux') {
+            // Look for .AppImage file
+            const linuxAsset = assets.find(asset => 
+                asset.name.includes('.AppImage')
+            )
+            downloadUrl = linuxAsset?.browser_download_url
         }
         
         if (downloadUrl) {
@@ -43,24 +50,24 @@ async function handleDownload(platform) {
         } else {
             // Fallback to releases page or build instructions
             if (release.assets && release.assets.length > 0) {
-                window.open('https://github.com/Edward-cloud-del/Framesense/releases/latest', '_blank')
+                window.open('https://github.com/Edward-cloud-del/framesense/releases/latest', '_blank')
             } else {
                 // No releases yet - show build instructions
-                alert('FrameSense is still building! Check back in a few minutes or visit: https://github.com/Edward-cloud-del/Framesense/releases')
-                window.open('https://github.com/Edward-cloud-del/Framesense/releases', '_blank')
+                alert('FrameSense is still building! Check back in a few minutes or visit: https://github.com/Edward-cloud-del/framesense/releases')
+                window.open('https://github.com/Edward-cloud-del/framesense/releases', '_blank')
             }
         }
     } catch (error) {
         console.error('Download error:', error)
         // Fallback to releases page
-        window.open('https://github.com/Edward-cloud-del/Framesense/releases', '_blank')
+        window.open('https://github.com/Edward-cloud-del/framesense/releases', '_blank')
     }
 }
 
 // Get and display latest version
 async function updateLatestVersion() {
     try {
-        const response = await fetch('https://api.github.com/repos/Edward-cloud-del/Framesense/releases/latest')
+        const response = await fetch('https://api.github.com/repos/Edward-cloud-del/framesense/releases/latest')
         if (response.ok) {
             const release = await response.json()
             const version = release.tag_name || 'v0.1.0'
@@ -83,8 +90,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Download buttons
     document.getElementById('download-mac')?.addEventListener('click', () => handleDownload('mac'))
     document.getElementById('download-windows')?.addEventListener('click', () => handleDownload('windows'))
+    document.getElementById('download-linux')?.addEventListener('click', () => handleDownload('linux'))
     document.getElementById('download-mac-2')?.addEventListener('click', () => handleDownload('mac'))
     document.getElementById('download-windows-2')?.addEventListener('click', () => handleDownload('windows'))
+    document.getElementById('download-linux-2')?.addEventListener('click', () => handleDownload('linux'))
 
     // Smooth scrolling for anchor links
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
