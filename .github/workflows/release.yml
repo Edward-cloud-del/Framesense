@@ -59,6 +59,7 @@ jobs:
 
       - uses: tauri-apps/tauri-action@v0
         env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.eeeeeee7 }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tagName: app-v__VERSION__
