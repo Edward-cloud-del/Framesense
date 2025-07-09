@@ -10,6 +10,7 @@ import OpenAI from 'openai';
 import type { IAIService, AIRequest, AIResponse, AIServiceConfig, UsageTracker } from '../types/ai-types';
 import { PromptOptimizer, type PromptContext } from './prompt-optimizer';
 import { ImageOptimizer } from '../utils/image-optimizer';
+import { OpenAIServiceAPI } from './openai-service-api';
 
 export class OpenAIServiceFrontend implements IAIService {
   private client: OpenAI;
@@ -169,11 +170,11 @@ export class OpenAIServiceFrontend implements IAIService {
 }
 
 // 🔧 FACTORY FUNCTION - This is what the app will use
-// When migrating to backend, only change this function!
+// ✅ UPDATED: Now using backend API service
 export function createAIService(apiKey: string): IAIService {
-  // 🚨 TEMPORARY: Frontend implementation
-  return new OpenAIServiceFrontend({ apiKey });
+  // ✅ NEW: Backend API implementation (secure)
+  return new OpenAIServiceAPI();
   
-  // 🔮 FUTURE: Backend implementation
-  // return new OpenAIServiceBackend({ apiKey });
+  // 🚨 OLD: Frontend implementation (insecure)
+  // return new OpenAIServiceFrontend({ apiKey });
 } 
