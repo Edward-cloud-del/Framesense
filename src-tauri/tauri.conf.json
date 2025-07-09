@@ -41,8 +41,8 @@
     "frontendDist": "../dist",
     "devUrl": "http://localhost:5173"
   },
-  "productName": "FrameSense",
-  "mainBinaryName": "FrameSense",
+  "productName": "frame-sense",
+  "mainBinaryName": "frame-sense",
   "version": "../package.json",
   "identifier": "com.framesense.app",
   "plugins": {
