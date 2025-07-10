@@ -15,6 +15,7 @@ import { useAppStore } from './stores/app-store';
 import { createAIService } from './services/openai-service';
 import { getApiKey } from './config/api-config';
 import type { IAIService, AIRequest } from './types/ai-types';
+import UserService from './services/user-service';
 
 // STEG 4: AI Message interface for complete AI integration
 interface AIMessage {
@@ -60,7 +61,9 @@ function App() {
 		hasPermissions, 
 		isProcessing, 
 		currentResult, 
-		setPermissions 
+		setPermissions,
+		user,
+		setUser 
 	} = useAppStore();
 
 	// 🤖 REAL OpenAI integration function - replaces mock
@@ -119,6 +122,9 @@ function App() {
 		
 		// Restore app state when window is created (Raycast-style)
 		restoreAppState();
+		
+		// Initialize user (load from storage or create mock)
+		initializeUser();
 		
 		// 🤖 Initialize AI service with API key
 		const apiKey = getApiKey();
@@ -183,6 +189,28 @@ function App() {
 			console.error('Failed to check permissions:', error);
 			setPermissions(true); // Assume true for testing
 			setIsReady(true);
+		}
+	};
+
+	const initializeUser = async () => {
+		try {
+			// Try to load existing user from storage
+			const storedUser = await UserService.loadStoredUser();
+			
+			if (storedUser) {
+				setUser(storedUser);
+				console.log('✅ User loaded from storage:', storedUser.email, storedUser.tier.tier);
+			} else {
+				// Create mock user for testing
+				const mockUser = await UserService.initializeMockUser();
+				setUser(mockUser);
+				console.log('✅ Mock user initialized:', mockUser.email, mockUser.tier.tier);
+			}
+		} catch (error) {
+			console.error('❌ Failed to initialize user:', error);
+			// Fallback to mock user
+			const mockUser = await UserService.initializeMockUser();
+			setUser(mockUser);
 		}
 	};
 
@@ -412,10 +440,21 @@ function App() {
 					console.warn('⚠️ Failed to resize window:', error);
 				}
 				
-				setAiResponse(aiResponse);
-				setIsAiThinking(false);
-				setAiProcessingStage('');
-			}, 100);
+							setAiResponse(aiResponse);
+			setIsAiThinking(false);
+			setAiProcessingStage('');
+			
+			// Update user usage after successful AI request
+			if (user) {
+				try {
+					const updatedUser = await UserService.updateUsage(1);
+					setUser(updatedUser);
+					console.log('✅ User usage updated:', updatedUser.tier.remainingRequests, 'requests remaining');
+				} catch (error) {
+					console.error('❌ Failed to update user usage:', error);
+				}
+			}
+		}, 100);
 		} catch (error) {
 			console.error('❌ AI request failed:', error);
 			setAiResponse('❌ Sorry, I encountered an error processing your request. Please try again.');

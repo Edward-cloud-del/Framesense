@@ -11,12 +11,40 @@ export interface AIResult {
     label: string;
     action: () => void;
   }>;
+  // Add captured image for display
+  capturedImage?: string;
+}
+
+// User tier and subscription information
+export interface UserTier {
+  tier: 'free' | 'premium' | 'pro' | 'enterprise';
+  remainingRequests: number;
+  dailyLimit: number;
+  customerId?: string;
+  subscriptionId?: string;
+}
+
+export interface User {
+  id: string;
+  email: string;
+  name: string;
+  tier: UserTier;
+  token: string;
 }
 
 interface AppState {
   // Permissions
   hasPermissions: boolean;
   setPermissions: (permissions: boolean) => void;
+
+  // User authentication and tier
+  user: User | null;
+  setUser: (user: User | null) => void;
+  isLoggedIn: boolean;
+  
+  // Current selected AI model
+  selectedModel: string;
+  setSelectedModel: (model: string) => void;
 
   // Processing state
   isProcessing: boolean;
@@ -41,6 +69,10 @@ interface AppState {
     theme: 'light' | 'dark' | 'system';
   };
   updateSettings: (settings: Partial<AppState['settings']>) => void;
+  
+  // UI state
+  showModelSelector: boolean;
+  setShowModelSelector: (show: boolean) => void;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -51,6 +83,14 @@ export const useAppStore = create<AppState>((set, get) => ({
   currentResult: null,
   recentResults: [],
   
+  // User state
+  user: null,
+  isLoggedIn: false,
+  selectedModel: 'GPT-3.5-turbo', // Default free model
+  
+  // UI state
+  showModelSelector: false,
+  
   settings: {
     hotkey: 'Alt+Space',
     aiProvider: 'openai',
@@ -60,6 +100,17 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   // Actions
   setPermissions: (permissions) => set({ hasPermissions: permissions }),
+  
+  setUser: (user) => set({ 
+    user, 
+    isLoggedIn: !!user,
+    // Set default model based on tier
+    selectedModel: user?.tier.tier === 'free' ? 'GPT-3.5-turbo' : 
+                  user?.tier.tier === 'premium' ? 'GPT-4o-mini' :
+                  user?.tier.tier === 'pro' ? 'GPT-4o' : 'GPT-4o 32k'
+  }),
+  
+  setSelectedModel: (model) => set({ selectedModel: model }),
   
   setProcessing: (processing) => set({ isProcessing: processing }),
   
@@ -76,4 +127,6 @@ export const useAppStore = create<AppState>((set, get) => ({
   updateSettings: (newSettings) => set((state) => ({
     settings: { ...state.settings, ...newSettings }
   })),
+  
+  setShowModelSelector: (show) => set({ showModelSelector: show }),
 })); 
