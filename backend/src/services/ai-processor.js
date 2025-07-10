@@ -4,32 +4,52 @@
 import { PromptOptimizer } from './prompt-optimizer.js';
 import { ImageOptimizer } from './image-optimizer.js';
 import { OCRService } from './ocr-service.js';
+import { ModelSelector } from './model-selector.js';
+import { SubscriptionService } from './subscription-service.js';
 
 class AIProcessor {
   
   // Main processing method that combines all optimizations
-  static async processRequest(request, openaiClient) {
+  static async processRequest(request, openaiClient, userContext = {}) {
     const { message, imageData } = request;
+    const { userId, customerId, userTier = 'free', usage = { hourly: 0, daily: 0 } } = userContext;
     
     console.log('🚀 Starting intelligent AI processing pipeline...');
+    console.log(`👤 User context: tier=${userTier}, usage=${usage.daily}/${ModelSelector.getModelConfig(userTier, 'general').rateLimits.requestsPerDay}`);
     
-    // Step 1: Detect question type for optimization strategy
+    // Step 1: Check rate limits
+    const rateLimitCheck = ModelSelector.checkRateLimit(userTier, usage);
+    if (!rateLimitCheck.canMakeRequest) {
+      throw new Error(`Rate limit exceeded. Remaining: ${rateLimitCheck.remainingDaily} requests today, ${rateLimitCheck.remainingHourly} this hour.`);
+    }
+    
+    // Step 2: Detect question type for optimization strategy
     const questionType = PromptOptimizer.detectQuestionType(message);
     console.log(`🎯 Detected question type: ${questionType}`);
+    
+    // Step 3: Get model configuration for user's tier
+    const modelConfig = ModelSelector.getModelConfig(userTier, questionType);
+    console.log(`🤖 Using model: ${modelConfig.model} (${userTier} tier)`);
     
     let processedImageData = null;
     let ocrResult = null;
     let imageBuffer = null;
     
-    // Step 2: Process image if provided
+    // Step 4: Process image if provided and user has access
     if (imageData) {
+      // Check if user can access image analysis
+      if (!ModelSelector.canAccessFeature(userTier, 'imageAnalysis') && questionType !== 'text_extraction') {
+        throw new Error(`Image analysis requires ${userTier === 'free' ? 'Premium' : 'Pro'} subscription. Upgrade to analyze images.`);
+      }
+      
       console.log('🖼️ Processing image...');
       
       // Convert base64 to buffer
       imageBuffer = ImageOptimizer.dataUrlToBuffer(imageData);
       
-      // Step 3: Run OCR intelligently based on question type
-      const shouldRunOCR = this.shouldRunOCR(questionType, message);
+      // Step 5: Run OCR intelligently based on question type and tier
+      const shouldRunOCR = this.shouldRunOCR(questionType, message) && 
+                           ModelSelector.canAccessFeature(userTier, 'ocrProcessing');
       if (shouldRunOCR) {
         console.log('🔍 Running OCR analysis...');
         ocrResult = await OCRService.extractTextIntelligent(imageBuffer, { 
@@ -38,17 +58,23 @@ class AIProcessor {
         });
       }
       
-      // Step 4: Optimize image based on question type
-      console.log('🎨 Optimizing image for AI analysis...');
-      const optimizedImage = await ImageOptimizer.optimizeForQuestionType(imageBuffer, questionType);
-      
-      // Convert back to data URL for OpenAI
-      processedImageData = ImageOptimizer.bufferToDataUrl(optimizedImage.buffer);
-      
-      console.log(`✅ Image optimization: ${Math.round(optimizedImage.optimization.compressionRatio * 100)}% compression`);
+      // Step 6: Optimize image based on question type and tier
+      if (ModelSelector.canAccessFeature(userTier, 'imageOptimization')) {
+        console.log('🎨 Optimizing image for AI analysis...');
+        const optimizedImage = await ImageOptimizer.optimizeForQuestionType(imageBuffer, questionType);
+        
+        // Convert back to data URL for OpenAI
+        processedImageData = ImageOptimizer.bufferToDataUrl(optimizedImage.buffer);
+        
+        console.log(`✅ Image optimization: ${Math.round(optimizedImage.optimization.compressionRatio * 100)}% compression`);
+      } else {
+        // Use original image without optimization for free tier
+        processedImageData = imageData;
+        console.log('⚡ Using original image (no optimization for free tier)');
+      }
     }
     
-    // Step 5: Build optimized prompt context
+    // Step 7: Build optimized prompt context
     const promptContext = {
       message,
       hasImage: !!imageData,
@@ -58,41 +84,54 @@ class AIProcessor {
       imageSize: imageBuffer ? ImageOptimizer.getImageSizeKB(imageBuffer) : 0
     };
     
-    // Step 6: Generate optimized prompt
+    // Step 8: Generate optimized prompt (respecting tier limits)
     const optimizedPrompt = PromptOptimizer.optimizePrompt(promptContext);
-    console.log(`🧠 Prompt optimization: ${optimizedPrompt.reasoning}`);
     
-    // Step 7: Prepare OpenAI request
+    // Override token limits based on user tier
+    const maxTokens = Math.min(optimizedPrompt.maxTokens, modelConfig.maxTokens);
+    const temperature = modelConfig.temperature;
+    
+    console.log(`🧠 Prompt optimization: ${optimizedPrompt.reasoning} (${maxTokens} tokens max)`);
+    
+    // Step 9: Prepare OpenAI request
     const messages = this.buildOpenAIMessages(optimizedPrompt.prompt, processedImageData);
     
-    // Step 8: Call OpenAI with optimized parameters
-    console.log('📡 Calling OpenAI API with optimizations...');
+    // Step 10: Call OpenAI with tier-appropriate model and parameters
+    console.log(`📡 Calling OpenAI API: ${modelConfig.model} with ${maxTokens} tokens...`);
     const completion = await openaiClient.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: modelConfig.model,
       messages,
-      max_tokens: optimizedPrompt.maxTokens,
-      temperature: optimizedPrompt.temperature,
+      max_tokens: maxTokens,
+      temperature: temperature,
     });
     
     const aiResponse = completion.choices[0]?.message?.content || 'No response generated';
     
-    // Step 9: Build comprehensive response
+    // Step 11: Build comprehensive response with subscription info
     const response = {
       message: aiResponse,
       success: true,
       processing_info: {
         question_type: questionType,
+        model_used: modelConfig.model,
+        user_tier: userTier,
         optimization_strategy: optimizedPrompt.reasoning,
         ocr_used: !!(ocrResult && ocrResult.has_text),
-        image_optimized: !!imageData,
+        image_optimized: !!imageData && ModelSelector.canAccessFeature(userTier, 'imageOptimization'),
         processing_time: {
           ocr: ocrResult?.processing_time || 0,
           total: Date.now() - (request.start_time || Date.now())
+        },
+        tokens_used: maxTokens,
+        rate_limits: {
+          remaining_hourly: rateLimitCheck.remainingHourly - 1,
+          remaining_daily: rateLimitCheck.remainingDaily - 1,
+          tier_limits: modelConfig.rateLimits
         }
       },
       usage: {
         requestCount: 1,
-        remainingRequests: 49,
+        remainingRequests: rateLimitCheck.remainingDaily - 1,
         timestamp: new Date().toISOString()
       }
     };

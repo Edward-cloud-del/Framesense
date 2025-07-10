@@ -4,6 +4,16 @@ import helmet from 'helmet';
 import dotenv from 'dotenv';
 import multer from 'multer';
 import { analyzeImageRoute } from './routes/ai.js';
+import { 
+  getPricingTiers, 
+  createCheckoutSession, 
+  createCustomer, 
+  getCustomerSubscription,
+  cancelSubscription,
+  createPortalSession,
+  handleStripeWebhook,
+  getUserTierInfo
+} from './routes/subscription.js';
 
 // Load environment variables
 dotenv.config();
@@ -47,6 +57,18 @@ app.get('/health', (req, res) => {
 
 // AI analysis endpoint
 app.post('/api/analyze', upload.single('image'), analyzeImageRoute);
+
+// Subscription management endpoints
+app.get('/api/pricing', getPricingTiers);
+app.post('/api/checkout', createCheckoutSession);
+app.post('/api/customers', createCustomer);
+app.get('/api/customers/:customerId/subscription', getCustomerSubscription);
+app.post('/api/subscriptions/cancel', cancelSubscription);
+app.post('/api/billing/portal', createPortalSession);
+app.get('/api/users/:userId/tier', getUserTierInfo);
+
+// Stripe webhook endpoint (needs raw body)
+app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), handleStripeWebhook);
 
 // Health check for optimization services
 app.get('/api/health/optimizations', async (req, res) => {
