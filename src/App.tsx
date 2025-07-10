@@ -4,18 +4,19 @@ import { listen } from '@tauri-apps/api/event';
 import PermissionWizard from './components/PermissionWizard';
 import ResultOverlay from './components/ResultOverlay';
 import ProgressIndicator from './components/ProgressIndicator';
-import AIResponse from './components/AIResponse';
+// Removed AIResponse import - now using ResultOverlay
 import ChatBox from './components/ChatBox';
 import SettingsDialog from './components/SettingsDialog';
 import ThinkingAnimation from './components/ThinkingAnimation';
 
-import { useAppStore } from './stores/app-store';
+import { useAppStore, AIResult } from './stores/app-store';
 
 // 🤖 Real OpenAI Integration
 import { createAIService } from './services/openai-service';
 import { getApiKey } from './config/api-config';
 import type { IAIService, AIRequest } from './types/ai-types';
 import UserService from './services/user-service';
+import DevHelpers from './utils/dev-helpers';
 
 // STEG 4: AI Message interface for complete AI integration
 interface AIMessage {
@@ -38,7 +39,6 @@ function App() {
 	const [isCreatingOverlay, setIsCreatingOverlay] = useState(false);
 	
 	// 🤖 CHAT FLOW STATE MANAGEMENT (STEG 2) - Updated for window-based chat
-	const [aiResponse, setAiResponse] = useState<string | null>(null);
 	const [chatBoxOpen, setChatBoxOpen] = useState(false);
 	
 	// 🖼️ STEG 2: Separate state for AI image context (independent from badge)
@@ -239,7 +239,7 @@ function App() {
 
 	const testScreenSelection = async () => {
 		// Always close previous chat/AI response when switching
-		setAiResponse(null);
+		useAppStore.getState().setCurrentResult(null);
 		setChatBoxOpen(false);
 		
 		if (isCreatingOverlay) {
@@ -279,7 +279,7 @@ function App() {
 	// 🤖 CHAT FLOW HANDLERS (FAS 4: React-based approach)
 	const handleAskAI = async () => {
 		// Always close previous chat/AI response when switching
-		setAiResponse(null);
+		useAppStore.getState().setCurrentResult(null);
 		setChatBoxOpen(false);
 		
 		console.log('🤖 Ask AI clicked - React ChatBox approach');
@@ -326,7 +326,7 @@ function App() {
 			clearImageContext();
 			
 			// Only shrink if no AI response is showing
-			if (!aiResponse) {
+			if (!currentResult) {
 				await invoke('resize_window', { width: 600, height: 50 });
 				console.log('✅ Window shrunk back to 600x50');
 			} else {
@@ -347,8 +347,8 @@ function App() {
 	const handleDismissAiResponse = async () => {
 		console.log('🔄 Dismissing AI response and shrinking window');
 		
-		// Hide AI response
-		setAiResponse(null);
+		// Hide AI response using new system
+		useAppStore.getState().setCurrentResult(null);
 		
 		// STEG 2: Clear image context when dismissing AI response  
 		clearImageContext();
@@ -440,24 +440,50 @@ function App() {
 					console.warn('⚠️ Failed to resize window:', error);
 				}
 				
-							setAiResponse(aiResponse);
-			setIsAiThinking(false);
-			setAiProcessingStage('');
-			
-			// Update user usage after successful AI request
-			if (user) {
-				try {
-					const updatedUser = await UserService.updateUsage(1);
-					setUser(updatedUser);
-					console.log('✅ User usage updated:', updatedUser.tier.remainingRequests, 'requests remaining');
-				} catch (error) {
-					console.error('❌ Failed to update user usage:', error);
+							// Create AIResult for new ResultOverlay instead of old AIResponse
+				const result: AIResult = {
+					id: `result_${Date.now()}`,
+					content: aiResponse,
+					type: selectedImageForAI ? 'hybrid' : 'text',
+					confidence: 0.9,
+					timestamp: new Date(),
+					capturedImage: selectedImageForAI || undefined,
+					position: { x: 100, y: 100 } // Center position
+				};
+				
+				// Use new ResultOverlay system
+				useAppStore.getState().setCurrentResult(result);
+				useAppStore.getState().addResult(result);
+				
+				setIsAiThinking(false);
+				setAiProcessingStage('');
+				
+				// Update user usage after successful AI request
+				if (user) {
+					try {
+						const updatedUser = await UserService.updateUsage(1);
+						setUser(updatedUser);
+						console.log('✅ User usage updated:', updatedUser.tier.remainingRequests, 'requests remaining');
+					} catch (error) {
+						console.error('❌ Failed to update user usage:', error);
+					}
 				}
-			}
 		}, 100);
 		} catch (error) {
 			console.error('❌ AI request failed:', error);
-			setAiResponse('❌ Sorry, I encountered an error processing your request. Please try again.');
+			
+			// Create error result for new ResultOverlay
+			const errorResult: AIResult = {
+				id: `error_${Date.now()}`,
+				content: '❌ Sorry, I encountered an error processing your request. Please try again.',
+				type: 'text',
+				confidence: 0.0,
+				timestamp: new Date(),
+				capturedImage: selectedImageForAI || undefined,
+				position: { x: 100, y: 100 }
+			};
+			
+			useAppStore.getState().setCurrentResult(errorResult);
 			setIsAiThinking(false);
 			setAiProcessingStage('');
 		}
@@ -538,16 +564,7 @@ function App() {
 		}
 	}, [isAiThinking]);
 
-	const [aiResponseVisible, setAiResponseVisible] = useState(false);
-
-	useEffect(() => {
-		if (aiResponse) {
-			setAiResponseVisible(false);
-			setTimeout(() => setAiResponseVisible(true), 10); // trigger animation
-		} else {
-			setAiResponseVisible(false);
-		}
-	}, [aiResponse]);
+	// Removed aiResponseVisible state - now using ResultOverlay system
 
 	if (!isReady) {
 		return (
@@ -659,16 +676,9 @@ function App() {
 
 			{/* Main content area with fixed top and bottom margins */}
 			<div className="flex flex-col justify-between h-full overflow-hidden">
-				{/* Top margin from header to AI Response */}
+				{/* Top margin from header - old AIResponse removed, now using ResultOverlay */}
 				<div className="mt-3 flex-shrink-0">
-					{aiResponse && (
-						<div className={`transition-all duration-300 ease-out pb-4 ${aiResponseVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}> {/* pb-4 = 16px bottom padding */}
-							<AIResponse 
-								response={aiResponse}
-								onDismiss={handleDismissAiResponse}
-							/>
-						</div>
-					)}
+					{/* AI Response now handled by ResultOverlay component below */}
 				</div>
 
 				{/* Bottom elements with fixed margin from AI Response */}
