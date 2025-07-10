@@ -83,6 +83,11 @@ const ResultOverlay: React.FC<ResultOverlayProps> = ({ result }) => {
     }
   };
 
+  // Safe position values to avoid TypeScript errors
+  const positionX = result.position?.x ?? undefined;
+  const positionY = result.position?.y ?? undefined;
+  const hasPosition = positionX !== undefined && positionY !== undefined;
+
   return (
     <>
       <div className={`fixed inset-0 z-50 transition-all duration-300 ${
@@ -99,9 +104,9 @@ const ResultOverlay: React.FC<ResultOverlayProps> = ({ result }) => {
           isVisible ? 'scale-100 translate-y-0' : 'scale-95 translate-y-4'
         }`}
         style={{
-          left: result.position?.x || '50%',
-          top: result.position?.y || '50%',
-          transform: `translate(${result.position?.x ? '0' : '-50%'}, ${result.position?.y ? '0' : '-50%'}) ${
+          left: '50%',
+          top: '50%',
+          transform: `translate(-50%, -50%) ${
             isVisible ? 'scale(1)' : 'scale(0.95)'
           }`
         }}>

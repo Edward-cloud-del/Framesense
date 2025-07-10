@@ -63,7 +63,8 @@ function App() {
 		currentResult, 
 		setPermissions,
 		user,
-		setUser 
+		setUser,
+		selectedModel 
 	} = useAppStore();
 
 	// 🤖 REAL OpenAI integration function - replaces mock
@@ -238,6 +239,7 @@ function App() {
 	};
 
 	const testScreenSelection = async () => {
+		console.log('🔴 RED CIRCLE: testScreenSelection called - user clicked Select button');
 		// Always close previous chat/AI response when switching
 		useAppStore.getState().setCurrentResult(null);
 		setChatBoxOpen(false);
@@ -440,7 +442,8 @@ function App() {
 					console.warn('⚠️ Failed to resize window:', error);
 				}
 				
-							// Create AIResult for new ResultOverlay instead of old AIResponse
+							// 🔴 RED CIRCLE: Creating AIResult for new ResultOverlay
+				console.log('🔴 RED CIRCLE: About to create AIResult with aiResponse:', aiResponse.substring(0, 50) + '...');
 				const result: AIResult = {
 					id: `result_${Date.now()}`,
 					content: aiResponse,
@@ -451,9 +454,17 @@ function App() {
 					position: { x: 100, y: 100 } // Center position
 				};
 				
+				console.log('🔴 RED CIRCLE: Created AIResult:', {
+					id: result.id,
+					contentLength: result.content.length,
+					type: result.type,
+					hasCapturedImage: !!result.capturedImage
+				});
+				
 				// Use new ResultOverlay system
 				useAppStore.getState().setCurrentResult(result);
 				useAppStore.getState().addResult(result);
+				console.log('🔴 RED CIRCLE: AIResult set in store - should trigger ResultOverlay render!');
 				
 				setIsAiThinking(false);
 				setAiProcessingStage('');
@@ -565,6 +576,37 @@ function App() {
 	}, [isAiThinking]);
 
 	// Removed aiResponseVisible state - now using ResultOverlay system
+
+	// 🔴 RED CIRCLE: Debug currentResult state before render
+	console.log('🔴 RED CIRCLE: App.tsx render - currentResult state:', {
+		hasCurrentResult: !!currentResult,
+		currentResultId: currentResult?.id,
+		currentResultType: currentResult?.type,
+		currentResultContent: currentResult?.content?.substring(0, 30) + '...' || 'NO CONTENT'
+	});
+
+	// 🔴 RED CIRCLE: Manual test function for debugging
+	const testResultOverlay = () => {
+		console.log('🔴 RED CIRCLE: Manually testing ResultOverlay...');
+		const testResult: AIResult = {
+			id: `test_${Date.now()}`,
+			content: '🔴 This is a test AI response to verify that the ResultOverlay works correctly. You should see upgrade buttons and model selector.',
+			type: 'text',
+			confidence: 1.0,
+			timestamp: new Date(),
+			capturedImage: undefined,
+			position: { x: 100, y: 100 }
+		};
+		
+		useAppStore.getState().setCurrentResult(testResult);
+		console.log('🔴 RED CIRCLE: Test result set - ResultOverlay should appear!');
+	};
+
+	// 🔴 RED CIRCLE: Make test function available in browser console
+	if (typeof window !== 'undefined') {
+		(window as any).testResultOverlay = testResultOverlay;
+		console.log('🔴 RED CIRCLE: Run testResultOverlay() in console to test UI');
+	}
 
 	if (!isReady) {
 		return (
@@ -699,8 +741,13 @@ function App() {
 			{/* Processing indicator */}
 			{isProcessing && <ProgressIndicator />}
 			
+					{/* 🔴 RED CIRCLE: Debug currentResult state */}
+			
 			{/* Result overlay */}
 			{currentResult && <ResultOverlay result={currentResult} />}
+			{/* 🔴 RED CIRCLE: ResultOverlay should render above this line when currentResult exists */}
+			
+
 			
 			{/* ⚙️ Settings Dialog */}
 			<SettingsDialog
