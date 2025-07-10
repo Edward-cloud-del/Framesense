@@ -4,16 +4,8 @@ import helmet from 'helmet';
 import dotenv from 'dotenv';
 import multer from 'multer';
 import { analyzeImageRoute } from './routes/ai.js';
-import { 
-  getPricingTiers, 
-  createCheckoutSession, 
-  createCustomer, 
-  getCustomerSubscription,
-  cancelSubscription,
-  createPortalSession,
-  handleStripeWebhook,
-  getUserTierInfo
-} from './routes/subscription.js';
+import authRoutes from './routes/auth.js';
+import subscriptionRoutes from './routes/subscription.js';
 
 // Load environment variables
 dotenv.config();
@@ -29,6 +21,7 @@ app.use(cors({
   origin: [
     'http://localhost:5173', // Local development
     'http://localhost:3000', // Local development
+    'http://localhost:8080', // Website payments server
     process.env.FRONTEND_URL || '', // Production Vercel URL
   ],
   credentials: true
@@ -55,20 +48,14 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Authentication routes
+app.use('/api/auth', authRoutes);
+
+// Subscription management routes
+app.use('/api', subscriptionRoutes);
+
 // AI analysis endpoint
 app.post('/api/analyze', upload.single('image'), analyzeImageRoute);
-
-// Subscription management endpoints
-app.get('/api/pricing', getPricingTiers);
-app.post('/api/checkout', createCheckoutSession);
-app.post('/api/customers', createCustomer);
-app.get('/api/customers/:customerId/subscription', getCustomerSubscription);
-app.post('/api/subscriptions/cancel', cancelSubscription);
-app.post('/api/billing/portal', createPortalSession);
-app.get('/api/users/:userId/tier', getUserTierInfo);
-
-// Stripe webhook endpoint (needs raw body)
-app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), handleStripeWebhook);
 
 // Health check for optimization services
 app.get('/api/health/optimizations', async (req, res) => {
@@ -107,6 +94,8 @@ app.use('*', (req, res) => {
 app.listen(PORT, () => {
   console.log(`🚀 FrameSense API running on port ${PORT}`);
   console.log(`🔗 Health check: http://localhost:${PORT}/health`);
+  console.log(`🔐 Auth endpoints: http://localhost:${PORT}/api/auth/*`);
+  console.log(`💳 Subscription endpoints: http://localhost:${PORT}/api/*`);
 });
 
 export default app; 
