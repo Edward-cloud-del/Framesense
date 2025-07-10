@@ -678,7 +678,7 @@ function App() {
 					{/* Settings Button */}
 					<button
 						onClick={handleOpenSettings}
-						className="bg-gray-500/20 hover:bg-gray-500/30 text-white px-3 py-1.5 rounded-lg transition-colors text-xs flex items-center space-x-1.5 backdrop-blur-sm border border-white/10"
+						className="bg-gray-500/20 hover:bg-gray-500/30 text-white px-3 py-0.5 rounded-lg transition-colors text-xs flex items-center space-x-1.5 backdrop-blur-sm border border-white/10"
 					>
 						<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
@@ -690,7 +690,7 @@ function App() {
 					{/* Ask AI Button */}
 					<button
 						onClick={handleAskAI}
-						className="bg-gray-500/20 hover:bg-gray-500/30 text-white px-3 py-1.5 rounded-lg transition-colors text-xs flex items-center space-x-1.5 backdrop-blur-sm border border-white/10"
+						className="bg-gray-500/20 hover:bg-gray-500/30 text-white px-3 py-0.5 rounded-lg transition-colors text-xs flex items-center space-x-1.5 backdrop-blur-sm border border-white/10"
 					>
 						<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
@@ -701,7 +701,7 @@ function App() {
 					{/* Model Selector Button */}
 					<button
 						onClick={handleOpenModelSelector}
-						className="bg-purple-500/20 hover:bg-purple-500/30 text-white px-3 py-1.5 rounded-lg transition-colors text-xs flex items-center space-x-1.5 backdrop-blur-sm border border-white/10"
+						className="bg-purple-500/20 hover:bg-purple-500/30 text-white px-3 py-0.5 rounded-lg transition-colors text-xs flex items-center space-x-1.5 backdrop-blur-sm border border-white/10"
 						title={`Current model: ${selectedModel}`}
 					>
 						<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -714,7 +714,7 @@ function App() {
 					{/* Move Window Button */}
 					<button
 						onClick={moveWindowToCorrectPosition}
-						className="bg-green-500/20 hover:bg-green-500/30 text-white px-3 py-1.5 rounded-lg transition-colors text-xs flex items-center space-x-1.5 backdrop-blur-sm border border-white/10"
+						className="bg-green-500/20 hover:bg-green-500/30 text-white px-3 py-0.5 rounded-lg transition-colors text-xs flex items-center space-x-1.5 backdrop-blur-sm border border-white/10"
 					>
 						<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
@@ -730,7 +730,7 @@ function App() {
 							isCreatingOverlay 
 								? 'bg-gray-500/30 cursor-not-allowed' 
 								: 'bg-gray-500/20 hover:bg-gray-500/30'
-						} text-white px-3 py-1.5 rounded-lg transition-colors text-xs flex items-center space-x-1.5 backdrop-blur-sm border border-white/10`}
+						} text-white px-3 py-0.5 rounded-lg transition-colors text-xs flex items-center space-x-1.5 backdrop-blur-sm border border-white/10`}
 					>
 						{isCreatingOverlay ? (
 							<>
