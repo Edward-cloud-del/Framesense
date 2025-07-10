@@ -702,7 +702,7 @@ function App() {
 					
 					{/* Screenshot result - BETWEEN LOGO AND BUTTON */}
 					{screenshotResult && (
-						<div className="flex items-center space-x-2 px-2 py-1 bg-gray-500/20 rounded border border-white/10 backdrop-blur-sm" data-tauri-drag-region="false">
+						<div className="flex items-center space-x-2 px-2 py-1 bg-gray-500/20 rounded border border-white/10 backdrop-blur-sm">
 							<img 
 								src={screenshotResult} 
 								alt="Screenshot" 
@@ -787,7 +787,7 @@ function App() {
 				</div>
 
 				{/* Bottom elements with fixed margin from AI Response */}
-				<div className="flex flex-col flex-shrink-0 mt-2" data-tauri-drag-region="false"> {/* mt-2 = 8px top margin */}
+				<div className="flex flex-col flex-shrink-0 mt-2"> {/* mt-2 = 8px top margin */}
 					<ThinkingAnimation
 						isVisible={isAiThinking}
 						currentStage={aiProcessingStage}
@@ -809,7 +809,7 @@ function App() {
 			</div>
 
 			{/* Processing indicator */}
-			{isProcessing && <div data-tauri-drag-region="false"><ProgressIndicator /></div>}
+			{isProcessing && <ProgressIndicator />}
 			
 					{/* 🔴 RED CIRCLE: Debug currentResult state */}
 			
