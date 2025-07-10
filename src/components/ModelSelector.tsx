@@ -108,27 +108,16 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({ isVisible, onClose, onMod
   return (
     <div className={`relative z-50 transition-all duration-300 ease-out ${boxVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
       <div 
-        className="bg-gray-900/95 backdrop-blur-[20px] border border-white/10 rounded-2xl p-3 mt-2 mb-1"
+        className="bg-gray-900/95 backdrop-blur-[20px] border border-white/10 rounded-2xl p-2 mt-2 mb-1"
         style={{
           background: 'rgba(20, 20, 20, 0.95)',
         }}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-xs font-semibold text-white/90">Välj AI-Modell</h3>
-          <button
-            onClick={onClose}
-            className="text-white/40 hover:text-white/60 transition-colors"
-          >
-            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
+
 
         {/* 4x2 Grid Layout - 4 columns, scrollable */}
-        <div className="max-h-32 overflow-y-auto mb-3 pr-1" style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.2) transparent' }}>
-          <div className="grid grid-cols-4 gap-1.5">
+        <div className="max-h-24 overflow-y-auto mb-2 pr-1" style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.2) transparent' }}>
+          <div className="grid grid-cols-4 gap-1">
             {allModels.map((model) => {
             const isLocked = isModelLocked(model);
             const isSelected = selectedModel === model.name;
@@ -138,7 +127,7 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({ isVisible, onClose, onMod
                 key={model.name}
                 onClick={() => handleModelSelect(model.name, isLocked)}
                 className={`
-                  relative p-1.5 rounded-md transition-all duration-200 text-left min-h-[45px] flex flex-col justify-center
+                  relative p-1 rounded-md transition-all duration-200 text-left min-h-[35px] flex flex-col justify-center
                   ${isSelected && !isLocked
                     ? 'bg-blue-500/30 border border-blue-400/50'
                     : isLocked 
@@ -179,10 +168,10 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({ isVisible, onClose, onMod
 
         {/* Upgrade section for locked models */}
         {lockedModels.length > 0 && (
-          <div className="border-t border-white/10 pt-2 mb-2">
+          <div className="border-t border-white/10 pt-1 mb-1">
             <button
               onClick={handleUpgrade}
-              className="w-full bg-gradient-to-r from-blue-500/20 to-purple-600/20 text-white/90 py-1.5 px-2 rounded-md font-medium text-xs hover:from-blue-500/30 hover:to-purple-600/30 transition-all duration-200 flex items-center justify-center space-x-1.5 border border-white/20"
+              className="w-full bg-gradient-to-r from-blue-500/20 to-purple-600/20 text-white/90 py-1 px-2 rounded-md font-medium text-xs hover:from-blue-500/30 hover:to-purple-600/30 transition-all duration-200 flex items-center justify-center space-x-1 border border-white/20"
             >
               <span>🚀</span>
               <span>Upgrade</span>
