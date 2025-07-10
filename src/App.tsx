@@ -570,8 +570,8 @@ function App() {
 			
 			try {
 				// Expand window for model selector with better height
-				await invoke('resize_window', { width: 600, height: 200 });
-				console.log('✅ Window expanded to 600x200 for model selector');
+				await invoke('resize_window', { width: 600, height: 250 });
+				console.log('✅ Window expanded to 600x250 for model selector');
 				
 				// Show ModelSelector React component
 				setModelSelectorOpen(true);

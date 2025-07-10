@@ -116,7 +116,7 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({ isVisible, onClose, onMod
 
 
         {/* 4x2 Grid Layout - 4 columns, scrollable */}
-        <div className="max-h-24 overflow-y-auto mb-2 pr-1" style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.2) transparent' }}>
+        <div className="max-h-32 overflow-y-auto mb-2 pr-1" style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.2) transparent' }}>
           <div className="grid grid-cols-4 gap-1">
             {allModels.map((model) => {
             const isLocked = isModelLocked(model);
