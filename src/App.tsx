@@ -663,7 +663,6 @@ function App() {
 					{/* Screenshot result - BETWEEN LOGO AND BUTTON */}
 					{screenshotResult && (
 						<div className="flex items-center space-x-2 px-2 py-1 bg-gray-500/20 rounded border border-white/10 backdrop-blur-sm">
-							<span className="text-xs text-white font-medium">Captured</span>
 							<img 
 								src={screenshotResult} 
 								alt="Screenshot" 
