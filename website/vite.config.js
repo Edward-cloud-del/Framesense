@@ -8,6 +8,23 @@ export default defineConfig({
   },
   server: {
     port: 3000,
-    open: true
-  }
+    open: true,
+    middlewareMode: false,
+    proxy: {},
+    fs: {
+      allow: ['.']
+    }
+  },
+  // Add custom middleware for routing
+  plugins: [
+    {
+      name: 'custom-routes',
+      configureServer(server) {
+        server.middlewares.use('/payments', (req, res, next) => {
+          req.url = '/payments.html';
+          next();
+        });
+      }
+    }
+  ]
 }) 
