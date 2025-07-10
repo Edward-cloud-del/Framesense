@@ -70,9 +70,7 @@ interface AppState {
   };
   updateSettings: (settings: Partial<AppState['settings']>) => void;
   
-  // UI state
-  showModelSelector: boolean;
-  setShowModelSelector: (show: boolean) => void;
+
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -87,9 +85,6 @@ export const useAppStore = create<AppState>((set, get) => ({
   user: null,
   isLoggedIn: false,
   selectedModel: 'GPT-3.5-turbo', // Default free model
-  
-  // UI state
-  showModelSelector: false,
   
   settings: {
     hotkey: 'Alt+Space',
@@ -127,6 +122,4 @@ export const useAppStore = create<AppState>((set, get) => ({
   updateSettings: (newSettings) => set((state) => ({
     settings: { ...state.settings, ...newSettings }
   })),
-  
-  setShowModelSelector: (show) => set({ showModelSelector: show }),
 })); 

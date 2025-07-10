@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAppStore } from '../stores/app-store';
 
 interface ModelSelectorProps {
@@ -16,6 +16,18 @@ interface AIModel {
 
 const ModelSelector: React.FC<ModelSelectorProps> = ({ isVisible, onClose, onModelSelect }) => {
   const { user, selectedModel } = useAppStore();
+  
+  // Animation state like ChatBox
+  const [boxVisible, setBoxVisible] = useState(false);
+  
+  useEffect(() => {
+    if (isVisible) {
+      setBoxVisible(false);
+      setTimeout(() => setBoxVisible(true), 10);
+    } else {
+      setBoxVisible(false);
+    }
+  }, [isVisible]);
 
   if (!isVisible) return null;
 
@@ -80,43 +92,47 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({ isVisible, onClose, onMod
   };
 
   const getModelDisplayName = (name: string) => {
-    // Shorten names for compact display
+    // Very short names for 4x2 compact display
     return name
       .replace('GPT-3.5-turbo', 'GPT-3.5')
       .replace('GPT-4o-mini', 'GPT-4o mini')
       .replace('GPT-4o 32k', 'GPT-4o 32k')
-      .replace('Claude 3 Haiku', 'Claude Haiku')
-      .replace('Claude 3.5 Sonnet', 'Claude Sonnet')
-      .replace('Claude 3 Opus', 'Claude Opus')
-      .replace('Gemini Flash', 'Gemini Flash')
+      .replace('GPT-4o', 'GPT-4o')
+      .replace('Claude 3 Haiku', 'Haiku')
+      .replace('Claude 3.5 Sonnet', 'Sonnet')
+      .replace('Claude 3 Opus', 'Opus')
+      .replace('Gemini Flash', 'Flash')
       .replace('Gemini Pro', 'Gemini Pro')
-      .replace('Gemini Ultra Pro', 'Gemini Ultra+')
-      .replace('Gemini Ultra', 'Gemini Ultra')
+      .replace('Gemini Ultra Pro', 'Ultra+')
+      .replace('Gemini Ultra', 'Ultra')
       .replace('Llama 3.1 70B', 'Llama 70B')
       .replace('Llama 3.1 405B', 'Llama 405B');
   };
 
   return (
-    // Use absolute positioning to cover the entire Tauri window
-    <div className="absolute inset-0 z-50 bg-white/95 backdrop-blur-sm overflow-hidden">
-      {/* Compact header */}
-      <div className="flex items-center justify-between p-3 border-b border-gray-200 bg-white/90">
-        <h3 className="text-sm font-semibold text-gray-900">Välj AI-Modell</h3>
-        <button
-          onClick={onClose}
-          className="text-gray-400 hover:text-gray-600 transition-colors"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-      </div>
+    <div className={`relative z-50 transition-all duration-300 ease-out ${boxVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
+      <div 
+        className="bg-gray-900/95 backdrop-blur-[20px] border border-white/10 rounded-2xl p-3 mt-2 mb-1"
+        style={{
+          background: 'rgba(20, 20, 20, 0.95)',
+        }}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-xs font-semibold text-white/90">Välj AI-Modell</h3>
+          <button
+            onClick={onClose}
+            className="text-white/40 hover:text-white/60 transition-colors"
+          >
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
 
-      {/* Main content with scroll */}
-      <div className="flex-1 overflow-y-auto p-3 max-h-[calc(100vh-120px)]">
-        {/* 4x2 Grid Layout - 2 columns, multiple rows */}
-        <div className="grid grid-cols-2 gap-2 mb-4">
-          {allModels.map((model) => {
+        {/* 4x2 Grid Layout - 4 columns, 2 rows max */}
+        <div className="grid grid-cols-4 gap-1.5 mb-3">
+          {allModels.slice(0, 8).map((model) => {
             const isLocked = isModelLocked(model);
             const isSelected = selectedModel === model.name;
             
@@ -125,19 +141,19 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({ isVisible, onClose, onMod
                 key={model.name}
                 onClick={() => handleModelSelect(model.name, isLocked)}
                 className={`
-                  relative p-2 rounded-lg transition-all duration-200 text-left min-h-[60px] flex flex-col justify-center
+                  relative p-1.5 rounded-md transition-all duration-200 text-left min-h-[45px] flex flex-col justify-center
                   ${isSelected && !isLocked
-                    ? 'bg-blue-100 border-2 border-blue-300 shadow-sm'
+                    ? 'bg-blue-500/30 border border-blue-400/50'
                     : isLocked 
-                      ? 'bg-gray-100 border border-gray-200 opacity-60 cursor-pointer hover:opacity-80'
-                      : 'bg-gray-50 border border-gray-200 hover:bg-gray-100 hover:border-gray-300'
+                      ? 'bg-white/5 border border-white/10 opacity-50 cursor-pointer hover:opacity-70'
+                      : 'bg-white/10 border border-white/20 hover:bg-white/20 hover:border-white/30'
                   }
                 `}
               >
                 {/* Lock icon for locked models */}
                 {isLocked && (
-                  <div className="absolute top-1 right-1">
-                    <svg className="w-3 h-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="absolute top-0.5 right-0.5">
+                    <svg className="w-2 h-2 text-white/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                     </svg>
                   </div>
@@ -145,22 +161,17 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({ isVisible, onClose, onMod
                 
                 {/* Selected checkmark */}
                 {isSelected && !isLocked && (
-                  <div className="absolute top-1 right-1">
-                    <svg className="w-3 h-3 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="absolute top-0.5 right-0.5">
+                    <svg className="w-2 h-2 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
                   </div>
                 )}
 
-                <div className="flex items-center space-x-2">
-                  <span className="text-sm">{model.icon}</span>
-                  <div className="flex-1 min-w-0">
-                    <div className={`text-xs font-medium leading-tight ${isLocked ? 'text-gray-600' : 'text-gray-900'}`}>
-                      {getModelDisplayName(model.name)}
-                    </div>
-                    <div className={`text-xs ${isLocked ? 'text-gray-400' : 'text-gray-500'}`}>
-                      {model.provider}
-                    </div>
+                <div className="flex flex-col items-center text-center">
+                  <span className="text-xs mb-0.5">{model.icon}</span>
+                  <div className={`text-xs font-medium leading-tight ${isLocked ? 'text-white/40' : 'text-white/90'}`}>
+                    {getModelDisplayName(model.name)}
                   </div>
                 </div>
               </button>
@@ -168,26 +179,31 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({ isVisible, onClose, onMod
           })}
         </div>
 
+        {/* Show more models if there are more than 8 */}
+        {allModels.length > 8 && (
+          <div className="text-xs text-white/50 text-center mb-3">
+            +{allModels.length - 8} more models available
+          </div>
+        )}
+
         {/* Upgrade section for locked models */}
         {lockedModels.length > 0 && (
-          <div className="border-t border-gray-200 pt-3">
+          <div className="border-t border-white/10 pt-2 mb-2">
             <button
               onClick={handleUpgrade}
-              className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-2 px-3 rounded-lg font-medium text-sm hover:from-blue-600 hover:to-purple-700 transition-all duration-200 flex items-center justify-center space-x-2"
+              className="w-full bg-gradient-to-r from-blue-500/20 to-purple-600/20 text-white/90 py-1.5 px-2 rounded-md font-medium text-xs hover:from-blue-500/30 hover:to-purple-600/30 transition-all duration-200 flex items-center justify-center space-x-1.5 border border-white/20"
             >
               <span>🚀</span>
-              <span>Uppgradera för fler modeller</span>
+              <span>Upgrade</span>
             </button>
           </div>
         )}
 
-        {/* Usage info - compact */}
+        {/* Usage info - very compact */}
         {user && (
-          <div className="mt-3 p-2 bg-gray-50 rounded-lg">
-            <div className="flex justify-between items-center text-xs text-gray-600">
-              <span>Requests kvar: <span className="font-medium">{user.tier.remainingRequests}</span></span>
-              <span className="capitalize font-medium">{user.tier.tier}</span>
-            </div>
+          <div className="text-xs text-white/50 flex justify-between items-center">
+            <span>{user.tier.remainingRequests} left</span>
+            <span className="capitalize">{user.tier.tier}</span>
           </div>
         )}
       </div>

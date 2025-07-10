@@ -57,6 +57,9 @@ function App() {
 	// 🎭 Thinking Animation state
 	const [isAiThinking, setIsAiThinking] = useState(false);
 	const [aiProcessingStage, setAiProcessingStage] = useState<string>('');
+	
+	// 🎯 Model Selector state (like ChatBox)
+	const [modelSelectorOpen, setModelSelectorOpen] = useState(false);
 
 	const { 
 		hasPermissions, 
@@ -66,9 +69,7 @@ function App() {
 		user,
 		setUser,
 		selectedModel,
-		setSelectedModel,
-		showModelSelector,
-		setShowModelSelector
+		setSelectedModel
 	} = useAppStore();
 
 	// 🤖 REAL OpenAI integration function - replaces mock
@@ -554,15 +555,62 @@ function App() {
 		console.log('⚙️ Settings dialog closed');
 	};
 
-	// 🎯 Model Selector handlers
-	const handleOpenModelSelector = () => {
-		setShowModelSelector(true);
-		console.log('🎯 Opening model selector');
+	// 🎯 Model Selector handlers (like ChatBox)
+	const handleOpenModelSelector = async () => {
+		// Always close previous chat/AI response when switching
+		useAppStore.getState().setCurrentResult(null);
+		setChatBoxOpen(false);
+		
+		console.log('🎯 Model selector clicked - dropdown approach');
+		console.log('📊 Current modelSelectorOpen state:', modelSelectorOpen);
+		
+		if (!modelSelectorOpen) {
+			// Open ModelSelector: Expand window + show ModelSelector
+			console.log('🔄 Opening ModelSelector - expanding window and showing component');
+			
+			try {
+				// Expand window for model selector with better height
+				await invoke('resize_window', { width: 600, height: 200 });
+				console.log('✅ Window expanded to 600x200 for model selector');
+				
+				// Show ModelSelector React component
+				setModelSelectorOpen(true);
+				console.log('✅ ModelSelector component now visible');
+				
+			} catch (error) {
+				console.error('❌ Failed to expand window for model selector:', error);
+				// Still show ModelSelector even if window resize fails
+				setModelSelectorOpen(true);
+			}
+		} else {
+			// Close ModelSelector: Hide ModelSelector + shrink window
+			console.log('🔄 Closing ModelSelector - hiding component and shrinking window');
+			handleCloseModelSelector();
+		}
 	};
 
-	const handleCloseModelSelector = () => {
-		setShowModelSelector(false);
-		console.log('🎯 Model selector closed');
+	const handleCloseModelSelector = async () => {
+		console.log('🔄 Closing ModelSelector and shrinking window');
+		
+		try {
+			// Hide ModelSelector component first
+			setModelSelectorOpen(false);
+			
+			// Only shrink if no AI response is showing
+			if (!currentResult) {
+				await invoke('resize_window', { width: 600, height: 50 });
+				console.log('✅ Window shrunk back to 600x50');
+			} else {
+				console.log('✅ Keeping window expanded - AI response visible');
+			}
+			
+			console.log('✅ ModelSelector closed, background consistent');
+			
+		} catch (error) {
+			console.error('❌ Failed to shrink window after model selector close:', error);
+			// Still hide ModelSelector even if window resize fails
+			setModelSelectorOpen(false);
+		}
 	};
 
 	const handleModelSelect = (model: string) => {
@@ -767,6 +815,11 @@ function App() {
 						onClose={handleCloseChatBox}
 						imageContext={selectedImageForAI || undefined}
 					/>
+					<ModelSelector
+						isVisible={modelSelectorOpen}
+						onClose={handleCloseModelSelector}
+						onModelSelect={handleModelSelect}
+					/>
 				</div>
 			</div>
 
@@ -789,12 +842,7 @@ function App() {
 				onApiKeyUpdate={handleApiKeyUpdate}
 			/>
 
-			{/* 🎯 Model Selector */}
-			<ModelSelector
-				isVisible={showModelSelector}
-				onClose={handleCloseModelSelector}
-				onModelSelect={handleModelSelect}
-			/>
+
 		</div>
 	);
 }
