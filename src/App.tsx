@@ -8,6 +8,7 @@ import ProgressIndicator from './components/ProgressIndicator';
 import ChatBox from './components/ChatBox';
 import SettingsDialog from './components/SettingsDialog';
 import ThinkingAnimation from './components/ThinkingAnimation';
+import ModelSelector from './components/ModelSelector';
 
 import { useAppStore, AIResult } from './stores/app-store';
 
@@ -64,7 +65,10 @@ function App() {
 		setPermissions,
 		user,
 		setUser,
-		selectedModel 
+		selectedModel,
+		setSelectedModel,
+		showModelSelector,
+		setShowModelSelector
 	} = useAppStore();
 
 	// 🤖 REAL OpenAI integration function - replaces mock
@@ -550,6 +554,22 @@ function App() {
 		console.log('⚙️ Settings dialog closed');
 	};
 
+	// 🎯 Model Selector handlers
+	const handleOpenModelSelector = () => {
+		setShowModelSelector(true);
+		console.log('🎯 Opening model selector');
+	};
+
+	const handleCloseModelSelector = () => {
+		setShowModelSelector(false);
+		console.log('🎯 Model selector closed');
+	};
+
+	const handleModelSelect = (model: string) => {
+		setSelectedModel(model);
+		console.log('🎯 Model selected:', model);
+	};
+
 	// STEG 2: Clear image context when starting new session
 	const clearImageContext = () => {
 		setSelectedImageForAI(null);
@@ -678,6 +698,19 @@ function App() {
 						<span>Ask AI</span>
 					</button>
 
+					{/* Model Selector Button */}
+					<button
+						onClick={handleOpenModelSelector}
+						className="bg-purple-500/20 hover:bg-purple-500/30 text-white px-3 py-1.5 rounded-lg transition-colors text-xs flex items-center space-x-1.5 backdrop-blur-sm border border-white/10"
+						title={`Current model: ${selectedModel}`}
+					>
+						<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
+						</svg>
+						<span>Models</span>
+						<span className="text-xs opacity-75">({selectedModel.split('-')[0]})</span>
+					</button>
+
 					{/* Move Window Button */}
 					<button
 						onClick={moveWindowToCorrectPosition}
@@ -755,6 +788,13 @@ function App() {
 				onClose={handleCloseSettings}
 				aiService={aiService}
 				onApiKeyUpdate={handleApiKeyUpdate}
+			/>
+
+			{/* 🎯 Model Selector */}
+			<ModelSelector
+				isVisible={showModelSelector}
+				onClose={handleCloseModelSelector}
+				onModelSelect={handleModelSelect}
 			/>
 		</div>
 	);
