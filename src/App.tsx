@@ -625,16 +625,7 @@ function App() {
 		console.log('🗑️ Image and OCR context cleared for new session');
 	};
 
-	const moveWindowToCorrectPosition = async () => {
-		try {
-			await invoke('move_window_to_position');
-			console.log('✅ Window moved to correct position (4/5 from bottom)');
-			alert('✅ Fönster flyttat till rätt position!');
-		} catch (error) {
-			console.error('❌ Failed to move window:', error);
-			alert('❌ Kunde inte flytta fönstret');
-		}
-	};
+
 
 	// Add effect to resize window when thinking
 	useEffect(() => {
@@ -691,12 +682,13 @@ function App() {
 
 	return (
 		<div 
-			className="h-full flex flex-col px-4 py-2 rounded-xl border border-gray-200 shadow-lg relative overflow-hidden"
+			className="h-full flex flex-col px-4 py-1.5 rounded-xl border border-gray-200 shadow-lg relative overflow-hidden"
 			style={{ 
 				backgroundColor: 'rgba(20, 20, 20, 0.5)', 
 				backdropFilter: 'blur(10px)',
 				borderColor: 'rgba(255, 255, 255, 0.2)'
 			}}
+			data-tauri-drag-region
 		>
 			{/* Compact palette header */}
 			<div className="flex items-center justify-between flex-shrink-0">
@@ -710,7 +702,7 @@ function App() {
 					
 					{/* Screenshot result - BETWEEN LOGO AND BUTTON */}
 					{screenshotResult && (
-						<div className="flex items-center space-x-2 px-2 py-1 bg-gray-500/20 rounded border border-white/10 backdrop-blur-sm">
+						<div className="flex items-center space-x-2 px-2 py-1 bg-gray-500/20 rounded border border-white/10 backdrop-blur-sm" data-tauri-drag-region="false">
 							<img 
 								src={screenshotResult} 
 								alt="Screenshot" 
@@ -721,7 +713,7 @@ function App() {
 				</div>
 				
 				{/* Action Buttons */}
-				<div className="flex space-x-1.5">
+				<div className="flex space-x-1.5" data-tauri-drag-region="false">
 					{/* Settings Button */}
 					<button
 						onClick={handleOpenSettings}
@@ -737,7 +729,7 @@ function App() {
 					{/* Ask AI Button */}
 					<button
 						onClick={handleAskAI}
-						className="bg-gray-500/20 hover:bg-gray-500/30 text-white px-3 py-0.5 rounded-lg transition-colors text-xs flex items-center space-x-1.5 backdrop-blur-sm border border-white/10"
+						className="bg-gray-500/20 hover:bg-gray-500/30 text-white px-3 py-1 rounded-lg transition-colors text-xs flex items-center space-x-1.5 backdrop-blur-sm border border-white/10"
 					>
 						<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
@@ -758,16 +750,7 @@ function App() {
 						<span className="text-xs opacity-75">({selectedModel.split('-')[0]})</span>
 					</button>
 
-					{/* Move Window Button */}
-					<button
-						onClick={moveWindowToCorrectPosition}
-						className="bg-green-500/20 hover:bg-green-500/30 text-white px-3 py-0.5 rounded-lg transition-colors text-xs flex items-center space-x-1.5 backdrop-blur-sm border border-white/10"
-					>
-						<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-						</svg>
-						<span>Move</span>
-					</button>
+
 
 					{/* Interactive Selection Button - With loading state */}
 					<button
@@ -804,43 +787,47 @@ function App() {
 				</div>
 
 				{/* Bottom elements with fixed margin from AI Response */}
-				<div className="flex flex-col flex-shrink-0 mt-2"> {/* mt-2 = 8px top margin */}
+				<div className="flex flex-col flex-shrink-0 mt-2" data-tauri-drag-region="false"> {/* mt-2 = 8px top margin */}
 					<ThinkingAnimation
 						isVisible={isAiThinking}
 						currentStage={aiProcessingStage}
 					/>
-					<ChatBox 
-						isVisible={chatBoxOpen}
-						onSend={handleSendMessage}
-						onClose={handleCloseChatBox}
-						imageContext={selectedImageForAI || undefined}
-					/>
-					<ModelSelector
-						isVisible={modelSelectorOpen}
-						onClose={handleCloseModelSelector}
-						onModelSelect={handleModelSelect}
-					/>
+					<div data-tauri-drag-region="false">
+						<ChatBox 
+							isVisible={chatBoxOpen}
+							onSend={handleSendMessage}
+							onClose={handleCloseChatBox}
+							imageContext={selectedImageForAI || undefined}
+						/>
+						<ModelSelector
+							isVisible={modelSelectorOpen}
+							onClose={handleCloseModelSelector}
+							onModelSelect={handleModelSelect}
+						/>
+					</div>
 				</div>
 			</div>
 
 			{/* Processing indicator */}
-			{isProcessing && <ProgressIndicator />}
+			{isProcessing && <div data-tauri-drag-region="false"><ProgressIndicator /></div>}
 			
 					{/* 🔴 RED CIRCLE: Debug currentResult state */}
 			
 			{/* Result overlay */}
-			{currentResult && <ResultOverlay result={currentResult} />}
+			{currentResult && <div data-tauri-drag-region="false"><ResultOverlay result={currentResult} /></div>}
 			{/* 🔴 RED CIRCLE: ResultOverlay should render above this line when currentResult exists */}
 			
 
 			
 			{/* ⚙️ Settings Dialog */}
-			<SettingsDialog
-				isOpen={settingsOpen}
-				onClose={handleCloseSettings}
-				aiService={aiService}
-				onApiKeyUpdate={handleApiKeyUpdate}
-			/>
+			<div data-tauri-drag-region="false">
+				<SettingsDialog
+					isOpen={settingsOpen}
+					onClose={handleCloseSettings}
+					aiService={aiService}
+					onApiKeyUpdate={handleApiKeyUpdate}
+				/>
+			</div>
 
 
 		</div>
