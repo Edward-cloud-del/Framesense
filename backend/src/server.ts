@@ -48,6 +48,26 @@ app.get('/health', (req, res) => {
 // AI analysis endpoint
 app.post('/api/analyze', upload.single('image'), analyzeImageRoute);
 
+// Health check for optimization services
+app.get('/api/health/optimizations', async (req, res) => {
+  try {
+    const { AIProcessor } = await import('./services/ai-processor.js');
+    const healthStatus = await AIProcessor.healthCheck();
+    
+    res.json({
+      status: healthStatus.overall ? 'healthy' : 'degraded',
+      services: healthStatus,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      status: 'error',
+      message: error.message || 'Unknown error',
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
   console.error('Error:', err);

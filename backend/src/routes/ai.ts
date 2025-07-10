@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import OpenAI from 'openai';
+import { AIProcessor } from '../services/ai-processor.js';
 
 // Initialize OpenAI client
 const openai = new OpenAI({
@@ -14,6 +15,16 @@ export interface AIRequest {
 export interface AIResponse {
   message: string;
   success: boolean;
+  processing_info?: {
+    question_type: string;
+    optimization_strategy: string;
+    ocr_used: boolean;
+    image_optimized: boolean;
+    processing_time?: {
+      ocr: number;
+      total: number;
+    };
+  };
   usage?: {
     requestCount: number;
     remainingRequests: number;
@@ -22,6 +33,8 @@ export interface AIResponse {
 }
 
 export const analyzeImageRoute = async (req: Request, res: Response) => {
+  const startTime = Date.now();
+  
   try {
     const { message } = req.body;
     let imageData: string | undefined;
@@ -44,48 +57,25 @@ export const analyzeImageRoute = async (req: Request, res: Response) => {
       });
     }
 
-    console.log('🤖 Processing AI request:', { 
+    console.log('🚀 Processing optimized AI request:', { 
       hasImage: !!imageData, 
       messageLength: message.length 
     });
 
-    // Prepare messages for OpenAI
-    const messages: any[] = [
-      {
-        role: 'user',
-        content: imageData ? [
-          { type: 'text', text: message },
-          { type: 'image_url', image_url: { url: imageData } }
-        ] : message
-      }
-    ];
-
-    // Call OpenAI API
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini', // Cost-effective model with vision capabilities
-      messages,
-      max_tokens: 500,
-      temperature: 0.7,
-    });
-
-    const responseMessage = completion.choices[0]?.message?.content || 'No response generated';
-
-    console.log('✅ OpenAI API call successful');
-
-    const response: AIResponse = {
-      message: responseMessage,
-      success: true,
-      usage: {
-        requestCount: 1,
-        remainingRequests: 49, // You can implement proper rate limiting here
-        timestamp: new Date().toISOString()
-      }
+    // Use optimized AI processor with fallback strategies
+    const request = {
+      message,
+      imageData,
+      start_time: startTime
     };
 
+    const response = await AIProcessor.processWithFallback(request, openai);
+
+    console.log('✅ Optimized AI processing completed');
     res.json(response);
 
   } catch (error: any) {
-    console.error('❌ OpenAI API error:', error);
+    console.error('❌ AI processing error:', error);
 
     let errorMessage = 'Failed to process AI request';
     let statusCode = 500;
@@ -102,7 +92,17 @@ export const analyzeImageRoute = async (req: Request, res: Response) => {
 
     res.status(statusCode).json({
       success: false,
-      message: errorMessage
+      message: errorMessage,
+      processing_info: {
+        question_type: 'unknown',
+        optimization_strategy: 'failed',
+        ocr_used: false,
+        image_optimized: false,
+        processing_time: {
+          ocr: 0,
+          total: Date.now() - startTime
+        }
+      }
     });
   }
 }; 
