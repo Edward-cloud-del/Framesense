@@ -69,9 +69,9 @@ class PromptOptimizer {
       
       ui_analysis: {
         name: 'UX/UI Expert',
-        prefix: 'As a UX/UI designer, analyze this interface:',
+        prefix: 'As a UX/UI designer, analyze this interface in a conversational way:',
         focusAreas: ['usability', 'design patterns', 'user experience'],
-        responseFormat: 'structured analysis'
+        responseFormat: 'conversational analysis without heavy formatting'
       },
       
       data_analysis: {
@@ -83,9 +83,9 @@ class PromptOptimizer {
       
       explanation: {
         name: 'Clear Explainer',
-        prefix: 'Explain this clearly and concisely:',
+        prefix: 'Explain this clearly and concisely in a natural, conversational way:',
         focusAreas: ['key concepts', 'main points', 'context'],
-        responseFormat: 'easy to understand'
+        responseFormat: 'easy to understand without markdown headers'
       },
       
       problem_solving: {
@@ -142,6 +142,9 @@ class PromptOptimizer {
     instructions += '• Be specific and actionable\n';
     instructions += '• Use clear, concise language\n';
     instructions += '• Provide practical insights\n';
+    instructions += '• Write in a natural, conversational style\n';
+    instructions += '• Avoid markdown headers (###, ##, #) and excessive formatting\n';
+    instructions += '• Present information in flowing paragraphs rather than structured sections\n';
     
     return instructions;
   }
