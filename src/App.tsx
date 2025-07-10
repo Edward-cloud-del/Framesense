@@ -6,7 +6,7 @@ import ResultOverlay from './components/ResultOverlay';
 import ProgressIndicator from './components/ProgressIndicator';
 // Removed AIResponse import - now using ResultOverlay
 import ChatBox from './components/ChatBox';
-import SettingsDialog from './components/SettingsDialog';
+// Removed SettingsDialog import - now using Upgrade to Pro
 import ThinkingAnimation from './components/ThinkingAnimation';
 import ModelSelector from './components/ModelSelector';
 
@@ -51,8 +51,7 @@ function App() {
 	// 🤖 Real OpenAI service state
 	const [aiService, setAiService] = useState<IAIService | null>(null);
 	
-	// ⚙️ Settings UI state
-	const [settingsOpen, setSettingsOpen] = useState(false);
+	// ⚙️ Settings UI state (removed - now using Upgrade to Pro)
 	
 	// 🎭 Thinking Animation state
 	const [isAiThinking, setIsAiThinking] = useState(false);
@@ -531,29 +530,7 @@ function App() {
 		}
 	};
 
-	// ⚙️ Settings handlers
-	const handleApiKeyUpdate = (newApiKey: string) => {
-		if (newApiKey && newApiKey.startsWith('sk-')) {
-			// Update service with new API key
-			const service = createAIService(newApiKey);
-			setAiService(service);
-			console.log('✅ AI service updated with new API key');
-		} else {
-			// Remove API key
-			setAiService(null);
-			console.log('🔐 API key removed - AI service disabled');
-		}
-	};
-
-	const handleOpenSettings = () => {
-		setSettingsOpen(true);
-		console.log('⚙️ Opening settings dialog');
-	};
-
-	const handleCloseSettings = () => {
-		setSettingsOpen(false);
-		console.log('⚙️ Settings dialog closed');
-	};
+	// ⚙️ Settings handlers (removed - now using Upgrade to Pro)
 
 	// 🎯 Model Selector handlers (like ChatBox)
 	const handleOpenModelSelector = async () => {
@@ -714,27 +691,15 @@ function App() {
 				
 				{/* Action Buttons */}
 				<div className="flex space-x-1.5" data-tauri-drag-region="false">
-					{/* Settings Button */}
+					{/* Upgrade to Pro Button */}
 					<button
-						onClick={handleOpenSettings}
-						className="bg-gray-500/20 hover:bg-gray-500/30 text-white px-3 py-0.5 rounded-lg transition-colors text-xs flex items-center space-x-1.5 backdrop-blur-sm border border-white/10"
+						onClick={() => window.open('http://localhost:5173/payments.html', '_blank')}
+						className="bg-gradient-to-r from-purple-500/20 to-blue-500/20 hover:from-purple-500/30 hover:to-blue-500/30 text-white px-3 py-0.5 rounded-lg transition-colors text-xs flex items-center space-x-1.5 backdrop-blur-sm border border-purple-400/20"
 					>
 						<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
 						</svg>
-						<span>Settings</span>
-					</button>
-
-					{/* Ask AI Button */}
-					<button
-						onClick={handleAskAI}
-						className="bg-gray-500/20 hover:bg-gray-500/30 text-white px-3 py-1 rounded-lg transition-colors text-xs flex items-center space-x-1.5 backdrop-blur-sm border border-white/10"
-					>
-						<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-						</svg>
-						<span>Ai</span>
+						<span>Upgrade to Pro</span>
 					</button>
 
 					{/* Model Selector Button */}
@@ -750,7 +715,16 @@ function App() {
 						<span className="text-xs opacity-75">({selectedModel.split('-')[0]})</span>
 					</button>
 
-
+					{/* Ask AI Button */}
+					<button
+						onClick={handleAskAI}
+						className="bg-gray-500/20 hover:bg-gray-500/30 text-white px-3 py-1 rounded-lg transition-colors text-xs flex items-center space-x-1.5 backdrop-blur-sm border border-white/10"
+					>
+						<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+						</svg>
+						<span>Ai</span>
+					</button>
 
 					{/* Interactive Selection Button - With loading state */}
 					<button
@@ -819,15 +793,7 @@ function App() {
 			
 
 			
-			{/* ⚙️ Settings Dialog */}
-			<div data-tauri-drag-region="false">
-				<SettingsDialog
-					isOpen={settingsOpen}
-					onClose={handleCloseSettings}
-					aiService={aiService}
-					onApiKeyUpdate={handleApiKeyUpdate}
-				/>
-			</div>
+			{/* ⚙️ Settings Dialog - Removed, now using Upgrade to Pro button */}
 
 
 		</div>
