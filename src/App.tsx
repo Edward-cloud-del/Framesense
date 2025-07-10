@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
+import { open } from '@tauri-apps/plugin-shell';
 import PermissionWizard from './components/PermissionWizard';
 import ResultOverlay from './components/ResultOverlay';
 import ProgressIndicator from './components/ProgressIndicator';
@@ -693,7 +694,7 @@ function App() {
 				<div className="flex space-x-1.5" data-tauri-drag-region="false">
 					{/* Upgrade to Pro Button */}
 					<button
-						onClick={() => window.open('http://localhost:3000/payments', '_blank')}
+						onClick={() => open('http://localhost:5173/payments')}
 						className="bg-gradient-to-r from-purple-500/20 to-blue-500/20 hover:from-purple-500/30 hover:to-blue-500/30 text-white px-3 py-0.5 rounded-lg transition-colors text-xs flex items-center space-x-1.5 backdrop-blur-sm border border-purple-400/20"
 					>
 						<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
