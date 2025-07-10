@@ -44,13 +44,11 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({ isVisible, onClose, onMod
     pro: [
       { name: 'GPT-4o', provider: 'OpenAI', icon: '🤖', tier: 'pro' },
       { name: 'Claude 3.5 Sonnet', provider: 'Anthropic', icon: '🧠', tier: 'pro' },
-      { name: 'Gemini Ultra', provider: 'Google', icon: '💎', tier: 'pro' },
       { name: 'Llama 3.1 70B', provider: 'Meta', icon: '🦙', tier: 'pro' }
     ],
     enterprise: [
       { name: 'GPT-4o 32k', provider: 'OpenAI', icon: '🤖', tier: 'enterprise' },
       { name: 'Claude 3 Opus', provider: 'Anthropic', icon: '🧠', tier: 'enterprise' },
-      { name: 'Gemini Ultra Pro', provider: 'Google', icon: '💎', tier: 'enterprise' },
       { name: 'Llama 3.1 405B', provider: 'Meta', icon: '🦙', tier: 'enterprise' }
     ]
   };
@@ -103,8 +101,6 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({ isVisible, onClose, onMod
       .replace('Claude 3 Opus', 'Opus')
       .replace('Gemini Flash', 'Flash')
       .replace('Gemini Pro', 'Gemini Pro')
-      .replace('Gemini Ultra Pro', 'Ultra+')
-      .replace('Gemini Ultra', 'Ultra')
       .replace('Llama 3.1 70B', 'Llama 70B')
       .replace('Llama 3.1 405B', 'Llama 405B');
   };
