@@ -130,9 +130,10 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({ isVisible, onClose, onMod
           </button>
         </div>
 
-        {/* 4x2 Grid Layout - 4 columns, 2 rows max */}
-        <div className="grid grid-cols-4 gap-1.5 mb-3">
-          {allModels.slice(0, 8).map((model) => {
+        {/* 4x2 Grid Layout - 4 columns, scrollable */}
+        <div className="max-h-32 overflow-y-auto mb-3 pr-1" style={{ scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.2) transparent' }}>
+          <div className="grid grid-cols-4 gap-1.5">
+            {allModels.map((model) => {
             const isLocked = isModelLocked(model);
             const isSelected = selectedModel === model.name;
             
@@ -175,16 +176,10 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({ isVisible, onClose, onMod
                   </div>
                 </div>
               </button>
-            );
-          })}
-        </div>
-
-        {/* Show more models if there are more than 8 */}
-        {allModels.length > 8 && (
-          <div className="text-xs text-white/50 text-center mb-3">
-            +{allModels.length - 8} more models available
+                          );
+            })}
           </div>
-        )}
+        </div>
 
         {/* Upgrade section for locked models */}
         {lockedModels.length > 0 && (
