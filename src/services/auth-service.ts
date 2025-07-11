@@ -273,26 +273,68 @@ class AuthService {
         }
     }
 
-    // Manual payment verification - calls backend to check for tier updates
+    // Manual payment verification - check localStorage first, then backend
     async verifyPaymentStatus(): Promise<User | null> {
         try {
-            console.log('🔄 Checking payment status with backend...');
+            console.log('🔄 Checking for payment credentials...');
             
+            // 🔑 STEP 1: Check localStorage for JWT token from payment success
+            const paymentToken = localStorage.getItem('framesense_payment_token');
+            const paymentEmail = localStorage.getItem('framesense_payment_email');
+            const paymentPlan = localStorage.getItem('framesense_payment_plan');
+            
+            if (paymentToken && paymentEmail) {
+                console.log('🎉 Found payment credentials in localStorage!', { email: paymentEmail, plan: paymentPlan });
+                
+                try {
+                    // Clear old session first
+                    await this.clearLocalSession();
+                    
+                    // Use JWT token to authenticate the real paying user
+                    const user = await invoke<User>('handle_payment_success', { 
+                        token: paymentToken, 
+                        plan: paymentPlan || 'premium' 
+                    });
+                    
+                    this.currentUser = user;
+                    this.notifyAuthListeners(user);
+                    
+                    // Clear payment credentials after successful authentication
+                    localStorage.removeItem('framesense_payment_token');
+                    localStorage.removeItem('framesense_payment_email');
+                    localStorage.removeItem('framesense_payment_plan');
+                    localStorage.removeItem('framesense_payment_timestamp');
+                    
+                    console.log('✅ Payment user authenticated successfully:', user.email, '→', user.tier);
+                    this.showPaymentSuccessNotification(user.tier);
+                    
+                    return user;
+                } catch (tokenError) {
+                    console.error('❌ Failed to authenticate with payment token:', tokenError);
+                    // Clear invalid credentials
+                    localStorage.removeItem('framesense_payment_token');
+                    localStorage.removeItem('framesense_payment_email');
+                    localStorage.removeItem('framesense_payment_plan');
+                    localStorage.removeItem('framesense_payment_timestamp');
+                    // Fall through to regular verification
+                }
+            }
+            
+            // 🔄 STEP 2: Fallback to regular backend verification
+            console.log('🔄 No payment credentials found, checking existing session...');
             const result = await invoke('verify_payment_status');
             
             if (result) {
                 const user = result as User;
                 this.currentUser = user;
-                this.userSubject.next(user);
+                this.notifyAuthListeners(user);
                 
-                console.log('✅ Payment status verified:', user.email, '→', user.tier);
-                
-                // Show success notification if tier changed
+                console.log('✅ Existing session verified:', user.email, '→', user.tier);
                 this.showPaymentSuccessNotification(user.tier);
                 
                 return user;
             } else {
-                console.log('ℹ️ No active session found');
+                console.log('ℹ️ No active session or payment found');
                 return null;
             }
         } catch (error) {

@@ -93,6 +93,34 @@
         const urlParams = new URLSearchParams(window.location.search);
         const plan = urlParams.get('plan') || 'premium';
         const sessionId = urlParams.get('session_id');
+        const token = urlParams.get('token');
+        const email = urlParams.get('email');
+        
+        console.log('🎉 Payment success page loaded:', { plan, email, hasToken: !!token });
+        
+        // 🔑 CRITICAL: Save JWT token for app authentication
+        if (token && email) {
+            // Save payment credentials for Tauri app to pick up
+            localStorage.setItem('framesense_payment_token', token);
+            localStorage.setItem('framesense_payment_email', email);
+            localStorage.setItem('framesense_payment_plan', plan);
+            localStorage.setItem('framesense_payment_timestamp', Date.now().toString());
+            
+            console.log('✅ Payment credentials saved to localStorage for app pickup');
+            
+            // Show success indicator
+            const returnButton = document.getElementById('return-to-app');
+            returnButton.innerHTML = `
+                <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+                <span>Credentials Ready - Return to App</span>
+            `;
+            returnButton.classList.add('bg-green-600', 'hover:bg-green-700');
+            returnButton.classList.remove('bg-gradient-to-r', 'from-blue-500', 'to-purple-600', 'hover:from-blue-600', 'hover:to-purple-700');
+        } else {
+            console.warn('⚠️ Missing token or email in success URL - manual verification needed');
+        }
         
         // Update plan info based on URL parameter
         const planInfo = {
@@ -107,35 +135,33 @@
         
         // Handle return to app button
         document.getElementById('return-to-app').addEventListener('click', function() {
-            // Try to open app with deep link (if it works in the future)
-            const deepLinkUrl = `framesense://success?plan=${plan}&session_id=${sessionId}`;
-            
-            // First try deep link
-            window.location.href = deepLinkUrl;
-            
-            // Show message after a short delay
-            setTimeout(() => {
-                alert('Om appen inte öppnas automatiskt, öppna FrameSense manuellt och använd "Check Payment Status" knappen.');
-            }, 1000);
+            if (token) {
+                // Try to open app with token-based deep link
+                const deepLinkUrl = `framesense://success?token=${token}&email=${encodeURIComponent(email)}&plan=${plan}`;
+                window.location.href = deepLinkUrl;
+                
+                setTimeout(() => {
+                    alert(`✅ Credentials saved!\n\nOm appen inte öppnas:\n1. Öppna FrameSense manuellt\n2. Tryck "Already paid? Check status"\n3. Din ${selectedPlan.name} access aktiveras direkt!`);
+                }, 1000);
+            } else {
+                alert('❌ Authentication token missing. Please try payment again or contact support.');
+            }
         });
         
-        // Auto-try deep link after 2 seconds
-        setTimeout(() => {
-            const deepLinkUrl = `framesense://success?plan=${plan}&session_id=${sessionId}`;
-            
-            // Create hidden iframe to try deep link without navigation
-            const iframe = document.createElement('iframe');
-            iframe.style.display = 'none';
-            iframe.src = deepLinkUrl;
-            document.body.appendChild(iframe);
-            
-            // Remove iframe after attempt
+        // Auto-save credentials message
+        if (token) {
             setTimeout(() => {
-                document.body.removeChild(iframe);
+                // Show a subtle notification that credentials are ready
+                const notification = document.createElement('div');
+                notification.className = 'fixed top-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg text-sm';
+                notification.innerHTML = '✅ Ready for app authentication';
+                document.body.appendChild(notification);
+                
+                setTimeout(() => {
+                    notification.remove();
+                }, 3000);
             }, 1000);
-        }, 2000);
-        
-        console.log('🎉 Payment success page loaded for plan:', plan);
+        }
     </script>
 </body>
 </html> 

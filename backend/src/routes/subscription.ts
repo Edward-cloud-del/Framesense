@@ -52,15 +52,15 @@ router.post('/create-checkout-session', authenticateUser, async (req: Request, r
       await AuthService.updateUser(user.email, { stripeCustomerId: customerId });
     }
     
-    // Create JWT token for deep link auth
+    // Create JWT token for payment success authentication
     const paymentToken = jwt.sign(
       { userId: user.id, email: user.email, plan: planName },
       JWT_SECRET,
       { expiresIn: '1h' } // Short expiry for payment flow
     );
     
-    // Create web success URL with plan info (no deep link for now)
-    const webSuccessUrl = `http://localhost:3000/success.html?plan=${planName}&session_id={CHECKOUT_SESSION_ID}`;
+    // Create web success URL with JWT token for app authentication
+    const webSuccessUrl = `http://localhost:3000/success.html?token=${paymentToken}&email=${encodeURIComponent(user.email)}&plan=${planName}&session_id={CHECKOUT_SESSION_ID}`;
     
     // Default cancel URL to website
     const webCancelUrl = cancelUrl || `http://localhost:3000/payments?canceled=true`;
@@ -252,6 +252,64 @@ router.get('/user-tier-info', authenticateUser, async (req: Request, res: Respon
       }
     });
   } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// 🧪 DEBUG: Simulate successful payment (for testing)
+router.post('/simulate-payment-success', async (req: Request, res: Response) => {
+  try {
+    const { email, plan } = req.body;
+    
+    if (!email || !plan) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing email or plan'
+      });
+    }
+
+    console.log('🧪 Simulating payment success for:', email, 'plan:', plan);
+
+    // Find user in database
+    const userData = await AuthService.readUsers();
+    const user = userData.users[email];
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Update user tier
+    await AuthService.updateUser(email, { 
+      tier: plan,
+      subscriptionStatus: 'active'
+    });
+
+    // Create JWT token like a real payment would
+    const paymentToken = jwt.sign(
+      { userId: user.id, email: user.email, plan: plan },
+      JWT_SECRET,
+      { expiresIn: '1h' }
+    );
+
+    // Create simulated success URL
+    const successUrl = `http://localhost:3000/success.html?token=${paymentToken}&email=${encodeURIComponent(email)}&plan=${plan}&session_id=sim_${Date.now()}`;
+
+    console.log('🧪 Simulation complete. Success URL:', successUrl);
+
+    res.json({
+      success: true,
+      message: 'Payment simulation complete',
+      successUrl: successUrl,
+      user: {
+        email: user.email,
+        tier: plan
+      }
+    });
+  } catch (error: any) {
+    console.error('Simulation error:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });
