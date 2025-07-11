@@ -67,6 +67,33 @@
       "createdAt": "2025-07-11T10:05:36.431Z",
       "stripeCustomerId": "cus_SexlDO2fnKsClF",
       "updatedAt": "2025-07-11T10:05:36.900Z"
+    },
+    "test-pro@example.com": {
+      "id": "user_1752228740027",
+      "email": "test-pro@example.com",
+      "name": "Pro Test User",
+      "password": "$2a$12$Ry9jqAwgz5/oIf8jpq3BM.ZiE1oy7zksIfAbJxskP/dONofd6n2nK",
+      "tier": "free",
+      "usage": {
+        "daily": 0,
+        "total": 0
+      },
+      "createdAt": "2025-07-11T10:12:20.028Z",
+      "stripeCustomerId": null
+    },
+    "yyy@gmail.com": {
+      "id": "user_1752228844288",
+      "email": "yyy@gmail.com",
+      "name": "yyyy",
+      "password": "$2a$12$J1x/qm7DcxgfCINaQHq5Ge0Mdglp.XcurCfICmIRDuBHUd7EPTR82",
+      "tier": "free",
+      "usage": {
+        "daily": 0,
+        "total": 0
+      },
+      "createdAt": "2025-07-11T10:14:04.288Z",
+      "stripeCustomerId": "cus_SextYoLdmWeoCz",
+      "updatedAt": "2025-07-11T10:14:04.637Z"
     }
   },
   "subscriptions": {}

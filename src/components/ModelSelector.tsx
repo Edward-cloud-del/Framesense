@@ -143,20 +143,30 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({ isVisible, onClose, onMod
   const handleCheckPaymentStatus = async () => {
     try {
       setLoading(true);
-      console.log('🔄 Checking payment status...');
+      console.log('🔄 Verifying payment status with backend...');
       
-      // Use the new verify payment method
-      const wasUpgraded = await authService.verifyPayment();
+      // Use new verification method that calls backend
+      const updatedUser = await authService.verifyPaymentStatus();
       
-      if (!wasUpgraded) {
+      if (updatedUser && updatedUser.tier !== 'free') {
+        console.log('✅ Payment verified! User upgraded to:', updatedUser.tier);
+        
+        // Show success notification
+        if ('Notification' in window && Notification.permission === 'granted') {
+          new Notification('Payment Verified! 🎉', {
+            body: `Welcome to FrameSense ${updatedUser.tier.charAt(0).toUpperCase() + updatedUser.tier.slice(1)}!`,
+            icon: '/favicon.ico'
+          });
+        }
+      } else {
         alert('No payment found. If you just completed payment, please wait a moment and try again.');
       }
       
-      // Reload models regardless to update UI
+      // Reload models to update UI
       await loadUserAndModels();
     } catch (error) {
-      console.error('❌ Failed to check payment status:', error);
-      alert('Failed to check payment status. Please try again.');
+      console.error('❌ Payment verification failed:', error);
+      alert('Failed to verify payment. Please try again or contact support.');
     } finally {
       setLoading(false);
     }

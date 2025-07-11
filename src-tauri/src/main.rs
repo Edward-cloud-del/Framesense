@@ -553,32 +553,49 @@ async fn test_deep_link(app: tauri::AppHandle, token: String, plan: String) -> R
     Ok(())
 }
 
-// Simulate successful payment upgrade (for testing)
+// Verify payment status and update user tier
 #[tauri::command]
-async fn simulate_payment_upgrade(
-    plan: String,
+async fn verify_payment_status(
     auth_service: tauri::State<'_, SharedAuthService>
-) -> Result<(), String> {
-    println!("🧪 Simulating payment upgrade to plan: {}", plan);
-    
-    // Create test token and simulate upgrade
-    let test_token = format!("test_token_{}", chrono::Utc::now().timestamp());
+) -> Result<Option<User>, String> {
+    println!("🔄 Verifying payment status with backend...");
     
     let service = {
         let guard = auth_service.lock().unwrap();
         guard.clone()
     };
     
-    match service.handle_payment_success(test_token, plan.clone()).await {
-        Ok(user) => {
-            println!("✅ Test upgrade successful: {} -> {}", user.email, user.tier);
-            Ok(())
+    match service.verify_payment_and_update().await {
+        Ok(Some(user)) => {
+            println!("✅ Payment verification successful: {} ({})", user.email, user.tier);
+            Ok(Some(user))
+        },
+        Ok(None) => {
+            println!("ℹ️ No current session found");
+            Ok(None)
         },
         Err(e) => {
-            println!("❌ Test upgrade failed: {}", e);
+            println!("❌ Payment verification failed: {}", e);
             Err(e)
         }
     }
+}
+
+// Clear local user session (for troubleshooting)
+#[tauri::command]
+async fn clear_user_session(
+    auth_service: tauri::State<'_, SharedAuthService>
+) -> Result<(), String> {
+    println!("🗑️ Clearing local user session...");
+    
+    let service = {
+        let guard = auth_service.lock().unwrap();
+        guard.clone()
+    };
+    
+    service.logout_user().await?;
+    println!("✅ Local session cleared");
+    Ok(())
 }
 
 // Removed problematic HTML/JS-based overlay function - using React overlays only
@@ -1276,7 +1293,8 @@ fn main() {
     get_available_models,
     can_use_model,
     test_deep_link,
-    simulate_payment_upgrade,
+    verify_payment_status,
+    clear_user_session,
             resize_window,
             debug_coordinates,
             test_chatbox_position,

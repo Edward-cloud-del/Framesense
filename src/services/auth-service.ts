@@ -273,6 +273,47 @@ class AuthService {
         }
     }
 
+    // Manual payment verification - calls backend to check for tier updates
+    async verifyPaymentStatus(): Promise<User | null> {
+        try {
+            console.log('🔄 Checking payment status with backend...');
+            
+            const result = await invoke('verify_payment_status');
+            
+            if (result) {
+                const user = result as User;
+                this.currentUser = user;
+                this.userSubject.next(user);
+                
+                console.log('✅ Payment status verified:', user.email, '→', user.tier);
+                
+                // Show success notification if tier changed
+                this.showPaymentSuccessNotification(user.tier);
+                
+                return user;
+            } else {
+                console.log('ℹ️ No active session found');
+                return null;
+            }
+        } catch (error) {
+            console.error('❌ Payment verification failed:', error);
+            throw new Error(`Payment verification failed: ${error}`);
+        }
+    }
+
+    // Clear local session (useful for troubleshooting)
+    async clearLocalSession(): Promise<void> {
+        try {
+            await invoke('clear_user_session');
+            this.currentUser = null;
+            this.userSubject.next(null);
+            console.log('🗑️ Local session cleared');
+        } catch (error) {
+            console.error('❌ Failed to clear session:', error);
+            throw new Error(`Failed to clear session: ${error}`);
+        }
+    }
+
     // Request notification permission for payment success
     async requestNotificationPermission(): Promise<boolean> {
         if (!('Notification' in window)) {

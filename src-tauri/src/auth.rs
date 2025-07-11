@@ -111,28 +111,7 @@ impl AuthService {
     }
 
     pub async fn handle_payment_success(&self, token: String, plan: String) -> Result<User, String> {
-        // For testing: Create a mock upgraded user
-        if token.starts_with("test_token_") {
-            println!("🧪 Test mode: Creating mock upgraded user for plan: {}", plan);
-            
-            let user = User {
-                id: "test_user_123".to_string(),
-                email: "test@framesense.se".to_string(),
-                name: "Test User".to_string(),
-                tier: plan.clone(),
-                token: token.clone(),
-                usage: UserUsage::default(),
-                created_at: chrono::Utc::now().format("%Y-%m-%d %H:%M:%S").to_string(),
-            };
-            
-            // Save user session locally
-            self.save_user_session(&user).await?;
-            
-            println!("🎉 Test user upgraded successfully: {} ({})", user.email, user.tier);
-            return Ok(user);
-        }
-        
-        // Real payment verification with backend
+        // Real payment verification with backend - no more test mode
         let client = reqwest::Client::new();
         
         let response = client
@@ -150,6 +129,9 @@ impl AuthService {
                 if let Some(mut user) = auth_response.user {
                     user.token = token;
                     
+                    // Clear any old session before saving new one
+                    self.clear_user_session().await?;
+                    
                     // Save user session locally
                     self.save_user_session(&user).await?;
                     
@@ -165,6 +147,26 @@ impl AuthService {
             }
         } else {
             Err("Authentication failed".to_string())
+        }
+    }
+
+    // Manual payment verification - loads fresh user data from backend
+    pub async fn verify_payment_and_update(&self) -> Result<Option<User>, String> {
+        // First check if we have a current session
+        if let Some(current_user) = self.load_user_session().await? {
+            // Verify current token with backend to get latest user data
+            let updated_user = self.verify_token(current_user.token).await?;
+            
+            // If tier changed, save updated session
+            if updated_user.tier != current_user.tier {
+                println!("🔄 User tier updated from {} to {}", current_user.tier, updated_user.tier);
+                self.save_user_session(&updated_user).await?;
+            }
+            
+            Ok(Some(updated_user))
+        } else {
+            // No current session
+            Ok(None)
         }
     }
 
