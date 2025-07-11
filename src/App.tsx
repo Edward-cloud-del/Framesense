@@ -12,6 +12,8 @@ import ThinkingAnimation from './components/ThinkingAnimation';
 import ModelSelector from './components/ModelSelector';
 
 import { useAppStore, AIResult } from './stores/app-store';
+import { authService, type User } from './services/auth-service';
+import { deepLinkService } from './services/deep-link-service';
 
 // 🤖 Real OpenAI Integration
 import { createAIService } from './services/openai-service';
@@ -61,16 +63,65 @@ function App() {
 	// 🎯 Model Selector state (like ChatBox)
 	const [modelSelectorOpen, setModelSelectorOpen] = useState(false);
 
+	// 🧪 Test deep link functionality
+	const testDeepLink = async (plan: string = 'premium') => {
+		try {
+			await invoke('test_deep_link', { 
+				token: 'test_token_123', 
+				plan 
+			});
+			console.log('🧪 Deep link test triggered for plan:', plan);
+		} catch (error) {
+			console.error('❌ Deep link test failed:', error);
+		}
+	};
+
+	// 🧪 Test payment upgrade
+	const testPaymentUpgrade = async (plan: string = 'premium') => {
+		try {
+			await invoke('simulate_payment_upgrade', { plan });
+			console.log('🧪 Payment upgrade simulated for plan:', plan);
+			
+			// Reload current user to see changes
+			const user = await authService.loadCurrentUser();
+			console.log('✅ User after upgrade:', user);
+		} catch (error) {
+			console.error('❌ Payment upgrade simulation failed:', error);
+		}
+	};
+
 	const { 
 		hasPermissions, 
 		isProcessing, 
 		currentResult, 
 		setPermissions,
-		user,
-		setUser,
 		selectedModel,
 		setSelectedModel
 	} = useAppStore();
+
+	// Use auth service for user management
+	const [currentUser, setCurrentUser] = useState<User | null>(null);
+	
+	// Initialize auth service and listen for user changes
+	useEffect(() => {
+		const handleUserChange = (user: User | null) => {
+			setCurrentUser(user);
+		};
+		
+		authService.addAuthListener(handleUserChange);
+		
+		// Load current user
+		authService.loadCurrentUser().then(user => {
+			setCurrentUser(user);
+		});
+		
+		// Request notification permission for payment success
+		authService.requestNotificationPermission();
+		
+		return () => {
+			authService.removeAuthListener(handleUserChange);
+		};
+	}, []);
 
 	// 🤖 REAL OpenAI integration function - replaces mock
 	const sendToAI = async (aiMessage: AIMessage): Promise<string> => {
@@ -128,9 +179,6 @@ function App() {
 		
 		// Restore app state when window is created (Raycast-style)
 		restoreAppState();
-		
-		// Initialize user (load from storage or create mock)
-		initializeUser();
 		
 		// 🤖 Initialize AI service with API key
 		const apiKey = getApiKey();
@@ -198,27 +246,7 @@ function App() {
 		}
 	};
 
-	const initializeUser = async () => {
-		try {
-			// Try to load existing user from storage
-			const storedUser = await UserService.loadStoredUser();
-			
-			if (storedUser) {
-				setUser(storedUser);
-				console.log('✅ User loaded from storage:', storedUser.email, storedUser.tier.tier);
-			} else {
-				// Create mock user for testing
-				const mockUser = await UserService.initializeMockUser();
-				setUser(mockUser);
-				console.log('✅ Mock user initialized:', mockUser.email, mockUser.tier.tier);
-			}
-		} catch (error) {
-			console.error('❌ Failed to initialize user:', error);
-			// Fallback to mock user
-			const mockUser = await UserService.initializeMockUser();
-			setUser(mockUser);
-		}
-	};
+
 
 	const saveAppState = async () => {
 		try {
@@ -474,15 +502,9 @@ function App() {
 				setIsAiThinking(false);
 				setAiProcessingStage('');
 				
-				// Update user usage after successful AI request
-				if (user) {
-					try {
-						const updatedUser = await UserService.updateUsage(1);
-						setUser(updatedUser);
-						console.log('✅ User usage updated:', updatedUser.tier.remainingRequests, 'requests remaining');
-					} catch (error) {
-						console.error('❌ Failed to update user usage:', error);
-					}
+				// Update user usage after successful AI request (handled by auth service)
+				if (currentUser) {
+					console.log('✅ AI request completed for user:', currentUser.email, currentUser.tier);
 				}
 		}, 100);
 		} catch (error) {
@@ -694,13 +716,23 @@ function App() {
 				<div className="flex space-x-1.5" data-tauri-drag-region="false">
 					{/* Upgrade to Pro Button */}
 					<button
-						onClick={() => open('http://localhost:8080/payments.html')}
+						onClick={() => open('http://localhost:3000/payments.html')}
 						className="bg-gradient-to-r from-purple-500/20 to-blue-500/20 hover:from-purple-500/30 hover:to-blue-500/30 text-white px-3 py-0.5 rounded-lg transition-colors text-xs flex items-center space-x-1.5 backdrop-blur-sm border border-purple-400/20"
 					>
 						<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
 						</svg>
 						<span>Upgrade to Pro</span>
+					</button>
+
+					{/* Test Payment Button (dev only) */}
+					<button
+						onClick={() => testPaymentUpgrade('premium')}
+						className="bg-green-500/20 hover:bg-green-500/30 text-white px-2 py-0.5 rounded-lg transition-colors text-xs flex items-center space-x-1 backdrop-blur-sm border border-green-400/20"
+						title="Test payment upgrade simulation"
+					>
+						<span>🧪</span>
+						<span>Test</span>
 					</button>
 
 					{/* Model Selector Button */}
@@ -774,11 +806,12 @@ function App() {
 							onClose={handleCloseChatBox}
 							imageContext={selectedImageForAI || undefined}
 						/>
-						<ModelSelector
-							isVisible={modelSelectorOpen}
-							onClose={handleCloseModelSelector}
-							onModelSelect={handleModelSelect}
-						/>
+									<ModelSelector
+				isVisible={modelSelectorOpen}
+				onClose={handleCloseModelSelector}
+				onModelSelect={handleModelSelect}
+				selectedModel={selectedModel}
+			/>
 					</div>
 				</div>
 			</div>

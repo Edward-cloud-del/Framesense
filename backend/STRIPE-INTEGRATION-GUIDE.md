@@ -871,4 +871,661 @@ Total: ~12,000 SEK/månad (~$1,200 USD)
 4. Optimera conversion rates
 5. Lägg till analytics & A/B testing
 
-**Du har nu en komplett roadmap för en multi-million SEK SaaS-business!** 🎉 
+**Du har nu en komplett roadmap för en multi-million SEK SaaS-business!** 🎉
+
+---
+
+## 📋 **STEG 9: APP INTEGRATION - Seamless Payment-to-App Flow**
+
+### **🎯 Smart UX: En Inloggning, Inte Två**
+
+**Problem med nuvarande flöde:**
+1. Free user trycker "Upgrade" i appen
+2. Öppnar payments-sida → måste logga in på HEMSIDAN
+3. Betalar via Stripe → framgång!
+4. Återvänder till appen → måste logga in IGEN i appen 😤
+
+**✨ Förbättrat flöde:**
+1. Free user trycker "Upgrade" i appen
+2. Öppnar payments-sida → loggar in ENDAST på hemsidan
+3. Stripe success → **appen öppnas automatiskt med auth token**
+4. Appen får premium access direkt - ingen extra inloggning! 🚀
+
+### **9.1 Deep Link Setup i Tauri**
+
+```json
+// src-tauri/tauri.conf.json - Lägg till deep link support
+{
+  "tauri": {
+    "allowlist": {
+      "protocol": {
+        "all": true,
+        "asset": true,
+        "assetScope": ["**"]
+      }
+    },
+    "bundle": {
+      "identifier": "com.framesense.app",
+      "category": "Productivity",
+      "targets": "all",
+      "externalBin": [],
+      "icon": ["icons/32x32.png"],
+      "resources": [],
+      "copyright": "",
+      "licenseFile": "",
+      "longDescription": "",
+      "macOS": {
+        "frameworks": [],
+        "minimumSystemVersion": "",
+        "exceptionDomain": "",
+        "signingIdentity": null,
+        "providerShortName": null,
+        "entitlements": null
+      },
+      "windows": {
+        "certificateThumbprint": null,
+        "digestAlgorithm": "sha256",
+        "timestampUrl": ""
+      },
+      "deb": {
+        "depends": []
+      },
+      "rpm": {
+        "depends": []
+      }
+    },
+    "security": {
+      "csp": null
+    },
+    "updater": {
+      "active": false
+    },
+    "windows": [
+      {
+        "title": "FrameSense",
+        "width": 600,
+        "height": 250,
+        "resizable": true,
+        "fullscreen": false,
+        "protocols": ["framesense"] // Deep link protocol
+      }
+    ]
+  }
+}
+```
+
+```rust
+// src-tauri/src/auth.rs - Ny fil
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct User {
+    pub id: String,
+    pub email: String,
+    pub name: String,
+    pub tier: String, // "free", "premium", "pro", "enterprise"
+    pub token: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct LoginRequest {
+    pub email: String,
+    pub password: String,
+}
+
+#[tauri::command]
+pub async fn login_user(email: String, password: String) -> Result<User, String> {
+    let client = reqwest::Client::new();
+    
+    let login_data = LoginRequest { email, password };
+    
+    let response = client
+        .post("http://localhost:3001/api/auth/login") // Railway URL i produktion
+        .json(&login_data)
+        .send()
+        .await
+        .map_err(|e| format!("Network error: {}", e))?;
+    
+    if response.status().is_success() {
+        let auth_response: serde_json::Value = response.json().await
+            .map_err(|e| format!("Parse error: {}", e))?;
+        
+        if auth_response["success"].as_bool().unwrap_or(false) {
+            let user_data = &auth_response["user"];
+            let token = auth_response["token"].as_str().unwrap_or("");
+            
+            let user = User {
+                id: user_data["id"].as_str().unwrap_or("").to_string(),
+                email: user_data["email"].as_str().unwrap_or("").to_string(),
+                name: user_data["name"].as_str().unwrap_or("").to_string(),
+                tier: user_data["tier"].as_str().unwrap_or("free").to_string(),
+                token: token.to_string(),
+            };
+            
+            // Spara användardata lokalt
+            save_user_session(&user).await?;
+            
+            Ok(user)
+        } else {
+            Err("Invalid credentials".to_string())
+        }
+    } else {
+        Err("Authentication failed".to_string())
+    }
+}
+
+#[tauri::command]
+pub async fn handle_payment_success(token: String, plan: String) -> Result<User, String> {
+    // Verifiera token med backend
+    let client = reqwest::Client::new();
+    
+    let response = client
+        .get("http://localhost:3001/api/auth/verify")
+        .header("Authorization", format!("Bearer {}", token))
+        .send()
+        .await
+        .map_err(|e| format!("Verification error: {}", e))?;
+    
+    if response.status().is_success() {
+        let auth_response: serde_json::Value = response.json().await
+            .map_err(|e| format!("Parse error: {}", e))?;
+        
+        if auth_response["success"].as_bool().unwrap_or(false) {
+            let user_data = &auth_response["user"];
+            
+            let user = User {
+                id: user_data["id"].as_str().unwrap_or("").to_string(),
+                email: user_data["email"].as_str().unwrap_or("").to_string(),
+                name: user_data["name"].as_str().unwrap_or("").to_string(),
+                tier: user_data["tier"].as_str().unwrap_or("free").to_string(),
+                token: token.clone(),
+            };
+            
+            // Spara användardata lokalt
+            save_user_session(&user).await?;
+            
+            println!("🎉 User automatically logged in after payment: {} ({})", user.email, user.tier);
+            
+            Ok(user)
+        } else {
+            Err("Token verification failed".to_string())
+        }
+    } else {
+        Err("Authentication failed".to_string())
+    }
+}
+
+#[tauri::command]
+pub async fn logout_user() -> Result<(), String> {
+    clear_user_session().await
+}
+
+#[tauri::command]
+pub async fn get_current_user() -> Result<Option<User>, String> {
+    load_user_session().await
+}
+
+// Lokala storage funktioner
+async fn save_user_session(user: &User) -> Result<(), String> {
+    // Implementera säker lokal lagring
+    Ok(())
+}
+
+async fn clear_user_session() -> Result<(), String> {
+    // Rensa lokal session
+    Ok(())
+}
+
+async fn load_user_session() -> Result<Option<User>, String> {
+    // Ladda sparad session
+    Ok(None)
+}
+```
+
+```rust
+// src-tauri/src/main.rs - Uppdatera för deep links
+use tauri::{Manager, api::shell};
+
+fn main() {
+    tauri::Builder::default()
+        .setup(|app| {
+            // Registrera deep link protocol handler
+            let handle = app.handle();
+            
+            app.listen_global("deep-link://", move |event| {
+                if let Some(payload) = event.payload() {
+                    println!("🔗 Deep link received: {}", payload);
+                    
+                    // Parse deep link: framesense://success?token=abc&plan=premium
+                    if let Ok(url) = url::Url::parse(payload) {
+                        if url.scheme() == "framesense" && url.host_str() == Some("success") {
+                            let query_pairs: std::collections::HashMap<_, _> = url.query_pairs().collect();
+                            
+                            if let (Some(token), Some(plan)) = (query_pairs.get("token"), query_pairs.get("plan")) {
+                                println!("🎉 Payment success detected: {} plan", plan);
+                                
+                                // Emit till frontend för automatisk login
+                                handle.emit_all("payment_success", serde_json::json!({
+                                    "token": token,
+                                    "plan": plan
+                                })).unwrap();
+                            }
+                        }
+                    }
+                }
+            });
+            
+            Ok(())
+        })
+        .invoke_handler(tauri::generate_handler![
+            login_user,
+            logout_user,
+            get_current_user,
+            handle_payment_success
+        ])
+        .run(tauri::generate_context!())
+        .expect("error while running tauri application");
+}
+```
+
+### **9.2 Backend Success URL Update**
+
+```javascript
+// backend/src/routes/subscription.js - Uppdatera checkout session
+router.post('/create-checkout-session', authMiddleware, async (req, res) => {
+  try {
+    const { priceId } = req.body;
+    const user = req.user;
+
+    // Skapa Stripe checkout session med deep link success URL
+    const session = await stripe.checkout.sessions.create({
+      customer_email: user.email,
+      line_items: [{
+        price: priceId,
+        quantity: 1,
+      }],
+      mode: 'subscription',
+      success_url: `framesense://success?token=${user.token}&plan=${getPlanFromPriceId(priceId)}&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.FRONTEND_URL}/payments?canceled=true`,
+      metadata: {
+        userId: user.id,
+        userEmail: user.email
+      }
+    });
+
+    res.json({ 
+      success: true, 
+      sessionId: session.id,
+      url: session.url 
+    });
+  } catch (error) {
+    console.error('Checkout session error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to create checkout session' 
+    });
+  }
+});
+
+function getPlanFromPriceId(priceId) {
+  const priceMap = {
+    'price_1RjbPBGhaJA85Y4BoLQzZdGi': 'premium',
+    'price_1RjbOGGhaJA85Y4BimHpcWHs': 'pro',
+    // Lägg till fler price IDs här
+  };
+  return priceMap[priceId] || 'premium';
+}
+```
+
+### **9.3 Frontend Deep Link Listener**
+
+```typescript
+// src/services/deep-link-service.ts
+import { listen } from '@tauri-apps/api/event';
+import { authService } from './auth-service';
+
+class DeepLinkService {
+    async initializeListeners() {
+        // Lyssna på payment success events från Tauri
+        await listen('payment_success', async (event) => {
+            console.log('🎉 Payment success received:', event.payload);
+            
+            const { token, plan } = event.payload as { token: string; plan: string };
+            
+            try {
+                // Automatisk inloggning med token från betalning
+                const user = await invoke('handle_payment_success', { token, plan });
+                
+                // Uppdatera UI
+                authService.setCurrentUser(user);
+                
+                // Visa success meddelande
+                this.showPaymentSuccessMessage(plan);
+                
+                // Trigga UI uppdatering
+                window.dispatchEvent(new CustomEvent('user_upgraded', { 
+                    detail: { user, plan } 
+                }));
+                
+            } catch (error) {
+                console.error('Failed to handle payment success:', error);
+                alert('Betalning lyckades men något gick fel. Kontakta support.');
+            }
+        });
+    }
+    
+    private showPaymentSuccessMessage(plan: string) {
+        const planNames = {
+            premium: 'Premium',
+            pro: 'Pro', 
+            enterprise: 'Enterprise'
+        };
+        
+        // Visa native notification
+        new Notification('FrameSense - Betalning Lyckades!', {
+            body: `Du har nu ${planNames[plan]} access! 🎉`,
+            icon: '/favicon.ico'
+        });
+    }
+}
+
+export const deepLinkService = new DeepLinkService();
+```
+
+### **9.4 Model Access Control**
+
+```rust
+// src-tauri/src/ai_access.rs
+use crate::auth::User;
+
+pub struct ModelAccess;
+
+impl ModelAccess {
+    pub fn get_available_models(user_tier: &str) -> Vec<&'static str> {
+        match user_tier {
+            "free" => vec!["GPT-3.5-turbo", "Gemini Flash"],
+            "premium" => vec![
+                "GPT-3.5-turbo", "Gemini Flash",
+                "GPT-4o-mini", "Claude 3 Haiku", "Gemini Pro"
+            ],
+            "pro" => vec![
+                "GPT-3.5-turbo", "Gemini Flash",
+                "GPT-4o-mini", "Claude 3 Haiku", "Gemini Pro",
+                "GPT-4o", "Claude 3.5 Sonnet", "Llama 3.1 70B"
+            ],
+            "enterprise" => vec![
+                "GPT-3.5-turbo", "Gemini Flash",
+                "GPT-4o-mini", "Claude 3 Haiku", "Gemini Pro",
+                "GPT-4o", "Claude 3.5 Sonnet", "Llama 3.1 70B",
+                "GPT-4o 32k", "Claude 3 Opus", "Llama 3.1 405B"
+            ],
+            _ => vec!["GPT-3.5-turbo"] // Fallback
+        }
+    }
+    
+    pub fn can_use_model(user_tier: &str, model: &str) -> bool {
+        Self::get_available_models(user_tier).contains(&model)
+    }
+    
+    pub fn get_daily_limit(user_tier: &str) -> i32 {
+        match user_tier {
+            "free" => 50,
+            "premium" => 1000,
+            "pro" => 5000,
+            "enterprise" => -1, // Unlimited
+            _ => 10 // Very limited fallback
+        }
+    }
+}
+```
+
+### **9.3 Frontend Integration**
+
+```typescript
+// src/services/auth-service.ts
+interface User {
+    id: string;
+    email: string;
+    name: string;
+    tier: string;
+    token: string;
+}
+
+class AuthService {
+    private currentUser: User | null = null;
+    
+    async login(email: string, password: string): Promise<User> {
+        try {
+            // Kalla Tauri backend
+            const user = await invoke('login_user', { email, password });
+            this.currentUser = user as User;
+            return user as User;
+        } catch (error) {
+            throw new Error(`Login failed: ${error}`);
+        }
+    }
+    
+    async logout(): Promise<void> {
+        await invoke('logout_user');
+        this.currentUser = null;
+    }
+    
+    async getCurrentUser(): Promise<User | null> {
+        if (!this.currentUser) {
+            try {
+                this.currentUser = await invoke('get_current_user') as User | null;
+            } catch (error) {
+                console.error('Failed to get current user:', error);
+            }
+        }
+        return this.currentUser;
+    }
+    
+    isLoggedIn(): boolean {
+        return this.currentUser !== null;
+    }
+    
+    getUserTier(): string {
+        return this.currentUser?.tier || 'free';
+    }
+    
+    canUseModel(model: string): boolean {
+        const tier = this.getUserTier();
+        const availableModels = this.getAvailableModels(tier);
+        return availableModels.includes(model);
+    }
+    
+    getAvailableModels(tier: string): string[] {
+        const models = {
+            free: ['GPT-3.5-turbo', 'Gemini Flash'],
+            premium: ['GPT-3.5-turbo', 'Gemini Flash', 'GPT-4o-mini', 'Claude 3 Haiku', 'Gemini Pro'],
+            pro: ['GPT-3.5-turbo', 'Gemini Flash', 'GPT-4o-mini', 'Claude 3 Haiku', 'Gemini Pro', 'GPT-4o', 'Claude 3.5 Sonnet', 'Llama 3.1 70B'],
+            enterprise: ['GPT-3.5-turbo', 'Gemini Flash', 'GPT-4o-mini', 'Claude 3 Haiku', 'Gemini Pro', 'GPT-4o', 'Claude 3.5 Sonnet', 'Llama 3.1 70B', 'GPT-4o 32k', 'Claude 3 Opus', 'Llama 3.1 405B']
+        };
+        return models[tier as keyof typeof models] || models.free;
+    }
+}
+
+export const authService = new AuthService();
+```
+
+### **9.4 UI Uppdateringar**
+
+```tsx
+// src/components/ModelSelector.tsx
+import React, { useState, useEffect } from 'react';
+import { authService } from '../services/auth-service';
+
+interface ModelSelectorProps {
+    selectedModel: string;
+    onModelChange: (model: string) => void;
+}
+
+export const ModelSelector: React.FC<ModelSelectorProps> = ({ selectedModel, onModelChange }) => {
+    const [user, setUser] = useState(null);
+    const [availableModels, setAvailableModels] = useState<string[]>([]);
+    
+    useEffect(() => {
+        loadUserAndModels();
+    }, []);
+    
+    const loadUserAndModels = async () => {
+        const currentUser = await authService.getCurrentUser();
+        setUser(currentUser);
+        
+        const tier = currentUser?.tier || 'free';
+        const models = authService.getAvailableModels(tier);
+        setAvailableModels(models);
+        
+        // Om vald modell inte är tillgänglig, välj första tillgängliga
+        if (!models.includes(selectedModel)) {
+            onModelChange(models[0]);
+        }
+    };
+    
+    const handleUpgrade = () => {
+        // Öppna upgrade sida i extern webbläsare
+        window.open('http://localhost:8080/payments', '_blank');
+    };
+    
+    return (
+        <div className="model-selector">
+            <div className="user-info">
+                {user ? (
+                    <div className="logged-in">
+                        <span className="user-name">{user.name}</span>
+                        <span className="user-tier tier-{user.tier}">{user.tier}</span>
+                        <button onClick={() => authService.logout()}>Logout</button>
+                    </div>
+                ) : (
+                    <div className="not-logged-in">
+                        <span className="free-user">Free User</span>
+                        <button onClick={() => showLoginModal()}>Login for Premium</button>
+                    </div>
+                )}
+            </div>
+            
+            <div className="model-list">
+                {availableModels.map(model => (
+                    <div 
+                        key={model}
+                        className={`model-option ${selectedModel === model ? 'selected' : ''}`}
+                        onClick={() => onModelChange(model)}
+                    >
+                        {model}
+                    </div>
+                ))}
+            </div>
+            
+            {(!user || user.tier === 'free') && (
+                <div className="upgrade-section">
+                    <h4>Unlock Premium Models</h4>
+                    <div className="premium-models">
+                        <span>GPT-4o</span>
+                        <span>Claude 3.5 Sonnet</span>
+                        <span>Llama 3.1 70B</span>
+                    </div>
+                    <button onClick={handleUpgrade} className="upgrade-btn">
+                        Upgrade to Premium
+                    </button>
+                </div>
+            )}
+        </div>
+    );
+};
+```
+
+### **9.5 AI Request Modifiering**
+
+```typescript
+// src/services/ai-service.ts
+import { authService } from './auth-service';
+
+export class AIService {
+    async processRequest(message: string, imageData?: string, selectedModel?: string) {
+        const user = await authService.getCurrentUser();
+        const tier = user?.tier || 'free';
+        
+        // Kontrollera modell-access
+        if (selectedModel && !authService.canUseModel(selectedModel)) {
+            throw new Error(`Model ${selectedModel} requires ${this.getRequiredTier(selectedModel)} subscription`);
+        }
+        
+        // Använd backend endpoint med auth
+        const headers: Record<string, string> = {
+            'Content-Type': 'application/json'
+        };
+        
+        // Lägg till auth token för premium users
+        if (user?.token) {
+            headers['Authorization'] = `Bearer ${user.token}`;
+        }
+        
+        const response = await fetch('http://localhost:3001/api/analyze', {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({
+                message,
+                imageData,
+                selectedModel: selectedModel || this.getDefaultModel(tier),
+                userTier: tier
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error('AI request failed');
+        }
+        
+        return response.json();
+    }
+    
+    private getDefaultModel(tier: string): string {
+        const defaults = {
+            free: 'GPT-3.5-turbo',
+            premium: 'GPT-4o-mini',
+            pro: 'GPT-4o',
+            enterprise: 'GPT-4o 32k'
+        };
+        return defaults[tier as keyof typeof defaults] || 'GPT-3.5-turbo';
+    }
+    
+    private getRequiredTier(model: string): string {
+        if (['GPT-4o 32k', 'Claude 3 Opus', 'Llama 3.1 405B'].includes(model)) return 'Enterprise';
+        if (['GPT-4o', 'Claude 3.5 Sonnet', 'Llama 3.1 70B'].includes(model)) return 'Pro';
+        if (['GPT-4o-mini', 'Claude 3 Haiku', 'Gemini Pro'].includes(model)) return 'Premium';
+        return 'Free';
+    }
+}
+```
+
+### **9.6 Implementation Checklista**
+
+**✅ Implementationsordning:**
+
+1. **Deep Link Setup** - Uppdatera tauri.conf.json + registrera protokoll
+2. **Tauri Deep Link Handler** - main.rs uppdatering för event listening  
+3. **Backend Success URL** - Ändra Stripe success_url till framesense:// protokoll
+4. **Frontend Deep Link Service** - Lyssna på payment_success events
+5. **Auth Service Update** - Hantera automatisk token-mottagning
+6. **Model Selector Update** - Visa tillgängliga modeller baserat på tier
+7. **AI Service Auth** - Skicka tokens med requests
+8. **Backend Model Validation** - Kontrollera användarens tier
+
+### **🎯 Kritiska Points:**
+
+1. **Free users** - Ingen inloggning krävd, bara basic modeller
+2. **Upgrade flow** - Logga in ENDAST på hemsidan, aldrig i appen
+3. **Deep Link Magic** - Stripe success → automatisk app-inloggning via framesense://
+4. **Token Transfer** - JWT token följer med från web till app seamlessly
+5. **Security** - Validera alla AI-requests + tokens på backend
+6. **UX Priority** - En inloggning, inte två - användarvänligt!
+
+### **📈 Business Impact:**
+
+- **Högre Conversion Rate**: Eliminerar friction - endast en inloggning istället för två
+- **Seamless User Journey**: App → Web Payment → Tillbaka till App automatiskt
+- **Reduced Drop-off**: Användare slutför köp eftersom processen är smidig
+- **Premium Retention**: Token-baserat system håller användare inloggade
+- **Revenue Protection**: AI-modeller + tiers skyddade på backend-nivå
+- **Future-Proof**: Deep link system redo för fler betalningsflows 

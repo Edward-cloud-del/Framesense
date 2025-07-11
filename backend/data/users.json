@@ -12,6 +12,47 @@
       },
       "createdAt": "2025-07-11T08:08:58.585Z",
       "stripeCustomerId": null
+    },
+    "edwardostberg0@gmail.com": {
+      "id": "user_1752224341809",
+      "email": "edwardostberg0@gmail.com",
+      "name": "Edward Östberg",
+      "password": "$2a$12$yXfGSUyTNm6ymPX0GzBOt.6G/ItZYspRWatXs/O.d7gpksUw9Usnm",
+      "tier": "free",
+      "usage": {
+        "daily": 0,
+        "total": 0
+      },
+      "createdAt": "2025-07-11T08:59:01.809Z",
+      "stripeCustomerId": "cus_SewggkITq9apTc",
+      "updatedAt": "2025-07-11T08:59:02.468Z"
+    },
+    "newuser@example.com": {
+      "id": "user_1752227252917",
+      "email": "newuser@example.com",
+      "name": "New Test User",
+      "password": "$2a$12$girg.udSCXn7tTzpT7g/p.m33BdK8WluvJSFMwHuGDoEqnq5qSSPm",
+      "tier": "free",
+      "usage": {
+        "daily": 0,
+        "total": 0
+      },
+      "createdAt": "2025-07-11T09:47:32.917Z",
+      "stripeCustomerId": null
+    },
+    "vfdadb@gmail.com": {
+      "id": "user_1752227271453",
+      "email": "vfdadb@gmail.com",
+      "name": "ewfsd",
+      "password": "$2a$12$btXWHhtFUUw09O/E2S993.fRiXA0RGsGEpuvJVjeieHxWFdKSn8Z2",
+      "tier": "free",
+      "usage": {
+        "daily": 0,
+        "total": 0
+      },
+      "createdAt": "2025-07-11T09:47:51.453Z",
+      "stripeCustomerId": "cus_SexTwsmF64kx3Z",
+      "updatedAt": "2025-07-11T09:47:52.238Z"
     }
   },
   "subscriptions": {}

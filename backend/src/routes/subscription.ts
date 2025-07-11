@@ -3,6 +3,9 @@ import { SubscriptionService } from '../services/subscription-service.js';
 import { ModelSelector } from '../services/model-selector.js';
 import express from 'express';
 import AuthService from '../services/auth-service.js';
+import jwt from 'jsonwebtoken';
+
+const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-key-change-this';
 
 const router = Router();
 const subscriptionService = new SubscriptionService();
@@ -30,14 +33,14 @@ router.post('/create-checkout-session', authenticateUser, async (req: Request, r
     const { priceId, planName, successUrl, cancelUrl } = req.body;
     const user = (req as any).user;
     
-    if (!priceId || !planName || !successUrl || !cancelUrl) {
+    if (!priceId || !planName) {
       return res.status(400).json({
         success: false,
-        message: 'Missing required fields: priceId, planName, successUrl, cancelUrl'
+        message: 'Missing required fields: priceId, planName'
       });
     }
     
-    console.log('Creating checkout session for user:', user.email);
+    console.log('Creating checkout session for user:', user.email, 'plan:', planName);
     
     // Create or get Stripe customer
     let customerId = user.stripeCustomerId;
@@ -49,13 +52,28 @@ router.post('/create-checkout-session', authenticateUser, async (req: Request, r
       await AuthService.updateUser(user.email, { stripeCustomerId: customerId });
     }
     
-    // Create checkout session
+    // Create JWT token for deep link auth
+    const paymentToken = jwt.sign(
+      { userId: user.id, email: user.email, plan: planName },
+      JWT_SECRET,
+      { expiresIn: '1h' } // Short expiry for payment flow
+    );
+    
+    // Create web success URL with plan info (no deep link for now)
+    const webSuccessUrl = `http://localhost:3000/success.html?plan=${planName}&session_id={CHECKOUT_SESSION_ID}`;
+    
+    // Default cancel URL to website
+    const webCancelUrl = cancelUrl || `http://localhost:3000/payments?canceled=true`;
+    
+    // Create checkout session with web success URL
     const session = await subscriptionService.createCheckoutSession(
       customerId,
       priceId,
-      successUrl,
-      cancelUrl
+      webSuccessUrl,
+      webCancelUrl
     );
+    
+    console.log('🌐 Checkout session created with web success URL:', webSuccessUrl);
     
     res.json({ 
       success: true, 

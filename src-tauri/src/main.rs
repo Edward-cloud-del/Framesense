@@ -29,6 +29,10 @@ use ocr::{OCRService, OCRResult};
 // OCR test module
 mod test_ocr;
 
+// Authentication module
+mod auth;
+use auth::{AuthService, User};
+
 // Global OCR service (reuse instance for performance)
 static mut OCR_SERVICE: Option<std::sync::Mutex<OCRService>> = None;
 static OCR_INIT: std::sync::Once = std::sync::Once::new();
@@ -75,6 +79,9 @@ type SharedPermissionCache = Arc<Mutex<PermissionCache>>;
 
 // FAS 3: Screenshot cache manager for optimization
 type SharedScreenshotCache = Arc<Mutex<ScreenshotCache>>;
+
+// Authentication service manager
+type SharedAuthService = Arc<Mutex<AuthService>>;
 
 // Test screen capture capability
 #[tauri::command]
@@ -446,6 +453,132 @@ fn resize_screenshot_buffer(
     screenshot_cache.resize_buffer(new_size_bytes);
     println!("📏 Screenshot buffer resized to {}MB", new_size_mb);
     Ok(())
+}
+
+// 🚀 AUTHENTICATION COMMANDS
+
+// Login user with credentials
+#[tauri::command]
+async fn login_user(
+    email: String, 
+    password: String, 
+    auth_service: tauri::State<'_, SharedAuthService>
+) -> Result<User, String> {
+    // Clone the auth service to avoid holding the lock across await
+    let service = {
+        let guard = auth_service.lock().unwrap();
+        guard.clone()
+    };
+    service.login_user(email, password).await
+}
+
+// Logout current user
+#[tauri::command]
+async fn logout_user(
+    auth_service: tauri::State<'_, SharedAuthService>
+) -> Result<(), String> {
+    // Clone the auth service to avoid holding the lock across await
+    let service = {
+        let guard = auth_service.lock().unwrap();
+        guard.clone()
+    };
+    service.logout_user().await
+}
+
+// Get current logged in user
+#[tauri::command]
+async fn get_current_user(
+    auth_service: tauri::State<'_, SharedAuthService>
+) -> Result<Option<User>, String> {
+    // Clone the auth service to avoid holding the lock across await
+    let service = {
+        let guard = auth_service.lock().unwrap();
+        guard.clone()
+    };
+    service.get_current_user().await
+}
+
+// Handle payment success from deep link
+#[tauri::command]
+async fn handle_payment_success(
+    token: String, 
+    plan: String, 
+    auth_service: tauri::State<'_, SharedAuthService>
+) -> Result<User, String> {
+    // Clone the auth service to avoid holding the lock across await
+    let service = {
+        let guard = auth_service.lock().unwrap();
+        guard.clone()
+    };
+    service.handle_payment_success(token, plan).await
+}
+
+// Get available models for user tier
+#[tauri::command]
+fn get_available_models(
+    user_tier: String,
+    auth_service: tauri::State<'_, SharedAuthService>
+) -> Result<Vec<String>, String> {
+    let service = auth_service.lock().unwrap();
+    let models = service.get_available_models(&user_tier)
+        .iter()
+        .map(|&s| s.to_string())
+        .collect();
+    Ok(models)
+}
+
+// Check if user can use specific model
+#[tauri::command]
+fn can_use_model(
+    user_tier: String,
+    model: String,
+    auth_service: tauri::State<'_, SharedAuthService>
+) -> Result<bool, String> {
+    let service = auth_service.lock().unwrap();
+    Ok(service.can_use_model(&user_tier, &model))
+}
+
+// Test deep link functionality (for development)
+#[tauri::command]
+async fn test_deep_link(app: tauri::AppHandle, token: String, plan: String) -> Result<(), String> {
+    println!("🧪 Testing deep link with token: {} and plan: {}", token, plan);
+    
+    // Emit payment success event for testing
+    app.emit("payment_success", serde_json::json!({
+        "token": token,
+        "plan": plan
+    })).map_err(|e| format!("Failed to emit payment success: {}", e))?;
+    
+    println!("✅ Test deep link event emitted successfully");
+    Ok(())
+}
+
+// Simulate successful payment upgrade (for testing)
+#[tauri::command]
+async fn simulate_payment_upgrade(
+    plan: String,
+    auth_service: tauri::State<'_, SharedAuthService>
+) -> Result<(), String> {
+    println!("🧪 Simulating payment upgrade to plan: {}", plan);
+    
+    // Create test token and simulate upgrade
+    let test_token = format!("test_token_{}", chrono::Utc::now().timestamp());
+    
+    let service = {
+        let guard = auth_service.lock().unwrap();
+        guard.clone()
+    };
+    
+    match service.handle_payment_success(test_token, plan.clone()).await {
+        Ok(user) => {
+            println!("✅ Test upgrade successful: {} -> {}", user.email, user.tier);
+            Ok(())
+        },
+        Err(e) => {
+            println!("❌ Test upgrade failed: {}", e);
+            Err(e)
+        }
+    }
 }
 
 // Removed problematic HTML/JS-based overlay function - using React overlays only
@@ -978,11 +1111,19 @@ fn main() {
     // FAS 3: Initialize screenshot cache for optimization
     let shared_screenshot_cache: SharedScreenshotCache = Arc::new(Mutex::new(ScreenshotCache::new()));
     
+    // Initialize authentication service with storage path
+    let app_data_dir = dirs::home_dir()
+        .unwrap_or_else(|| std::path::PathBuf::from("/tmp"))
+        .join(".framesense");
+    let auth_service = AuthService::new().with_storage_path(app_data_dir);
+    let shared_auth_service: SharedAuthService = Arc::new(Mutex::new(auth_service));
+    
     tauri::Builder::default()
         .manage(shared_state)
         .manage(shared_overlay_manager)
         .manage(shared_permission_cache)
         .manage(shared_screenshot_cache)
+        .manage(shared_auth_service)
         .plugin(tauri_plugin_global_shortcut::Builder::new()
             .with_handler(|app, shortcut, event| {
                 println!("🔥 GLOBAL SHORTCUT: {:?} - State: {:?}", shortcut, event.state());
@@ -1037,6 +1178,7 @@ fn main() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_notification::init())
         .setup(|app| {
+            // Continue with existing setup...
             // Create tray menu items inside setup where we have access to app
             let quit_item = MenuItem::with_id(app, "quit", "Quit FrameSense", true, None::<&str>)?;
             let capture_item = MenuItem::with_id(app, "capture", "Start Capture", true, None::<&str>)?;
@@ -1126,6 +1268,15 @@ fn main() {
             get_screenshot_cache_stats,
             cleanup_screenshot_cache,
             resize_screenshot_buffer,
+    // Authentication commands
+    login_user,
+    logout_user,
+    get_current_user,
+    handle_payment_success,
+    get_available_models,
+    can_use_model,
+    test_deep_link,
+    simulate_payment_upgrade,
             resize_window,
             debug_coordinates,
             test_chatbox_position,
