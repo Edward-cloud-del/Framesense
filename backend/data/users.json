@@ -94,6 +94,20 @@
       "createdAt": "2025-07-11T10:14:04.288Z",
       "stripeCustomerId": "cus_SextYoLdmWeoCz",
       "updatedAt": "2025-07-11T10:14:04.637Z"
+    },
+    "tt@gmail.com": {
+      "id": "user_1752229131527",
+      "email": "tt@gmail.com",
+      "name": "tt",
+      "password": "$2a$12$EMAgu7Vl22P1.gZ49wd3ueXYUfcQCiGZTb5OcdqNAleT3Sny7MB16",
+      "tier": "free",
+      "usage": {
+        "daily": 0,
+        "total": 0
+      },
+      "createdAt": "2025-07-11T10:18:51.527Z",
+      "stripeCustomerId": "cus_SexyvhOMWkPShS",
+      "updatedAt": "2025-07-11T10:18:52.278Z"
     }
   },
   "subscriptions": {}

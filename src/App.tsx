@@ -76,11 +76,13 @@ function App() {
 
 	// Use auth service for user management
 	const [currentUser, setCurrentUser] = useState<User | null>(null);
+	const [debugMode, setDebugMode] = useState(true); // Auto-show debug info
 	
 	// Initialize auth service and listen for user changes
 	useEffect(() => {
 		const handleUserChange = (user: User | null) => {
 			setCurrentUser(user);
+			console.log('🔍 User changed:', user ? `${user.email} (${user.tier})` : 'No user');
 		};
 		
 		authService.addAuthListener(handleUserChange);
@@ -88,6 +90,7 @@ function App() {
 		// Load current user
 		authService.loadCurrentUser().then(user => {
 			setCurrentUser(user);
+			console.log('🔍 Initial user loaded:', user ? `${user.email} (${user.tier})` : 'No user');
 		});
 		
 		// Request notification permission for payment success
@@ -97,6 +100,34 @@ function App() {
 			authService.removeAuthListener(handleUserChange);
 		};
 	}, []);
+
+	// Debug functions for session management
+	const clearUserSession = async () => {
+		try {
+			await authService.clearLocalSession();
+			console.log('🗑️ Session cleared successfully');
+			alert('Session cleared! You are now logged out.');
+		} catch (error) {
+			console.error('❌ Failed to clear session:', error);
+			alert('Failed to clear session. Check console for details.');
+		}
+	};
+
+	const refreshUserSession = async () => {
+		try {
+			const user = await authService.verifyPaymentStatus();
+			if (user) {
+				console.log('🔄 Session refreshed:', user.email, user.tier);
+				alert(`Session refreshed! User: ${user.email} (${user.tier})`);
+			} else {
+				console.log('🔄 No session to refresh');
+				alert('No active session found.');
+			}
+		} catch (error) {
+			console.error('❌ Failed to refresh session:', error);
+			alert('Failed to refresh session. Check console for details.');
+		}
+	};
 
 	// 🤖 REAL OpenAI integration function - replaces mock
 	const sendToAI = async (aiMessage: AIMessage): Promise<string> => {
@@ -611,12 +642,25 @@ function App() {
 
 	// Removed aiResponseVisible state - now using ResultOverlay system
 
-	// 🔴 RED CIRCLE: Debug currentResult state before render
-	console.log('🔴 RED CIRCLE: App.tsx render - currentResult state:', {
+	// 🔴 DEBUG: Comprehensive render state logging
+	console.log('🔍 App.tsx render - Debug State:', {
+		// User session info
+		hasCurrentUser: !!currentUser,
+		userEmail: currentUser?.email || 'NO USER',
+		userTier: currentUser?.tier || 'NO TIER',
+		userToken: currentUser?.token ? `${currentUser.token.substring(0, 20)}...` : 'NO TOKEN',
+		
+		// AI result info
 		hasCurrentResult: !!currentResult,
 		currentResultId: currentResult?.id,
 		currentResultType: currentResult?.type,
-		currentResultContent: currentResult?.content?.substring(0, 30) + '...' || 'NO CONTENT'
+		currentResultContent: currentResult?.content?.substring(0, 30) + '...' || 'NO CONTENT',
+		
+		// Component states
+		chatBoxOpen,
+		modelSelectorOpen,
+		debugMode,
+		selectedModel,
 	});
 
 	// 🔴 RED CIRCLE: Manual test function for debugging
@@ -674,6 +718,52 @@ function App() {
 						</svg>
 					</div>
 					<span className="text-xs font-medium text-white">FrameSense</span>
+					
+					{/* 🔍 DEBUG: Current User Display */}
+					<div className="flex items-center space-x-1">
+						<button
+							onClick={() => setDebugMode(!debugMode)}
+							className="text-xs text-white/50 hover:text-white/80 transition-colors"
+							title="Toggle debug info"
+						>
+							🔍
+						</button>
+						{debugMode && (
+							<div className="flex items-center space-x-1 px-2 py-0.5 bg-yellow-500/20 rounded border border-yellow-400/30 backdrop-blur-sm">
+								{currentUser ? (
+									<>
+										<span className="text-xs text-yellow-300 font-mono">
+											{currentUser.email.substring(0, 15)}...
+										</span>
+										<span className={`text-xs px-1 py-0.5 rounded font-mono ${
+											currentUser.tier === 'free' ? 'bg-gray-500/30 text-gray-300' :
+											currentUser.tier === 'premium' ? 'bg-blue-500/30 text-blue-300' :
+											currentUser.tier === 'pro' ? 'bg-purple-500/30 text-purple-300' :
+											'bg-yellow-500/30 text-yellow-300'
+										}`}>
+											{currentUser.tier.toUpperCase()}
+										</span>
+										<button
+											onClick={clearUserSession}
+											className="text-xs text-red-400 hover:text-red-300 ml-1"
+											title="Clear session"
+										>
+											🗑️
+										</button>
+										<button
+											onClick={refreshUserSession}
+											className="text-xs text-green-400 hover:text-green-300"
+											title="Refresh session"
+										>
+											🔄
+										</button>
+									</>
+								) : (
+									<span className="text-xs text-gray-400 font-mono">NO USER</span>
+								)}
+							</div>
+						)}
+					</div>
 					
 					{/* Screenshot result - BETWEEN LOGO AND BUTTON */}
 					{screenshotResult && (
