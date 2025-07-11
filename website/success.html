@@ -98,15 +98,45 @@
         
         console.log('🎉 Payment success page loaded:', { plan, email, hasToken: !!token });
         
-        // 🔑 CRITICAL: Save JWT token for app authentication
+        // 🔑 CRITICAL: Save JWT token to file system for Tauri app
         if (token && email) {
-            // Save payment credentials for Tauri app to pick up
-            localStorage.setItem('framesense_payment_token', token);
-            localStorage.setItem('framesense_payment_email', email);
-            localStorage.setItem('framesense_payment_plan', plan);
-            localStorage.setItem('framesense_payment_timestamp', Date.now().toString());
+            // Create payment credentials object
+            const paymentCredentials = {
+                token: token,
+                email: email,
+                plan: plan,
+                timestamp: Date.now(),
+                session_id: sessionId
+            };
             
-            console.log('✅ Payment credentials saved to localStorage for app pickup');
+            console.log('💾 Saving payment credentials to file system...', { email, plan });
+            
+            // Save to file system via fetch to a local endpoint that writes file
+            try {
+                const response = await fetch('http://localhost:3001/api/save-payment-credentials', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(paymentCredentials)
+                });
+                
+                if (response.ok) {
+                    console.log('✅ Payment credentials saved to file system for Tauri pickup');
+                } else {
+                    console.warn('⚠️ Failed to save to file system, falling back to localStorage');
+                    // Fallback to localStorage
+                    localStorage.setItem('framesense_payment_token', token);
+                    localStorage.setItem('framesense_payment_email', email);
+                    localStorage.setItem('framesense_payment_plan', plan);
+                    localStorage.setItem('framesense_payment_timestamp', Date.now().toString());
+                }
+            } catch (error) {
+                console.warn('⚠️ File system save failed, using localStorage fallback:', error);
+                // Fallback to localStorage  
+                localStorage.setItem('framesense_payment_token', token);
+                localStorage.setItem('framesense_payment_email', email);
+                localStorage.setItem('framesense_payment_plan', plan);
+                localStorage.setItem('framesense_payment_timestamp', Date.now().toString());
+            }
             
             // Show success indicator
             const returnButton = document.getElementById('return-to-app');

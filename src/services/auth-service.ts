@@ -273,12 +273,45 @@ class AuthService {
         }
     }
 
-    // Manual payment verification - check localStorage first, then backend
+    // Manual payment verification - check file system first, then localStorage, then backend
     async verifyPaymentStatus(): Promise<User | null> {
         try {
             console.log('🔄 Checking for payment credentials...');
             
-            // 🔑 STEP 1: Check localStorage for JWT token from payment success
+            // 🔑 STEP 1: Check file system for JWT token from payment success (PRIMARY)
+            const paymentFileData = await invoke('check_payment_file');
+            
+            if (paymentFileData) {
+                const fileCredentials = paymentFileData as any;
+                console.log('🎉 Found payment credentials in file system!', { 
+                    email: fileCredentials.email, 
+                    plan: fileCredentials.plan 
+                });
+                
+                try {
+                    // Clear old session first
+                    await this.clearLocalSession();
+                    
+                    // Use JWT token to authenticate the real paying user
+                    const user = await invoke<User>('handle_payment_success', { 
+                        token: fileCredentials.token, 
+                        plan: fileCredentials.plan || 'premium' 
+                    });
+                    
+                    this.currentUser = user;
+                    this.notifyAuthListeners(user);
+                    
+                    console.log('✅ Payment user authenticated from file system:', user.email, '→', user.tier);
+                    this.showPaymentSuccessNotification(user.tier);
+                    
+                    return user;
+                } catch (tokenError) {
+                    console.error('❌ Failed to authenticate with payment token from file:', tokenError);
+                    // Continue to localStorage fallback
+                }
+            }
+            
+            // 🔑 STEP 2: Check localStorage for JWT token (FALLBACK)
             const paymentToken = localStorage.getItem('framesense_payment_token');
             const paymentEmail = localStorage.getItem('framesense_payment_email');
             const paymentPlan = localStorage.getItem('framesense_payment_plan');
@@ -320,8 +353,8 @@ class AuthService {
                 }
             }
             
-            // 🔄 STEP 2: Fallback to regular backend verification
-            console.log('🔄 No payment credentials found, checking existing session...');
+            // 🔄 STEP 3: Fallback to regular backend verification
+            console.log('🔄 No payment credentials found in file or localStorage, checking existing session...');
             const result = await invoke('verify_payment_status');
             
             if (result) {

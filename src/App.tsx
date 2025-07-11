@@ -113,21 +113,32 @@ function App() {
 		}
 	};
 
-	const refreshUserSession = async () => {
-		try {
-			const user = await authService.verifyPaymentStatus();
-			if (user) {
-				console.log('🔄 Session refreshed:', user.email, user.tier);
-				alert(`Session refreshed! User: ${user.email} (${user.tier})`);
-			} else {
-				console.log('🔄 No session to refresh');
-				alert('No active session found.');
-			}
-		} catch (error) {
-			console.error('❌ Failed to refresh session:', error);
-			alert('Failed to refresh session. Check console for details.');
-		}
-	};
+	    const refreshUserSession = async () => {
+        try {
+            const user = await authService.verifyPaymentStatus();
+            if (user) {
+                console.log('🔄 Session refreshed:', user.email, user.tier);
+                alert(`Session refreshed! User: ${user.email} (${user.tier})`);
+            } else {
+                console.log('🔄 No session to refresh');
+                alert('No active session found.');
+            }
+        } catch (error) {
+            console.error('❌ Failed to refresh session:', error);
+            alert('Failed to refresh session. Check console for details.');
+        }
+    };
+
+    const clearPaymentFile = async () => {
+        try {
+            await invoke('clear_payment_file');
+            console.log('🗑️ Payment file cleared');
+            alert('Payment file cleared successfully.');
+        } catch (error) {
+            console.error('❌ Failed to clear payment file:', error);
+            alert('Failed to clear payment file. Check console for details.');
+        }
+    };
 
 	// 🤖 REAL OpenAI integration function - replaces mock
 	const sendToAI = async (aiMessage: AIMessage): Promise<string> => {
@@ -756,6 +767,13 @@ function App() {
 											title="Refresh session"
 										>
 											🔄
+										</button>
+										<button
+											onClick={clearPaymentFile}
+											className="text-xs text-orange-400 hover:text-orange-300"
+											title="Clear payment file"
+										>
+											📄
 										</button>
 									</>
 								) : (

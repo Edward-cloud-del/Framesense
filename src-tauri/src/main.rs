@@ -598,6 +598,51 @@ async fn clear_user_session(
     Ok(())
 }
 
+// 💾 Check for payment credentials file from web payment
+#[tauri::command]
+async fn check_payment_file() -> Result<Option<serde_json::Value>, String> {
+    use std::path::PathBuf;
+    
+    // Look for payment_ready.json in ~/.framesense/
+    let home_dir = dirs::home_dir().ok_or("Could not find home directory")?;
+    let payment_file = home_dir.join(".framesense").join("payment_ready.json");
+    
+    if payment_file.exists() {
+        println!("💾 Found payment credentials file: {:?}", payment_file);
+        
+        let contents = std::fs::read_to_string(&payment_file)
+            .map_err(|e| format!("Failed to read payment file: {}", e))?;
+        
+        let credentials: serde_json::Value = serde_json::from_str(&contents)
+            .map_err(|e| format!("Failed to parse payment file: {}", e))?;
+        
+        // Delete file after reading to prevent reuse
+        std::fs::remove_file(&payment_file)
+            .map_err(|e| format!("Failed to delete payment file: {}", e))?;
+        
+        println!("✅ Payment credentials loaded and file cleaned up");
+        Ok(Some(credentials))
+    } else {
+        println!("📄 No payment credentials file found");
+        Ok(None)
+    }
+}
+
+// 🗑️ Clear payment credentials file (for cleanup)
+#[tauri::command]
+async fn clear_payment_file() -> Result<(), String> {
+    let home_dir = dirs::home_dir().ok_or("Could not find home directory")?;
+    let payment_file = home_dir.join(".framesense").join("payment_ready.json");
+    
+    if payment_file.exists() {
+        std::fs::remove_file(&payment_file)
+            .map_err(|e| format!("Failed to delete payment file: {}", e))?;
+        println!("🗑️ Payment credentials file cleared");
+    }
+    
+    Ok(())
+}
+
 // Removed problematic HTML/JS-based overlay function - using React overlays only
 
 // Removed old process_screen_selection - using optimized version only
@@ -1295,6 +1340,8 @@ fn main() {
     test_deep_link,
     verify_payment_status,
     clear_user_session,
+    check_payment_file,
+    clear_payment_file,
             resize_window,
             debug_coordinates,
             test_chatbox_position,

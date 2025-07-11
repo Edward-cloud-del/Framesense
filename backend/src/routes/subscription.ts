@@ -256,6 +256,67 @@ router.get('/user-tier-info', authenticateUser, async (req: Request, res: Respon
   }
 });
 
+// 💾 Save payment credentials to file system for Tauri app pickup
+router.post('/save-payment-credentials', async (req: Request, res: Response) => {
+  try {
+    const { token, email, plan, timestamp, session_id } = req.body;
+    
+    if (!token || !email || !plan) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields: token, email, plan'
+      });
+    }
+
+    console.log('💾 Saving payment credentials to file for:', email, 'plan:', plan);
+
+    // Create credentials object
+    const credentials = {
+      token,
+      email, 
+      plan,
+      timestamp: timestamp || Date.now(),
+      session_id: session_id || `manual_${Date.now()}`,
+      created_at: new Date().toISOString()
+    };
+
+    // Save to known file location that Tauri can read
+    const os = require('os');
+    const path = require('path');
+    const fs = require('fs').promises;
+    
+    const homeDir = os.homedir();
+    const framesenseDir = path.join(homeDir, '.framesense');
+    const credentialsFile = path.join(framesenseDir, 'payment_ready.json');
+
+    // Ensure directory exists
+    try {
+      await fs.mkdir(framesenseDir, { recursive: true });
+    } catch (error) {
+      // Directory might already exist, that's OK
+    }
+
+    // Write credentials file
+    await fs.writeFile(credentialsFile, JSON.stringify(credentials, null, 2));
+
+    console.log('✅ Payment credentials saved to:', credentialsFile);
+
+    res.json({
+      success: true,
+      message: 'Payment credentials saved to file system',
+      file_path: credentialsFile,
+      credentials: {
+        email: credentials.email,
+        plan: credentials.plan,
+        timestamp: credentials.timestamp
+      }
+    });
+  } catch (error: any) {
+    console.error('File system save error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // 🧪 DEBUG: Simulate successful payment (for testing)
 router.post('/simulate-payment-success', async (req: Request, res: Response) => {
   try {
