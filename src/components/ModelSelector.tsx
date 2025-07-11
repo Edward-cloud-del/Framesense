@@ -162,7 +162,7 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({ isVisible, onClose, onMod
     }
   };
 
-  const handleTestUpgrade = async (plan: string = 'premium') => {
+  const handleTestUpgrade = async (plan: string = 'pro') => {
     try {
       setLoading(true);
       console.log('🧪 Testing upgrade to:', plan);
@@ -248,11 +248,11 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({ isVisible, onClose, onMod
                   Already paid? Check status
                 </button>
                 <button 
-                  onClick={() => handleTestUpgrade('premium')}
+                  onClick={() => handleTestUpgrade('pro')}
                   className="text-xs text-yellow-400 hover:text-yellow-300 underline bg-yellow-500/10 px-2 py-0.5 rounded"
                   disabled={loading}
                 >
-                  🧪 Test Premium Upgrade
+                  🧪 Test Pro Upgrade
                 </button>
               </div>
             </div>

@@ -560,7 +560,7 @@
                     },
                     body: JSON.stringify({
                         priceId: plan.priceId,
-                        planName: plan.name,
+                        planName: selectedPlan, // Use selectedPlan key instead of plan.name to match backend expectations
                         successUrl: `${window.location.origin}/payments?success=true&plan=${selectedPlan}`,
                         cancelUrl: `${window.location.origin}/payments?canceled=true`
                     })

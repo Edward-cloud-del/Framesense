@@ -85,6 +85,16 @@ function App() {
 			// Reload current user to see changes
 			const user = await authService.loadCurrentUser();
 			console.log('✅ User after upgrade:', user);
+			
+			// Show success notification
+			if (user && user.tier !== 'free') {
+				if ('Notification' in window && Notification.permission === 'granted') {
+					new Notification('Test Upgrade Success! 🧪', {
+						body: `You now have ${user.tier} access with all models!`,
+						icon: '/favicon.ico'
+					});
+				}
+			}
 		} catch (error) {
 			console.error('❌ Payment upgrade simulation failed:', error);
 		}
@@ -727,9 +737,9 @@ function App() {
 
 					{/* Test Payment Button (dev only) */}
 					<button
-						onClick={() => testPaymentUpgrade('premium')}
+						onClick={() => testPaymentUpgrade('pro')}
 						className="bg-green-500/20 hover:bg-green-500/30 text-white px-2 py-0.5 rounded-lg transition-colors text-xs flex items-center space-x-1 backdrop-blur-sm border border-green-400/20"
-						title="Test payment upgrade simulation"
+						title="Test Pro upgrade simulation - full access to all models"
 					>
 						<span>🧪</span>
 						<span>Test</span>
