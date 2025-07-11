@@ -170,8 +170,8 @@
                             API access & Support
                         </li>
                     </ul>
-                    <button onclick="startUpgrade('enterprise')" class="w-full py-2 px-4 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold transition-colors text-sm">
-                        Uppgradera till Enterprise
+                    <button onclick="alert('Enterprise plan kommer snart! Kontakta oss för early access.')" class="w-full py-2 px-4 bg-gray-600 text-gray-300 rounded-lg font-semibold cursor-not-allowed text-sm">
+                        Kommer snart
                     </button>
                 </div>
             </div>
@@ -326,9 +326,9 @@
     </div>
 
     <script>
-        // Configuration
-        const API_BASE_URL = 'http://localhost:3001'; // Will be updated when backend is deployed
-        const STRIPE_PUBLISHABLE_KEY = 'pk_test_your_stripe_key_here'; // Will be updated with real Stripe key
+                 // Configuration
+         const API_BASE_URL = 'http://localhost:3001'; // Backend API URL
+         const STRIPE_PUBLISHABLE_KEY = 'pk_test_DIN_RIKTIGA_PUBLISHABLE_KEY_HÄR'; // Replace with your actual Stripe publishable key
         
         // Initialize Stripe
         const stripe = Stripe(STRIPE_PUBLISHABLE_KEY);
@@ -338,27 +338,27 @@
         let selectedPlan = null;
         let currentUser = null;
         
-        // Plan configurations
-        const plans = {
-            premium: {
-                name: 'Premium',
-                price: 99,
-                priceId: 'price_premium_monthly_sek',
-                features: ['GPT-4o-mini', 'Claude 3 Haiku', 'Gemini Pro', '1000 requests/dag']
-            },
-            pro: {
-                name: 'Pro',
-                price: 299,
-                priceId: 'price_pro_monthly_sek',
-                features: ['GPT-4o', 'Claude 3.5 Sonnet', 'Llama 3.1 70B', '5000 requests/dag']
-            },
-            enterprise: {
-                name: 'Enterprise',
-                price: 499,
-                priceId: 'price_enterprise_monthly_sek',
-                features: ['Alla AI-modeller', 'Obegränsade requests', 'API access', 'Dedicated support']
-            }
-        };
+                 // Plan configurations with actual Stripe price IDs
+         const plans = {
+             premium: {
+                 name: 'Premium',
+                 price: 99,
+                 priceId: 'price_1RjbPBGhaJA85Y4BoLQzZdGi',
+                 features: ['GPT-4o-mini', 'Claude 3 Haiku', 'Gemini Pro', '1000 requests/dag']
+             },
+             pro: {
+                 name: 'Pro',
+                 price: 299,
+                 priceId: 'price_1RjbOGGhaJA85Y4BimHpcWHs',
+                 features: ['GPT-4o', 'Claude 3.5 Sonnet', 'Llama 3.1 70B', '5000 requests/dag']
+             },
+             enterprise: {
+                 name: 'Enterprise',
+                 price: 499,
+                 priceId: 'price_coming_soon',
+                 features: ['Alla AI-modeller', 'Obegränsade requests', 'API access', 'Dedicated support']
+             }
+         };
         
         // Check if user is logged in on page load
         document.addEventListener('DOMContentLoaded', function() {

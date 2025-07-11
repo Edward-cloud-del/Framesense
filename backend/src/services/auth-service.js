@@ -1,7 +1,11 @@
-const jwt = require('jsonwebtoken');
-const bcrypt = require('bcryptjs');
-const fs = require('fs').promises;
-const path = require('path');
+import jwt from 'jsonwebtoken';
+import bcrypt from 'bcryptjs';
+import { promises as fs } from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const USERS_FILE = path.join(__dirname, '../../data/users.json');
 const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-key-change-this';
@@ -153,4 +157,4 @@ class AuthService {
   }
 }
 
-module.exports = new AuthService(); 
+export default new AuthService(); 

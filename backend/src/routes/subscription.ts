@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { SubscriptionService } from '../services/subscription-service.js';
 import { ModelSelector } from '../services/model-selector.js';
 import express from 'express';
-const AuthService = require('../services/auth-service');
+import AuthService from '../services/auth-service.js';
 
 const router = Router();
 const subscriptionService = new SubscriptionService();
@@ -136,11 +136,11 @@ router.post('/webhooks/stripe', express.raw({ type: 'application/json' }), async
         );
         
         if (userEmail) {
-          // Map Stripe price ID to tier
+                    // Map Stripe price ID to tier with actual price IDs
           const tierMapping: { [key: string]: string } = {
-            'price_premium_monthly_sek': 'premium',
-            'price_pro_monthly_sek': 'pro',
-            'price_enterprise_monthly_sek': 'enterprise'
+            'price_1RjbPBGhaJA85Y4BoLQzZdGi': 'premium',
+            'price_1RjbOGGhaJA85Y4BimHpcWHs': 'pro',
+            'price_coming_soon': 'enterprise'
           };
           
           const newTier = tierMapping[subscription.items.data[0].price.id] || 'free';

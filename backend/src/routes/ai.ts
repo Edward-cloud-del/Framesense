@@ -2,10 +2,20 @@ import { Request, Response } from 'express';
 import OpenAI from 'openai';
 import { AIProcessor } from '../services/ai-processor.js';
 
-// Initialize OpenAI client
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
+// Lazy-load OpenAI client to avoid startup errors
+let openai: OpenAI | null = null;
+
+function getOpenAIClient(): OpenAI {
+  if (!openai) {
+    if (!process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY.startsWith('sk-test-dummy')) {
+      throw new Error('OpenAI API key not configured for production use');
+    }
+    openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY
+    });
+  }
+  return openai;
+}
 
 export interface AIRequest {
   message: string;
@@ -69,7 +79,8 @@ export const analyzeImageRoute = async (req: Request, res: Response) => {
       start_time: startTime
     };
 
-    const response = await AIProcessor.processWithFallback(request, openai);
+    const openaiClient = getOpenAIClient();
+    const response = await AIProcessor.processWithFallback(request, openaiClient);
 
     console.log('✅ Optimized AI processing completed');
     res.json(response);

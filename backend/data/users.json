@@ -1,0 +1,18 @@
+{
+  "users": {
+    "test@example.com": {
+      "id": "user_1752221338585",
+      "email": "test@example.com",
+      "name": "Test User",
+      "password": "$2a$12$WgIZbpCy0bnEE5KKSDqere2IS/hB1wtqxhGENfbAANxGuL0ZgSPV6",
+      "tier": "free",
+      "usage": {
+        "daily": 0,
+        "total": 0
+      },
+      "createdAt": "2025-07-11T08:08:58.585Z",
+      "stripeCustomerId": null
+    }
+  },
+  "subscriptions": {}
+}
