@@ -249,29 +249,7 @@ class AuthService {
         });
     }
 
-    // Test upgrade function for development
-    async testUpgrade(plan: string = 'pro'): Promise<void> {
-        try {
-            console.log('🧪 Testing upgrade to plan:', plan);
-            
-            await invoke('simulate_payment_upgrade', { plan });
-            
-            // Reload user to get updated tier
-            const user = await this.loadCurrentUser();
-            
-            // Show success notification
-            this.showPaymentSuccessNotification(plan);
-            
-            // Log the result
-            if (user) {
-                console.log(`✅ Test upgrade successful: User ${user.email} upgraded to ${user.tier}`);
-                console.log('📊 Available models:', await this.getAvailableModels(user.tier));
-            }
-        } catch (error) {
-            console.error('❌ Test upgrade failed:', error);
-            throw new Error(`Test upgrade failed: ${error}`);
-        }
-    }
+
 
     // Manual payment verification - check with backend
     async verifyPayment(): Promise<boolean> {

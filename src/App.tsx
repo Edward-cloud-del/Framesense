@@ -63,42 +63,7 @@ function App() {
 	// 🎯 Model Selector state (like ChatBox)
 	const [modelSelectorOpen, setModelSelectorOpen] = useState(false);
 
-	// 🧪 Test deep link functionality
-	const testDeepLink = async (plan: string = 'premium') => {
-		try {
-			await invoke('test_deep_link', { 
-				token: 'test_token_123', 
-				plan 
-			});
-			console.log('🧪 Deep link test triggered for plan:', plan);
-		} catch (error) {
-			console.error('❌ Deep link test failed:', error);
-		}
-	};
 
-	// 🧪 Test payment upgrade
-	const testPaymentUpgrade = async (plan: string = 'premium') => {
-		try {
-			await invoke('simulate_payment_upgrade', { plan });
-			console.log('🧪 Payment upgrade simulated for plan:', plan);
-			
-			// Reload current user to see changes
-			const user = await authService.loadCurrentUser();
-			console.log('✅ User after upgrade:', user);
-			
-			// Show success notification
-			if (user && user.tier !== 'free') {
-				if ('Notification' in window && Notification.permission === 'granted') {
-					new Notification('Test Upgrade Success! 🧪', {
-						body: `You now have ${user.tier} access with all models!`,
-						icon: '/favicon.ico'
-					});
-				}
-			}
-		} catch (error) {
-			console.error('❌ Payment upgrade simulation failed:', error);
-		}
-	};
 
 	const { 
 		hasPermissions, 
@@ -735,15 +700,7 @@ function App() {
 						<span>Upgrade to Pro</span>
 					</button>
 
-					{/* Test Payment Button (dev only) */}
-					<button
-						onClick={() => testPaymentUpgrade('pro')}
-						className="bg-green-500/20 hover:bg-green-500/30 text-white px-2 py-0.5 rounded-lg transition-colors text-xs flex items-center space-x-1 backdrop-blur-sm border border-green-400/20"
-						title="Test Pro upgrade simulation - full access to all models"
-					>
-						<span>🧪</span>
-						<span>Test</span>
-					</button>
+
 
 					{/* Model Selector Button */}
 					<button

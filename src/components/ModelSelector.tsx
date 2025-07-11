@@ -162,22 +162,7 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({ isVisible, onClose, onMod
     }
   };
 
-  const handleTestUpgrade = async (plan: string = 'pro') => {
-    try {
-      setLoading(true);
-      console.log('🧪 Testing upgrade to:', plan);
-      
-      await authService.testUpgrade(plan);
-      
-      // Reload models to update UI
-      await loadUserAndModels();
-    } catch (error) {
-      console.error('❌ Test upgrade failed:', error);
-      alert('Test upgrade failed. Check console for details.');
-    } finally {
-      setLoading(false);
-    }
-  };
+
 
   const isModelLocked = (model: AIModel) => {
     return !userAvailableModels.includes(model.name);
@@ -239,22 +224,13 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({ isVisible, onClose, onMod
                   Upgrade to Premium
                 </button>
               </div>
-              <div className="flex flex-col space-y-1">
-                <button 
-                  onClick={() => handleCheckPaymentStatus()}
-                  className="text-xs text-green-400 hover:text-green-300 underline"
-                  disabled={loading}
-                >
-                  Already paid? Check status
-                </button>
-                <button 
-                  onClick={() => handleTestUpgrade('pro')}
-                  className="text-xs text-yellow-400 hover:text-yellow-300 underline bg-yellow-500/10 px-2 py-0.5 rounded"
-                  disabled={loading}
-                >
-                  🧪 Test Pro Upgrade
-                </button>
-              </div>
+              <button 
+                onClick={() => handleCheckPaymentStatus()}
+                className="text-xs text-green-400 hover:text-green-300 underline"
+                disabled={loading}
+              >
+                Already paid? Check status
+              </button>
             </div>
           )}
         </div>

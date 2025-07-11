@@ -53,6 +53,20 @@
       "createdAt": "2025-07-11T09:47:51.453Z",
       "stripeCustomerId": "cus_SexTwsmF64kx3Z",
       "updatedAt": "2025-07-11T09:47:52.238Z"
+    },
+    "edwarudostberg0@gmail.com": {
+      "id": "user_1752228336431",
+      "email": "edwarudostberg0@gmail.com",
+      "name": "edward8",
+      "password": "$2a$12$agUKLOdKYVdymjWkWbvyk.ecNDXK/56RtYK.suZk6DTa5jv0uWRhu",
+      "tier": "free",
+      "usage": {
+        "daily": 0,
+        "total": 0
+      },
+      "createdAt": "2025-07-11T10:05:36.431Z",
+      "stripeCustomerId": "cus_SexlDO2fnKsClF",
+      "updatedAt": "2025-07-11T10:05:36.900Z"
     }
   },
   "subscriptions": {}
