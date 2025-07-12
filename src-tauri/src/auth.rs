@@ -24,6 +24,14 @@ pub struct UserUsage {
     pub last_reset: String,
 }
 
+// Add the missing Usage struct that main.rs references
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct Usage {
+    pub daily: i32,
+    pub total: i32,
+    pub last_reset: String,
+}
+
 impl Default for UserUsage {
     fn default() -> Self {
         Self {
@@ -256,7 +264,7 @@ impl AuthService {
     }
 
     // Local storage functions
-    async fn save_user_session(&self, user: &User) -> Result<(), String> {
+    pub async fn save_user_session(&self, user: &User) -> Result<(), String> {
         if let Some(storage_path) = &self.storage_path {
             let user_file = storage_path.join("user_session.json");
             
@@ -279,7 +287,7 @@ impl AuthService {
         Ok(())
     }
 
-    async fn clear_user_session(&self) -> Result<(), String> {
+    pub async fn clear_user_session(&self) -> Result<(), String> {
         if let Some(storage_path) = &self.storage_path {
             let user_file = storage_path.join("user_session.json");
             if user_file.exists() {
@@ -291,7 +299,7 @@ impl AuthService {
         Ok(())
     }
 
-    async fn load_user_session(&self) -> Result<Option<User>, String> {
+    pub async fn load_user_session(&self) -> Result<Option<User>, String> {
         if let Some(storage_path) = &self.storage_path {
             let user_file = storage_path.join("user_session.json");
             if user_file.exists() {

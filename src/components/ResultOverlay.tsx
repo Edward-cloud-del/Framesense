@@ -44,7 +44,7 @@ const ResultOverlay: React.FC<ResultOverlayProps> = ({ result }) => {
   };
 
   const handleUpgrade = () => {
-    window.open('https://framesense.se/payments', '_blank');
+    window.open('http://localhost:8080/payments', '_blank');
   };
 
   const handleModelSelector = () => {

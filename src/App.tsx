@@ -11,9 +11,11 @@ import ChatBox from './components/ChatBox';
 import ThinkingAnimation from './components/ThinkingAnimation';
 import ModelSelector from './components/ModelSelector';
 
+
 import { useAppStore, AIResult } from './stores/app-store';
-import { authService, type User } from './services/auth-service';
-import { deepLinkService } from './services/deep-link-service';
+import { authService, type User } from './services/auth-service-db';
+import LoginDialog from './components/LoginDialog';
+import UserMenu from './components/UserMenu';
 
 // 🤖 Real OpenAI Integration
 import { createAIService } from './services/openai-service';
@@ -77,14 +79,34 @@ function App() {
 	// Use auth service for user management
 	const [currentUser, setCurrentUser] = useState<User | null>(null);
 	const [debugMode, setDebugMode] = useState(true); // Auto-show debug info
+	const [showLoginDialog, setShowLoginDialog] = useState(false);
 	
+	// Login handlers - defined at component level
+	const handleLoginClick = () => {
+		setShowLoginDialog(true);
+	};
+
+	const handleLoginSuccess = (user: User) => {
+		setCurrentUser(user);
+		alert(`🎉 Welcome back, ${user.name}!\n\nYou now have ${user.tier} access!`);
+	};
+
+	const handleLogout = () => {
+		setCurrentUser(null);
+		alert('👋 You have been logged out. You now have free access.');
+	};
+
+	const handleUserUpdate = (user: User) => {
+		setCurrentUser(user);
+	};
+
 	// Initialize auth service and listen for user changes
 	useEffect(() => {
 		const handleUserChange = (user: User | null) => {
 			setCurrentUser(user);
 			console.log('🔍 User changed:', user ? `${user.email} (${user.tier})` : 'No user');
 		};
-		
+
 		authService.addAuthListener(handleUserChange);
 		
 		// Load current user
@@ -92,9 +114,6 @@ function App() {
 			setCurrentUser(user);
 			console.log('🔍 Initial user loaded:', user ? `${user.email} (${user.tier})` : 'No user');
 		});
-		
-		// Request notification permission for payment success
-		authService.requestNotificationPermission();
 		
 		return () => {
 			authService.removeAuthListener(handleUserChange);
@@ -104,7 +123,7 @@ function App() {
 	// Debug functions for session management
 	const clearUserSession = async () => {
 		try {
-			await authService.clearLocalSession();
+			await authService.logout();
 			console.log('🗑️ Session cleared successfully');
 			alert('Session cleared! You are now logged out.');
 		} catch (error) {
@@ -113,19 +132,40 @@ function App() {
 		}
 	};
 
+	// Handle upgrade click
+	const handleUpgradeClick = async (plan?: string) => {
+		try {
+			console.log('🚀 Starting upgrade process for plan:', plan || 'default');
+			
+			// Open payment page on payments server
+			const baseUrl = 'http://localhost:8080';
+			const upgradeUrl = plan 
+				? `${baseUrl}/payments?plan=${plan}`
+				: `${baseUrl}/payments`;
+			
+			console.log('🔗 Opening payment page:', upgradeUrl);
+			await open(upgradeUrl);
+			
+			console.log('✅ Payment process initiated');
+		} catch (error) {
+			console.error('❌ Failed to start upgrade process:', error);
+			alert('Failed to open payment page. Please try again.');
+		}
+	};
+
 	    const refreshUserSession = async () => {
         try {
-            const user = await authService.verifyPaymentStatus();
+            const user = await authService.refreshUserStatus();
             if (user) {
-                console.log('🔄 Session refreshed:', user.email, user.tier);
-                alert(`Session refreshed! User: ${user.email} (${user.tier})`);
+                console.log('🔄 Status refreshed:', user.email, user.tier);
+                alert(`Status refreshed! User: ${user.email} (${user.tier})`);
             } else {
-                console.log('🔄 No session to refresh');
-                alert('No active session found.');
+                console.log('🔄 No user to refresh');
+                alert('No active user session found.');
             }
         } catch (error) {
-            console.error('❌ Failed to refresh session:', error);
-            alert('Failed to refresh session. Check console for details.');
+            console.error('❌ Failed to refresh status:', error);
+            alert('Failed to refresh status. Check console for details.');
         }
     };
 
@@ -138,6 +178,23 @@ function App() {
             console.error('❌ Failed to clear payment file:', error);
             alert('Failed to clear payment file. Check console for details.');
         }
+    };
+
+    const testStatusCheck = async () => {
+        try {
+            console.log('🧪 Testing status check...');
+            await refreshUserSession();
+            console.log('✅ Status check test completed');
+        } catch (error) {
+            console.error('❌ Status check test failed:', error);
+            alert('Status check test failed. Check console for details.');
+        }
+    };
+
+    const testPaymentsPage = () => {
+        console.log('🧪 Testing payments page...');
+        open('http://localhost:3000/payments');
+        console.log('✅ Payments page opened');
     };
 
 	// 🤖 REAL OpenAI integration function - replaces mock
@@ -206,6 +263,9 @@ function App() {
 		} else {
 			console.warn('⚠️ No API key found - AI service disabled');
 		}
+		
+		// 🔗 Server-centralized method - no deep link service needed
+		console.log('✅ Using simple server-centralized payment method');
 		
 		// Listen for save-state-and-close event from Rust (Raycast-style)
 		const unlistenSave = listen('save-state-and-close', () => {
@@ -659,7 +719,7 @@ function App() {
 		hasCurrentUser: !!currentUser,
 		userEmail: currentUser?.email || 'NO USER',
 		userTier: currentUser?.tier || 'NO TIER',
-		userToken: currentUser?.token ? `${currentUser.token.substring(0, 20)}...` : 'NO TOKEN',
+		userStatus: currentUser?.subscription_status || 'NO STATUS',
 		
 		// AI result info
 		hasCurrentResult: !!currentResult,
@@ -768,13 +828,27 @@ function App() {
 										>
 											🔄
 										</button>
-										<button
-											onClick={clearPaymentFile}
-											className="text-xs text-orange-400 hover:text-orange-300"
-											title="Clear payment file"
-										>
-											📄
-										</button>
+																			<button
+										onClick={clearPaymentFile}
+										className="text-xs text-orange-400 hover:text-orange-300"
+										title="Clear payment file"
+									>
+										📄
+									</button>
+									<button
+										onClick={testStatusCheck}
+										className="text-xs text-green-400 hover:text-green-300"
+										title="Test status check"
+									>
+										💳
+									</button>
+									<button
+										onClick={testPaymentsPage}
+										className="text-xs text-blue-400 hover:text-blue-300"
+										title="Test payments page"
+									>
+										🌐
+									</button>
 									</>
 								) : (
 									<span className="text-xs text-gray-400 font-mono">NO USER</span>
@@ -795,11 +869,31 @@ function App() {
 					)}
 				</div>
 				
+				{/* User Authentication Section */}
+				<div className="flex items-center space-x-2">
+					{currentUser ? (
+						<UserMenu 
+							user={currentUser}
+							onLogout={handleLogout}
+							onUserUpdate={handleUserUpdate}
+						/>
+					) : (
+						<button
+							onClick={handleLoginClick}
+							className="flex items-center space-x-2 p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+							title="Login with premium account"
+						>
+							<span>🔑</span>
+							<span className="text-white/80 text-sm">Login</span>
+						</button>
+					)}
+				</div>
+				
 				{/* Action Buttons */}
 				<div className="flex space-x-1.5" data-tauri-drag-region="false">
 					{/* Upgrade to Pro Button */}
 					<button
-						onClick={() => open('http://localhost:3000/payments.html')}
+						onClick={() => handleUpgradeClick('pro')}
 						className="bg-gradient-to-r from-purple-500/20 to-blue-500/20 hover:from-purple-500/30 hover:to-blue-500/30 text-white px-3 py-0.5 rounded-lg transition-colors text-xs flex items-center space-x-1.5 backdrop-blur-sm border border-purple-400/20"
 					>
 						<svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -901,7 +995,15 @@ function App() {
 			{/* 🔴 RED CIRCLE: ResultOverlay should render above this line when currentResult exists */}
 			
 
+
 			
+			{/* Login Dialog */}
+			<LoginDialog
+				isOpen={showLoginDialog}
+				onClose={() => setShowLoginDialog(false)}
+				onLoginSuccess={handleLoginSuccess}
+			/>
+
 			{/* ⚙️ Settings Dialog - Removed, now using Upgrade to Pro button */}
 
 

@@ -31,7 +31,9 @@ mod test_ocr;
 
 // Authentication module
 mod auth;
+mod database;
 use auth::{AuthService, User};
+use database::{Database, User as DbUser};
 
 // Global OCR service (reuse instance for performance)
 static mut OCR_SERVICE: Option<std::sync::Mutex<OCRService>> = None;
@@ -82,6 +84,7 @@ type SharedScreenshotCache = Arc<Mutex<ScreenshotCache>>;
 
 // Authentication service manager
 type SharedAuthService = Arc<Mutex<AuthService>>;
+type SharedDatabase = Arc<Mutex<Database>>;
 
 // Test screen capture capability
 #[tauri::command]
@@ -598,50 +601,181 @@ async fn clear_user_session(
     Ok(())
 }
 
-// 💾 Check for payment credentials file from web payment
 #[tauri::command]
-async fn check_payment_file() -> Result<Option<serde_json::Value>, String> {
-    use std::path::PathBuf;
+async fn login_user_db(
+    email: String, 
+    password: String,
+    db: tauri::State<'_, SharedDatabase>,
+    auth_service: tauri::State<'_, SharedAuthService>
+) -> Result<DbUser, String> {
+    println!("🔐 Attempting database login for: {}", email);
     
-    // Look for payment_ready.json in ~/.framesense/
-    let home_dir = dirs::home_dir().ok_or("Could not find home directory")?;
-    let payment_file = home_dir.join(".framesense").join("payment_ready.json");
+    // Clone the database to avoid holding the lock across await
+    let database = {
+        let db_guard = db.lock().unwrap();
+        db_guard.clone()
+    };
     
-    if payment_file.exists() {
-        println!("💾 Found payment credentials file: {:?}", payment_file);
+    match database.verify_user(&email, &password).await {
+        Ok(Some(user)) => {
+            println!("✅ Database login successful: {} ({})", user.email, user.tier);
+            
+            // Save user session locally
+            let service = {
+                let guard = auth_service.lock().unwrap();
+                guard.clone()
+            };
+            
+            // Convert DbUser to User for local storage
+            let local_user = User {
+                id: user.id.clone(),
+                email: user.email.clone(),
+                name: user.name.clone(),
+                tier: user.tier.clone(),
+                token: "database_session".to_string(), // Placeholder token for local storage
+                usage: auth::UserUsage {
+                    daily: user.usage_daily,
+                    total: user.usage_total,
+                    last_reset: user.updated_at.clone(),
+                },
+                created_at: user.created_at.clone(),
+            };
+            
+            if let Err(e) = service.save_user_session(&local_user).await {
+                println!("⚠️ Failed to save user session: {}", e);
+            }
+            
+            Ok(user)
+        },
+        Ok(None) => {
+            println!("❌ Invalid credentials for: {}", email);
+            Err("Invalid email or password".to_string())
+        },
+        Err(e) => {
+            println!("❌ Database error during login: {}", e);
+            Err("Database connection error".to_string())
+        }
+    }
+}
+
+#[tauri::command]
+async fn get_current_user_db(
+    auth_service: tauri::State<'_, SharedAuthService>
+) -> Result<Option<DbUser>, String> {
+    let service = {
+        let guard = auth_service.lock().unwrap();
+        guard.clone()
+    };
+    
+    // Try to load from local session first
+    match service.load_user_session().await {
+        Ok(Some(user)) => {
+            println!("📖 Loaded user session: {} ({})", user.email, user.tier);
+            
+            // Convert User to DbUser
+            let db_user = DbUser {
+                id: user.id,
+                email: user.email,
+                name: user.name,
+                tier: user.tier,
+                subscription_status: "active".to_string(), // Default for now
+                stripe_customer_id: None,
+                usage_daily: user.usage.daily,
+                usage_total: user.usage.total,
+                created_at: user.created_at,
+                updated_at: user.usage.last_reset,
+            };
+            
+            Ok(Some(db_user))
+        },
+        Ok(None) => {
+            println!("ℹ️ No local user session found");
+            Ok(None)
+        },
+        Err(e) => {
+            println!("❌ Failed to load user session: {}", e);
+            Ok(None)
+        }
+    }
+}
+
+#[tauri::command]
+async fn logout_user_db(
+    auth_service: tauri::State<'_, SharedAuthService>
+) -> Result<(), String> {
+    let service = {
+        let guard = auth_service.lock().unwrap();
+        guard.clone()
+    };
+    
+    service.clear_user_session().await?;
+    println!("🚪 User logged out");
+    Ok(())
+}
+
+#[tauri::command]
+async fn refresh_user_status_db(
+    db: tauri::State<'_, SharedDatabase>,
+    auth_service: tauri::State<'_, SharedAuthService>
+) -> Result<Option<DbUser>, String> {
+    let service = {
+        let guard = auth_service.lock().unwrap();
+        guard.clone()
+    };
+    
+    // Get current user from local session
+    if let Ok(Some(local_user)) = service.load_user_session().await {
+        // Clone the database to avoid holding the lock across await
+        let database = {
+            let db_guard = db.lock().unwrap();
+            db_guard.clone()
+        };
         
-        let contents = std::fs::read_to_string(&payment_file)
-            .map_err(|e| format!("Failed to read payment file: {}", e))?;
-        
-        let credentials: serde_json::Value = serde_json::from_str(&contents)
-            .map_err(|e| format!("Failed to parse payment file: {}", e))?;
-        
-        // Delete file after reading to prevent reuse
-        std::fs::remove_file(&payment_file)
-            .map_err(|e| format!("Failed to delete payment file: {}", e))?;
-        
-        println!("✅ Payment credentials loaded and file cleaned up");
-        Ok(Some(credentials))
+        // Get fresh data from database
+        match database.get_user_by_id(&local_user.id).await {
+            Ok(Some(fresh_user)) => {
+                // Check if tier changed
+                if local_user.tier != fresh_user.tier {
+                    println!("🔄 User tier updated: {} → {}", local_user.tier, fresh_user.tier);
+                    
+                    // Update local session
+                    let updated_local_user = User {
+                        id: fresh_user.id.clone(),
+                        email: fresh_user.email.clone(),
+                        name: fresh_user.name.clone(),
+                        tier: fresh_user.tier.clone(),
+                        token: local_user.token,
+                        usage: auth::UserUsage {
+                            daily: fresh_user.usage_daily,
+                            total: fresh_user.usage_total,
+                            last_reset: fresh_user.updated_at.clone(),
+                        },
+                        created_at: fresh_user.created_at.clone(),
+                    };
+                    
+                    if let Err(e) = service.save_user_session(&updated_local_user).await {
+                        println!("⚠️ Failed to update local session: {}", e);
+                    }
+                }
+                
+                Ok(Some(fresh_user))
+            },
+            Ok(None) => {
+                println!("⚠️ User not found in database, clearing local session");
+                let _ = service.clear_user_session().await;
+                Ok(None)
+            },
+            Err(e) => {
+                println!("❌ Database error during refresh: {}", e);
+                Err("Failed to refresh user status".to_string())
+            }
+        }
     } else {
-        println!("📄 No payment credentials file found");
         Ok(None)
     }
 }
 
-// 🗑️ Clear payment credentials file (for cleanup)
-#[tauri::command]
-async fn clear_payment_file() -> Result<(), String> {
-    let home_dir = dirs::home_dir().ok_or("Could not find home directory")?;
-    let payment_file = home_dir.join(".framesense").join("payment_ready.json");
-    
-    if payment_file.exists() {
-        std::fs::remove_file(&payment_file)
-            .map_err(|e| format!("Failed to delete payment file: {}", e))?;
-        println!("🗑️ Payment credentials file cleared");
-    }
-    
-    Ok(())
-}
+
 
 // Removed problematic HTML/JS-based overlay function - using React overlays only
 
@@ -1180,12 +1314,17 @@ fn main() {
     let auth_service = AuthService::new().with_storage_path(app_data_dir);
     let shared_auth_service: SharedAuthService = Arc::new(Mutex::new(auth_service));
     
+    // Initialize database
+    let database = Database::new().expect("Failed to initialize database");
+    let shared_database: SharedDatabase = Arc::new(Mutex::new(database));
+    
     tauri::Builder::default()
         .manage(shared_state)
         .manage(shared_overlay_manager)
         .manage(shared_permission_cache)
         .manage(shared_screenshot_cache)
         .manage(shared_auth_service)
+        .manage(shared_database)
         .plugin(tauri_plugin_global_shortcut::Builder::new()
             .with_handler(|app, shortcut, event| {
                 println!("🔥 GLOBAL SHORTCUT: {:?} - State: {:?}", shortcut, event.state());
@@ -1340,8 +1479,12 @@ fn main() {
     test_deep_link,
     verify_payment_status,
     clear_user_session,
-    check_payment_file,
-    clear_payment_file,
+    // Database authentication commands
+    login_user_db,
+    get_current_user_db,
+    logout_user_db,
+    refresh_user_status_db,
+
             resize_window,
             debug_coordinates,
             test_chatbox_position,

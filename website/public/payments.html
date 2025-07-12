@@ -326,8 +326,10 @@
     </div>
 
     <script>
-                 // Configuration
-         const API_BASE_URL = 'http://localhost:3001'; // Backend API URL
+                 // Configuration - automatically detect environment
+         const API_BASE_URL = window.location.hostname === 'localhost' 
+             ? 'http://localhost:3001' 
+             : 'https://api.finalyze.pro'; // Railway backend URL
          const STRIPE_PUBLISHABLE_KEY = 'pk_test_51RJdvKGhaJA85Y4BktlySadE0pJnK75pQYHhvRPcEreBZO0xShBjkc6cVnhj8RsFnMq372rURiVOrmfQdHfJCrKD008skrIRjk';
         
         // Initialize Stripe
@@ -552,6 +554,10 @@
             
             try {
                 const token = localStorage.getItem('framesense_token');
+                console.log('🔍 Creating checkout session for plan:', selectedPlan);
+                console.log('🔍 API URL:', `${API_BASE_URL}/api/create-checkout-session`);
+                console.log('🔍 Token available:', !!token);
+                
                 const response = await fetch(`${API_BASE_URL}/api/create-checkout-session`, {
                     method: 'POST',
                     headers: {
@@ -560,13 +566,23 @@
                     },
                     body: JSON.stringify({
                         priceId: plan.priceId,
-                        planName: selectedPlan, // Use selectedPlan key instead of plan.name to match backend expectations
+                        planName: selectedPlan,
                         successUrl: `${window.location.origin}/payments?success=true&plan=${selectedPlan}`,
                         cancelUrl: `${window.location.origin}/payments?canceled=true`
                     })
                 });
                 
+                console.log('🔍 Response status:', response.status);
+                console.log('🔍 Response headers:', response.headers);
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('🔍 Error response:', errorText);
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+                
                 const data = await response.json();
+                console.log('🔍 Response data:', data);
                 
                 if (data.success && data.sessionId) {
                     // Redirect to Stripe Checkout
@@ -631,9 +647,26 @@
             }
         }
         
+        // Test backend connection
+        async function testBackendConnection() {
+            try {
+                console.log('🧪 Testing backend connection...');
+                const response = await fetch(`${API_BASE_URL}/health`);
+                const data = await response.json();
+                console.log('✅ Backend connection successful:', data);
+                alert('✅ Backend connection successful!');
+            } catch (error) {
+                console.error('❌ Backend connection failed:', error);
+                alert('❌ Backend connection failed: ' + error.message);
+            }
+        }
+        
         // Handle URL parameters on page load
         document.addEventListener('DOMContentLoaded', function() {
             handleURLParams();
+            
+            // Test backend connection on page load
+            testBackendConnection();
         });
     </script>
 </body>

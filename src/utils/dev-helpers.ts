@@ -47,8 +47,8 @@ export class DevHelpers {
   // Test the upgrade flow
   static testUpgradeFlow() {
     console.log('🧪 DEV: Testing upgrade flow...');
-    console.log('🔗 Opening payment page: https://framesense.se/payments');
-    window.open('https://framesense.se/payments', '_blank');
+    	console.log('🔗 Opening payment page: http://localhost:8080/payments');
+	window.open('http://localhost:8080/payments', '_blank');
   }
   
   // Test model selector

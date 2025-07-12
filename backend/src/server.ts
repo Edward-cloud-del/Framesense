@@ -1,14 +1,11 @@
+// Import modules (environment variables will be loaded by database connection)
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import dotenv from 'dotenv';
 import multer from 'multer';
 import { analyzeImageRoute } from './routes/ai.js';
 import authRoutes from './routes/auth.js';
 import subscriptionRoutes from './routes/subscription.js';
-
-// Load environment variables
-dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -20,8 +17,9 @@ app.use(helmet());
 app.use(cors({
   origin: [
     'http://localhost:5173', // Local development
-    'http://localhost:3000', // Local development
-    'http://localhost:8080', // Website payments server
+    'http://localhost:3000', // Website server
+    'http://localhost:3001', // Local development
+    'http://localhost:8080', // Payments server
     process.env.FRONTEND_URL || '', // Production Vercel URL
   ],
   credentials: true

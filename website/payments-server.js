@@ -5,22 +5,54 @@ const path = require('path');
 const server = http.createServer((req, res) => {
   console.log('Request for:', req.url);
   
-  if (req.url === '/payments.html' || req.url === '/payments') {
+  // Handle payments page
+  if (req.url.startsWith('/payments.html') || req.url.startsWith('/payments')) {
     const filePath = path.join(__dirname, 'public', 'payments.html');
     
     fs.readFile(filePath, 'utf8', (err, data) => {
       if (err) {
         res.writeHead(404, { 'Content-Type': 'text/plain' });
-        res.end('File not found');
+        res.end('Payments page not found');
         return;
       }
       
       res.writeHead(200, { 'Content-Type': 'text/html' });
       res.end(data);
     });
-  } else {
+  }
+  // Handle success page
+  else if (req.url.startsWith('/success.html') || req.url.startsWith('/success')) {
+    const filePath = path.join(__dirname, 'success.html');
+    
+    fs.readFile(filePath, 'utf8', (err, data) => {
+      if (err) {
+        res.writeHead(404, { 'Content-Type': 'text/plain' });
+        res.end('Success page not found');
+        return;
+      }
+      
+      res.writeHead(200, { 'Content-Type': 'text/html' });
+      res.end(data);
+    });
+  }
+  // Handle root
+  else if (req.url === '/') {
+    const filePath = path.join(__dirname, 'index.html');
+    
+    fs.readFile(filePath, 'utf8', (err, data) => {
+      if (err) {
+        res.writeHead(404, { 'Content-Type': 'text/plain' });
+        res.end('Index page not found');
+        return;
+      }
+      
+      res.writeHead(200, { 'Content-Type': 'text/html' });
+      res.end(data);
+    });
+  }
+  else {
     res.writeHead(404, { 'Content-Type': 'text/plain' });
-    res.end('Page not found');
+    res.end('Page not found: ' + req.url);
   }
 });
 

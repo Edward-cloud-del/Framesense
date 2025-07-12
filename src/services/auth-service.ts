@@ -27,6 +27,7 @@ class AuthService {
     private authListeners: Array<(user: User | null) => void> = [];
     private deepLinkInitialized = false;
 
+
     async initialize() {
         // Load current user from Tauri storage
         await this.loadCurrentUser();
@@ -273,106 +274,56 @@ class AuthService {
         }
     }
 
-    // Manual payment verification - check file system first, then localStorage, then backend
-    async verifyPaymentStatus(): Promise<User | null> {
+    // Simple server-centralized status check
+    async checkUserStatus(): Promise<User | null> {
         try {
-            console.log('🔄 Checking for payment credentials...');
-            
-            // 🔑 STEP 1: Check file system for JWT token from payment success (PRIMARY)
-            const paymentFileData = await invoke('check_payment_file');
-            
-            if (paymentFileData) {
-                const fileCredentials = paymentFileData as any;
-                console.log('🎉 Found payment credentials in file system!', { 
-                    email: fileCredentials.email, 
-                    plan: fileCredentials.plan 
-                });
-                
-                try {
-                    // Clear old session first
-                    await this.clearLocalSession();
-                    
-                    // Use JWT token to authenticate the real paying user
-                    const user = await invoke<User>('handle_payment_success', { 
-                        token: fileCredentials.token, 
-                        plan: fileCredentials.plan || 'premium' 
-                    });
-                    
-                    this.currentUser = user;
-                    this.notifyAuthListeners(user);
-                    
-                    console.log('✅ Payment user authenticated from file system:', user.email, '→', user.tier);
-                    this.showPaymentSuccessNotification(user.tier);
-                    
-                    return user;
-                } catch (tokenError) {
-                    console.error('❌ Failed to authenticate with payment token from file:', tokenError);
-                    // Continue to localStorage fallback
-                }
+            if (!this.currentUser) {
+                console.log('ℹ️ No current user to check status for');
+                return null;
             }
             
-            // 🔑 STEP 2: Check localStorage for JWT token (FALLBACK)
-            const paymentToken = localStorage.getItem('framesense_payment_token');
-            const paymentEmail = localStorage.getItem('framesense_payment_email');
-            const paymentPlan = localStorage.getItem('framesense_payment_plan');
+            console.log('🔄 Checking user status with server...');
             
-            if (paymentToken && paymentEmail) {
-                console.log('🎉 Found payment credentials in localStorage!', { email: paymentEmail, plan: paymentPlan });
-                
-                try {
-                    // Clear old session first
-                    await this.clearLocalSession();
-                    
-                    // Use JWT token to authenticate the real paying user
-                    const user = await invoke<User>('handle_payment_success', { 
-                        token: paymentToken, 
-                        plan: paymentPlan || 'premium' 
-                    });
-                    
-                    this.currentUser = user;
-                    this.notifyAuthListeners(user);
-                    
-                    // Clear payment credentials after successful authentication
-                    localStorage.removeItem('framesense_payment_token');
-                    localStorage.removeItem('framesense_payment_email');
-                    localStorage.removeItem('framesense_payment_plan');
-                    localStorage.removeItem('framesense_payment_timestamp');
-                    
-                    console.log('✅ Payment user authenticated successfully:', user.email, '→', user.tier);
-                    this.showPaymentSuccessNotification(user.tier);
-                    
-                    return user;
-                } catch (tokenError) {
-                    console.error('❌ Failed to authenticate with payment token:', tokenError);
-                    // Clear invalid credentials
-                    localStorage.removeItem('framesense_payment_token');
-                    localStorage.removeItem('framesense_payment_email');
-                    localStorage.removeItem('framesense_payment_plan');
-                    localStorage.removeItem('framesense_payment_timestamp');
-                    // Fall through to regular verification
+            // Call backend to check current user status
+            const response = await fetch('http://localhost:3001/api/check-status', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${this.currentUser.token}`,
+                    'Content-Type': 'application/json'
                 }
+            });
+            
+            if (!response.ok) {
+                console.error('❌ Status check failed:', response.status);
+                return null;
             }
             
-            // 🔄 STEP 3: Fallback to regular backend verification
-            console.log('🔄 No payment credentials found in file or localStorage, checking existing session...');
-            const result = await invoke('verify_payment_status');
+            const data = await response.json();
             
-            if (result) {
-                const user = result as User;
-                this.currentUser = user;
-                this.notifyAuthListeners(user);
+            if (data.success && data.user) {
+                const updatedUser: User = {
+                    ...this.currentUser,
+                    tier: data.user.tier,
+                    usage: this.currentUser.usage // Keep existing usage data
+                };
                 
-                console.log('✅ Existing session verified:', user.email, '→', user.tier);
-                this.showPaymentSuccessNotification(user.tier);
+                // Check if tier changed
+                if (this.currentUser.tier !== updatedUser.tier) {
+                    console.log('🎉 User tier updated:', this.currentUser.tier, '→', updatedUser.tier);
+                    this.showPaymentSuccessNotification(updatedUser.tier);
+                }
                 
-                return user;
+                this.currentUser = updatedUser;
+                this.notifyAuthListeners(updatedUser);
+                
+                return updatedUser;
             } else {
-                console.log('ℹ️ No active session or payment found');
+                console.log('ℹ️ No user data from server');
                 return null;
             }
         } catch (error) {
-            console.error('❌ Payment verification failed:', error);
-            throw new Error(`Payment verification failed: ${error}`);
+            console.error('❌ Status check failed:', error);
+            return null;
         }
     }
 
@@ -381,13 +332,15 @@ class AuthService {
         try {
             await invoke('clear_user_session');
             this.currentUser = null;
-            this.userSubject.next(null);
+            this.notifyAuthListeners(null);
             console.log('🗑️ Local session cleared');
         } catch (error) {
             console.error('❌ Failed to clear session:', error);
             throw new Error(`Failed to clear session: ${error}`);
         }
     }
+
+
 
     // Request notification permission for payment success
     async requestNotificationPermission(): Promise<boolean> {
@@ -407,6 +360,8 @@ class AuthService {
 
         return false;
     }
+
+
 }
 
 // Export singleton instance

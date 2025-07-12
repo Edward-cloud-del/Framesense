@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import AuthService from '../services/auth-service.js';
+import UserService from '../services/user-service.js';
 
 const router = Router();
 
@@ -32,8 +32,12 @@ router.post('/register', async (req: Request, res: Response) => {
       });
     }
     
-    const result = await AuthService.createUser(email, password, name);
-    res.json({ success: true, ...result });
+    const userWithToken = await UserService.createUser(email, password, name);
+    res.json({ 
+      success: true, 
+      user: userWithToken,
+      token: userWithToken.token 
+    });
   } catch (error: any) {
     res.status(400).json({ success: false, message: error.message });
   }
@@ -51,8 +55,12 @@ router.post('/login', async (req: Request, res: Response) => {
       });
     }
     
-    const result = await AuthService.loginUser(email, password);
-    res.json({ success: true, ...result });
+    const userWithToken = await UserService.loginUser(email, password);
+    res.json({ 
+      success: true, 
+      user: userWithToken,
+      token: userWithToken.token 
+    });
   } catch (error: any) {
     res.status(401).json({ success: false, message: error.message });
   }
@@ -67,26 +75,25 @@ router.get('/verify', async (req: Request, res: Response) => {
       return res.status(401).json({ success: false, message: 'No token provided' });
     }
     
-    const user = await AuthService.verifyToken(token);
+    const user = await UserService.verifyToken(token);
     res.json({ success: true, user });
   } catch (error: any) {
     res.status(401).json({ success: false, message: error.message });
   }
 });
 
-// Get user profile
-router.get('/profile', async (req: Request, res: Response) => {
+// Logout user
+router.post('/logout', async (req: Request, res: Response) => {
   try {
     const token = req.headers.authorization?.replace('Bearer ', '');
     
-    if (!token) {
-      return res.status(401).json({ success: false, message: 'No token provided' });
+    if (token) {
+      await UserService.logoutUser(token);
     }
     
-    const user = await AuthService.verifyToken(token);
-    res.json({ success: true, user });
+    res.json({ success: true, message: 'Logged out successfully' });
   } catch (error: any) {
-    res.status(401).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: error.message });
   }
 });
 

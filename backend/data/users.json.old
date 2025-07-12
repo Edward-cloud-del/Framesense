@@ -1,0 +1,144 @@
+{
+  "users": {
+    "test@example.com": {
+      "id": "user_1752221338585",
+      "email": "test@example.com",
+      "name": "Test User",
+      "password": "$2a$12$WgIZbpCy0bnEE5KKSDqere2IS/hB1wtqxhGENfbAANxGuL0ZgSPV6",
+      "tier": "premium",
+      "usage": {
+        "daily": 0,
+        "total": 0
+      },
+      "createdAt": "2025-07-11T08:08:58.585Z",
+      "stripeCustomerId": null,
+      "subscriptionStatus": "active",
+      "updatedAt": "2025-07-11T18:50:23.827Z"
+    },
+    "edwardostberg0@gmail.com": {
+      "id": "user_1752224341809",
+      "email": "edwardostberg0@gmail.com",
+      "name": "Edward Östberg",
+      "password": "$2a$12$yXfGSUyTNm6ymPX0GzBOt.6G/ItZYspRWatXs/O.d7gpksUw9Usnm",
+      "tier": "free",
+      "usage": {
+        "daily": 0,
+        "total": 0
+      },
+      "createdAt": "2025-07-11T08:59:01.809Z",
+      "stripeCustomerId": "cus_SewggkITq9apTc",
+      "updatedAt": "2025-07-11T08:59:02.468Z"
+    },
+    "newuser@example.com": {
+      "id": "user_1752227252917",
+      "email": "newuser@example.com",
+      "name": "New Test User",
+      "password": "$2a$12$girg.udSCXn7tTzpT7g/p.m33BdK8WluvJSFMwHuGDoEqnq5qSSPm",
+      "tier": "free",
+      "usage": {
+        "daily": 0,
+        "total": 0
+      },
+      "createdAt": "2025-07-11T09:47:32.917Z",
+      "stripeCustomerId": null
+    },
+    "vfdadb@gmail.com": {
+      "id": "user_1752227271453",
+      "email": "vfdadb@gmail.com",
+      "name": "ewfsd",
+      "password": "$2a$12$btXWHhtFUUw09O/E2S993.fRiXA0RGsGEpuvJVjeieHxWFdKSn8Z2",
+      "tier": "free",
+      "usage": {
+        "daily": 0,
+        "total": 0
+      },
+      "createdAt": "2025-07-11T09:47:51.453Z",
+      "stripeCustomerId": "cus_SexTwsmF64kx3Z",
+      "updatedAt": "2025-07-11T09:47:52.238Z"
+    },
+    "edwarudostberg0@gmail.com": {
+      "id": "user_1752228336431",
+      "email": "edwarudostberg0@gmail.com",
+      "name": "edward8",
+      "password": "$2a$12$agUKLOdKYVdymjWkWbvyk.ecNDXK/56RtYK.suZk6DTa5jv0uWRhu",
+      "tier": "free",
+      "usage": {
+        "daily": 0,
+        "total": 0
+      },
+      "createdAt": "2025-07-11T10:05:36.431Z",
+      "stripeCustomerId": "cus_SexlDO2fnKsClF",
+      "updatedAt": "2025-07-11T10:05:36.900Z"
+    },
+    "test-pro@example.com": {
+      "id": "user_1752228740027",
+      "email": "test-pro@example.com",
+      "name": "Pro Test User",
+      "password": "$2a$12$Ry9jqAwgz5/oIf8jpq3BM.ZiE1oy7zksIfAbJxskP/dONofd6n2nK",
+      "tier": "free",
+      "usage": {
+        "daily": 0,
+        "total": 0
+      },
+      "createdAt": "2025-07-11T10:12:20.028Z",
+      "stripeCustomerId": null
+    },
+    "yyy@gmail.com": {
+      "id": "user_1752228844288",
+      "email": "yyy@gmail.com",
+      "name": "yyyy",
+      "password": "$2a$12$J1x/qm7DcxgfCINaQHq5Ge0Mdglp.XcurCfICmIRDuBHUd7EPTR82",
+      "tier": "free",
+      "usage": {
+        "daily": 0,
+        "total": 0
+      },
+      "createdAt": "2025-07-11T10:14:04.288Z",
+      "stripeCustomerId": "cus_SextYoLdmWeoCz",
+      "updatedAt": "2025-07-11T10:14:04.637Z"
+    },
+    "tt@gmail.com": {
+      "id": "user_1752229131527",
+      "email": "tt@gmail.com",
+      "name": "tt",
+      "password": "$2a$12$EMAgu7Vl22P1.gZ49wd3ueXYUfcQCiGZTb5OcdqNAleT3Sny7MB16",
+      "tier": "free",
+      "usage": {
+        "daily": 0,
+        "total": 0
+      },
+      "createdAt": "2025-07-11T10:18:51.527Z",
+      "stripeCustomerId": "cus_SexyvhOMWkPShS",
+      "updatedAt": "2025-07-11T10:18:52.278Z"
+    },
+    "ttt@gmail.com": {
+      "id": "user_1752232656364",
+      "email": "ttt@gmail.com",
+      "name": "ttt",
+      "password": "$2a$12$IdhuH3zHY/nnkKwAXdL81.Eg.i5.P/SZ4.nGIgrIlC3hH.JKR0M1e",
+      "tier": "free",
+      "usage": {
+        "daily": 0,
+        "total": 0
+      },
+      "createdAt": "2025-07-11T11:17:36.364Z",
+      "stripeCustomerId": "cus_SeyvEPmXEna6ok",
+      "updatedAt": "2025-07-11T11:17:36.994Z"
+    },
+    "4uwihrfli2u@gmail.com": {
+      "id": "user_1752258645208",
+      "email": "4uwihrfli2u@gmail.com",
+      "name": "rifhuewlu",
+      "password": "$2a$12$VJTvCnRYB.YHSph/XJaEDeRkDoJ.GFzMH..k5lCqcf.mBNUiqU4EC",
+      "tier": "free",
+      "usage": {
+        "daily": 0,
+        "total": 0
+      },
+      "createdAt": "2025-07-11T18:30:45.208Z",
+      "stripeCustomerId": "cus_Sf5uAvH48CgeMM",
+      "updatedAt": "2025-07-11T18:30:45.636Z"
+    }
+  },
+  "subscriptions": {}
+}

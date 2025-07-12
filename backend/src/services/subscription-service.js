@@ -40,8 +40,8 @@ class SubscriptionService {
     }
   }
   
-  // Create subscription checkout session
-  async createCheckoutSession(customerId, priceId, successUrl, cancelUrl) {
+  // Create subscription checkout session with user ID for webhook
+  async createCheckoutSession(customerId, priceId, successUrl, cancelUrl, userId = null) {
     if (!this.stripe) throw new Error('Stripe not initialized');
     
     try {
@@ -57,11 +57,16 @@ class SubscriptionService {
         mode: 'subscription',
         success_url: successUrl,
         cancel_url: cancelUrl,
+        client_reference_id: userId, // ✅ User ID for webhook identification
         allow_promotion_codes: true,
         billing_address_collection: 'required',
         customer_update: {
           address: 'auto',
           name: 'auto'
+        },
+        metadata: {
+          userId: userId,
+          source: 'framesense_app'
         }
       });
       
