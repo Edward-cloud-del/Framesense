@@ -1,5 +1,6 @@
 -- FrameSense PostgreSQL Schema for Railway
 -- Run this in your Railway PostgreSQL database
+-- Railway automatically creates the database, so we just need to create tables
 
 -- Users table (replaces users.json)
 CREATE TABLE IF NOT EXISTS users (
