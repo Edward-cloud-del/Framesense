@@ -180,7 +180,8 @@ class UserService {
     }
 
     private async saveSession(userId: string, token: string): Promise<void> {
-        const tokenHash = jwt.sign({ token }, JWT_SECRET);
+        const crypto = require('crypto');
+        const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
         const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
 
         await query(
