@@ -4,9 +4,10 @@
 
 Alla nödvändiga filer har redan konfigurerats:
 
-✅ **vercel.json** - Routing för `/payments` och `/success`  
-✅ **public/payments.html** - Kopierad från website  
-✅ **public/success.html** - Kopierad från website  
+✅ **website/vercel.json** - Routing för `/payments` och `/success`  
+✅ **website/public/payments.html** - Betalningssidan  
+✅ **website/public/success.html** - Success-sidan  
+✅ **website/public/index.html** - Huvudsidan  
 ✅ **App.tsx** - Uppdaterad med `framesense.vercel.app`  
 ✅ **Backend CORS** - Konfigurerad för Vercel domän  
 ✅ **Git push** - Klar för deployment
@@ -20,7 +21,8 @@ Gå till [vercel.com](https://vercel.com) och:
 1. Logga in med GitHub
 2. Klicka "New Project"
 3. Välj ditt FrameSense repository
-4. Klicka "Deploy"
+4. **VIKTIGT**: Sätt Root Directory till `website/`
+5. Klicka "Deploy"
 
 ### 2. Domain Setup
 
@@ -35,9 +37,10 @@ När projektet är deployat:
 Lägg till i Vercel Dashboard → Settings → Environment Variables:
 
 ```
-VITE_API_URL=https://api.finalyze.pro
-VITE_WEBSITE_URL=https://framesense.vercel.app
+API_BASE_URL=https://api.finalyze.pro
 ```
+
+(API_BASE_URL används i payments.html för Stripe integration)
 
 ## 🎯 Hur det fungerar
 
