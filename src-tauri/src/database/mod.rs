@@ -1,6 +1,7 @@
 use deadpool_postgres::{Config, Pool, Runtime};
 use tokio_postgres::NoTls;
 use serde::{Deserialize, Serialize};
+use std::env;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct User {
@@ -24,13 +25,18 @@ pub struct Database {
 impl Database {
     pub fn new() -> Result<Self, Box<dyn std::error::Error>> {
         let mut cfg = Config::new();
-        cfg.host = Some("localhost".to_string());
-        cfg.port = Some(5432);
-        cfg.dbname = Some("framesense".to_string());
-        cfg.user = Some("postgres".to_string());
-        cfg.password = Some("password".to_string());
         
-        let pool = cfg.create_pool(Some(Runtime::Tokio1), NoTls)?;
+        // Use Railway PostgreSQL connection
+        cfg.host = Some("autorack.proxy.rlwy.net".to_string());
+        cfg.port = Some(35093);
+        cfg.dbname = Some("railway".to_string());
+        cfg.user = Some("postgres".to_string());
+        cfg.password = Some("SlBzlcadKqxWpKgCLhkGYzUgaxPpBzrP".to_string());
+        
+        // Enable SSL for Railway connection
+        cfg.ssl_mode = Some(deadpool_postgres::SslMode::Require);
+        
+        let pool = cfg.create_pool(Some(Runtime::Tokio1), tokio_postgres_rustls::MakeRustlsConnect::default())?;
         
         Ok(Database { pool })
     }

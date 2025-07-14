@@ -16,6 +16,7 @@ export interface User {
 class AuthService {
     private currentUser: User | null = null;
     private authListeners: Array<(user: User | null) => void> = [];
+    private apiUrl = 'https://api.finalyze.pro'; // Railway backend URL
 
     async initialize() {
         // Load current user from Tauri storage
@@ -24,10 +25,32 @@ class AuthService {
 
     async loginWithDatabase(email: string, password: string): Promise<User> {
         try {
-            console.log('🔐 Logging in user with database:', email);
+            console.log('🔐 Logging in user with backend API:', email);
             
-            const user = await invoke<User>('login_user_db', { email, password });
+            // Use backend API instead of direct database call
+            const response = await fetch(`${this.apiUrl}/api/auth/login`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ email, password }),
+            });
+
+            const data = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(data.message || 'Login failed');
+            }
+
+            if (!data.success || !data.user) {
+                throw new Error('Invalid response from server');
+            }
+
+            const user = data.user;
             this.currentUser = user;
+            
+            // Save user session locally using Tauri
+            await invoke('save_user_session_local', { user });
             
             // Notify listeners
             this.notifyAuthListeners(user);
@@ -42,7 +65,8 @@ class AuthService {
 
     async logout(): Promise<void> {
         try {
-            await invoke('logout_user_db');
+            // Clear user session using Tauri
+            await invoke('clear_user_session_local');
             this.currentUser = null;
             
             // Notify listeners
@@ -57,7 +81,7 @@ class AuthService {
 
     async loadCurrentUser(): Promise<User | null> {
         try {
-            const user = await invoke<User | null>('get_current_user_db');
+            const user = await invoke<User | null>('load_user_session_local');
             this.currentUser = user;
             
             if (user) {
@@ -75,12 +99,40 @@ class AuthService {
 
     async refreshUserStatus(): Promise<User | null> {
         try {
-            const user = await invoke<User | null>('refresh_user_status_db');
-            if (user) {
-                this.currentUser = user;
-                this.notifyAuthListeners(user);
+            if (!this.currentUser) {
+                return null;
             }
-            return user;
+
+            // Verify user status with backend API
+            const response = await fetch(`${this.apiUrl}/api/auth/verify`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${this.currentUser.id}`, // Use user ID as simple auth
+                },
+            });
+
+            if (!response.ok) {
+                // If verification fails, clear local session
+                await this.logout();
+                return null;
+            }
+
+            const data = await response.json();
+            if (data.success && data.user) {
+                const freshUser = data.user;
+                
+                // Update local session if tier changed
+                if (freshUser.tier !== this.currentUser.tier) {
+                    console.log('🔄 User tier updated:', this.currentUser.tier, '→', freshUser.tier);
+                    await invoke('save_user_session_local', { user: freshUser });
+                }
+                
+                this.currentUser = freshUser;
+                this.notifyAuthListeners(freshUser);
+                return freshUser;
+            }
+            
+            return this.currentUser;
         } catch (error) {
             console.error('❌ Failed to refresh user status:', error);
             return null;

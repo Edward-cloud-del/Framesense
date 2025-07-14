@@ -6,6 +6,13 @@ import multer from 'multer';
 import { analyzeImageRoute } from './routes/ai.js';
 import authRoutes from './routes/auth.js';
 import subscriptionRoutes from './routes/subscription.js';
+import { query } from './database/connection.js';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -26,8 +33,8 @@ app.use(cors({
 }));
 
 // Body parsing middleware
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true }));
 
 // Configure multer for image uploads
 const upload = multer({
@@ -44,6 +51,33 @@ app.get('/health', (req, res) => {
     timestamp: new Date().toISOString(),
     service: 'FrameSense API'
   });
+});
+
+// Database migration endpoint (admin only)
+app.post('/admin/migrate', async (req, res) => {
+  try {
+    console.log('🔄 Running database migration...');
+    
+    // Read the SQL file
+    const sqlPath = path.join(__dirname, '../railway-setup.sql');
+    const sqlContent = fs.readFileSync(sqlPath, 'utf8');
+    
+    // Execute the SQL
+    await query(sqlContent);
+    
+    console.log('✅ Database migration completed successfully');
+    
+    res.json({
+      success: true,
+      message: 'Database migration completed successfully'
+    });
+  } catch (error: any) {
+    console.error('❌ Database migration failed:', error);
+    res.status(500).json({
+      success: false,
+      message: `Migration failed: ${error.message}`
+    });
+  }
 });
 
 // Authentication routes

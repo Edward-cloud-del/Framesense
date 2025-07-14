@@ -775,7 +775,72 @@ async fn refresh_user_status_db(
     }
 }
 
+#[tauri::command]
+async fn save_user_session_local(
+    user: serde_json::Value,
+    auth_service: tauri::State<'_, SharedAuthService>
+) -> Result<(), String> {
+    let service = {
+        let guard = auth_service.lock().unwrap();
+        guard.clone()
+    };
+    
+    // Convert JSON to User struct
+    let user_struct: User = serde_json::from_value(user)
+        .map_err(|e| format!("Failed to parse user data: {}", e))?;
+    
+    service.save_user_session(&user_struct).await?;
+    println!("💾 User session saved locally: {}", user_struct.email);
+    Ok(())
+}
 
+#[tauri::command]
+async fn load_user_session_local(
+    auth_service: tauri::State<'_, SharedAuthService>
+) -> Result<Option<serde_json::Value>, String> {
+    let service = {
+        let guard = auth_service.lock().unwrap();
+        guard.clone()
+    };
+    
+    match service.load_user_session().await {
+        Ok(Some(user)) => {
+            // Convert User to JSON for frontend compatibility
+            match serde_json::to_value(&user) {
+                Ok(user_json) => {
+                    println!("📖 User session loaded: {}", user.email);
+                    Ok(Some(user_json))
+                },
+                Err(e) => {
+                    println!("❌ Failed to serialize user: {}", e);
+                    Ok(None)
+                }
+            }
+        },
+        Ok(None) => {
+            println!("ℹ️ No local user session found");
+            Ok(None)
+        },
+        Err(e) => {
+            println!("❌ Failed to load user session: {}", e);
+            Ok(None)
+        }
+    }
+}
+
+#[tauri::command]
+async fn clear_user_session_local(
+    auth_service: tauri::State<'_, SharedAuthService>
+) -> Result<(), String> {
+    let service = {
+        let guard = auth_service.lock().unwrap();
+        guard.clone()
+    };
+    
+    service.clear_user_session().await?;
+    println!("🗑️ User session cleared locally");
+    Ok(())
+}
 
 // Removed problematic HTML/JS-based overlay function - using React overlays only
 
@@ -1479,6 +1544,9 @@ fn main() {
     test_deep_link,
     verify_payment_status,
     clear_user_session,
+    save_user_session_local,
+    load_user_session_local,
+    clear_user_session_local,
     // Database authentication commands
     login_user_db,
     get_current_user_db,

@@ -11,9 +11,7 @@ const ResultOverlay: React.FC<ResultOverlayProps> = ({ result }) => {
   const { 
     setCurrentResult, 
     user, 
-    selectedModel, 
-    showModelSelector, 
-    setShowModelSelector 
+    selectedModel 
   } = useAppStore();
   const [isVisible, setIsVisible] = useState(false);
 
@@ -47,9 +45,7 @@ const ResultOverlay: React.FC<ResultOverlayProps> = ({ result }) => {
     window.open('http://localhost:8080/payments', '_blank');
   };
 
-  const handleModelSelector = () => {
-    setShowModelSelector(true);
-  };
+  // Removed model selector functionality to match AIResponse simplicity
 
   const getTypeIcon = () => {
     switch (result.type) {
@@ -90,146 +86,57 @@ const ResultOverlay: React.FC<ResultOverlayProps> = ({ result }) => {
 
   return (
     <>
-      <div className={`fixed inset-0 z-50 transition-all duration-300 ${
-        isVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'
-      }`}>
-        {/* Backdrop */}
-        <div 
-          className="absolute inset-0 bg-black/30 backdrop-blur-sm"
-          onClick={handleClose}
-        />
-        
-        {/* Result overlay */}
-        <div className={`absolute transform transition-all duration-300 ${
-          isVisible ? 'scale-100 translate-y-0' : 'scale-95 translate-y-4'
+      {/* Seamless AI Response - No backdrop, no modal overlay */}
+      <div 
+        className={`p-3 rounded-xl border border-white/10 backdrop-blur-sm overflow-y-auto transition-all duration-300 ${
+          isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
         }`}
         style={{
-          left: '50%',
-          top: '50%',
-          transform: `translate(-50%, -50%) ${
-            isVisible ? 'scale(1)' : 'scale(0.95)'
-          }`
-        }}>
-          <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-gray-200 max-w-lg w-96 overflow-hidden">
+          backgroundColor: 'rgba(20, 20, 20, 0.7)',
+          maxHeight: 'calc(100vh - 68px)',
+          minHeight: 60,
+        }}
+      >
+        <div className="flex items-start justify-between">
+          <div className="flex-1 min-w-0">
             {/* Header */}
-            <div className="px-6 py-4 border-b border-gray-100">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <span className="text-2xl">{getTypeIcon()}</span>
-                  <div>
-                    <h3 className="font-semibold text-gray-900">FrameSense AI</h3>
-                    <div className="flex items-center space-x-2">
-                      <span className={`text-xs px-2 py-1 rounded-full ${getTierColor()}`}>
-                        {user?.tier.tier?.charAt(0).toUpperCase() + user?.tier.tier?.slice(1) || 'Free'}
-                      </span>
-                      <span className="text-xs text-gray-500">
-                        {getModelIcon()} {selectedModel}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                <button
-                  onClick={handleClose}
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-
-            {/* Captured Image Preview - Reduced size */}
-            {result.capturedImage && (
-              <div className="px-6 py-4 border-b border-gray-100">
-                <div className="image-preview" style={{ maxHeight: '300px' }}>
-                  <img 
-                    src={result.capturedImage} 
-                    alt="Captured screenshot"
-                    className="w-full h-auto rounded-lg shadow-sm"
-                    style={{ 
-                      maxHeight: '300px', 
-                      objectFit: 'contain' 
-                    }}
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* AI Response */}
-            <div className="px-6 py-4">
-              <div className="prose prose-sm max-w-none">
-                <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-                  {result.content}
-                </p>
-              </div>
-            </div>
-
-            {/* Upgrade Section - Prominent */}
-            <div className="px-6 py-4 bg-gradient-to-r from-blue-50 to-purple-50 border-t border-gray-100">
+            <h3 className="text-xs font-medium text-gray-300 mb-2 flex items-center justify-between">
+              <span>AI Response</span>
               <button
-                onClick={handleUpgrade}
-                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 px-4 rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all font-medium text-sm flex items-center justify-center space-x-2 shadow-lg"
+                onClick={handleClose}
+                className="ml-3 flex-shrink-0 text-gray-400 hover:text-gray-200 transition-colors"
+                title="Dismiss"
               >
-                <span>🚀</span>
-                <span>
-                  {user?.tier.tier === 'free' ? 'Upgrade to Pro - Få tillgång till GPT-4o & Claude' :
-                   user?.tier.tier === 'premium' ? 'Upgrade to Pro - Få tillgång till GPT-4o & Llama' :
-                   user?.tier.tier === 'pro' ? 'Upgrade to Enterprise - Obegränsade requests' :
-                   'Hantera prenumeration'}
-                </span>
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
               </button>
-              <p className="text-xs text-gray-600 mt-2 text-center">
-                Använder {selectedModel} • {user?.tier.remainingRequests || 0} requests kvar idag
-              </p>
+            </h3>
+
+            {/* AI Response Content */}
+            <div className="text-xs text-gray-300 leading-relaxed whitespace-pre-wrap break-words">
+              {result.content}
             </div>
 
-            {/* Actions */}
-            <div className="px-6 py-4 bg-gray-50 border-t border-gray-100">
-              <div className="flex space-x-2">
-                <button
-                  onClick={handleCopyText}
-                  className="flex-1 bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-700 transition-colors font-medium text-sm flex items-center justify-center space-x-2"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                  </svg>
-                  <span>Copy</span>
-                </button>
-                
-                {/* Model Selection Button */}
-                <button
-                  onClick={handleModelSelector}
-                  className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm flex items-center justify-center space-x-2"
-                >
-                  <span>🎯</span>
-                  <span>Choose Models</span>
-                </button>
-              </div>
-              
-              {/* Additional action buttons if available */}
-              {result.actions && result.actions.length > 0 && (
-                <div className="flex space-x-2 mt-2">
-                  {result.actions.map((action, index) => (
-                    <button
-                      key={index}
-                      onClick={action.action}
-                      className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium text-sm"
-                    >
-                      {action.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
           </div>
         </div>
+        
+        {/* Action buttons */}
+        <div className="mt-2 pt-2 border-t border-white/10 flex justify-end space-x-2">
+          <button 
+            onClick={handleCopyText}
+            className="px-2 py-1 text-xs text-gray-300 hover:text-gray-100 transition-colors"
+          >
+            Copy
+          </button>
+          <button 
+            onClick={handleUpgrade}
+            className="px-2 py-1 text-xs text-blue-400 hover:text-blue-300 transition-colors"
+          >
+            Upgrade to Pro
+          </button>
+        </div>
       </div>
-
-      {/* Model Selector Modal */}
-      {showModelSelector && (
-        <ModelSelector onClose={() => setShowModelSelector(false)} />
-      )}
     </>
   );
 };

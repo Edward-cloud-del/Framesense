@@ -1,18 +1,5 @@
 import React, { useState } from 'react';
-import { invoke } from '@tauri-apps/api/core';
-
-interface User {
-    id: string;
-    email: string;
-    name: string;
-    tier: string;
-    subscription_status: string;
-    stripe_customer_id?: string;
-    usage_daily: number;
-    usage_total: number;
-    created_at: string;
-    updated_at: string;
-}
+import { authService, type User } from '../services/auth-service-db';
 
 interface LoginDialogProps {
     isOpen: boolean;
@@ -32,7 +19,7 @@ export const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLog
         setError('');
 
         try {
-            const user = await invoke<User>('login_user_db', { email, password });
+            const user = await authService.loginWithDatabase(email, password);
             onLoginSuccess(user);
             onClose();
             setEmail('');
@@ -45,7 +32,7 @@ export const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLog
     };
 
     const openRegistrationPage = () => {
-        window.open('http://localhost:3000', '_blank');
+        window.open('https://api.finalyze.pro', '_blank');
     };
 
     if (!isOpen) return null;
