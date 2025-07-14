@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import { query } from '../database/connection.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-key-change-this';
@@ -180,7 +181,6 @@ class UserService {
     }
 
     private async saveSession(userId: string, token: string): Promise<void> {
-        const crypto = require('crypto');
         const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
         const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
 
