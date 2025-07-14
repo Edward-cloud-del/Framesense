@@ -24,6 +24,9 @@ export interface UserWithToken extends User {
 class UserService {
     async createUser(email: string, password: string, name: string): Promise<UserWithToken> {
         console.log('🔍 Creating user:', email, name);
+        console.log('🔍 Email length:', email.length);
+        console.log('🔍 Name length:', name.length);
+        console.log('🔍 Password length:', password.length);
         
         // Check if user exists
         const existingUser = await query('SELECT id FROM users WHERE email = $1', [email]);
@@ -35,6 +38,7 @@ class UserService {
 
         // Hash password
         const passwordHash = await bcrypt.hash(password, 12);
+        console.log('🔍 Password hash length:', passwordHash.length);
 
         // Insert user
         console.log('🔍 Attempting to insert user with email length:', email.length, 'name length:', name.length);

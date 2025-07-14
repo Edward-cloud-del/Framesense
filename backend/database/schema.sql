@@ -3,7 +3,7 @@ CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email VARCHAR(255) UNIQUE NOT NULL,
     name VARCHAR(255) NOT NULL,
-    password_hash VARCHAR(255) NOT NULL,
+    password_hash VARCHAR(500) NOT NULL,
     tier VARCHAR(50) DEFAULT 'free' CHECK (tier IN ('free', 'premium', 'pro', 'enterprise')),
     subscription_status VARCHAR(50) DEFAULT 'inactive',
     stripe_customer_id VARCHAR(255),
