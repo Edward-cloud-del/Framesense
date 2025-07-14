@@ -9,7 +9,7 @@ export class OpenAIServiceAPI implements IAIService {
   }
 
   private getAPIUrl(): string {
-    // Use environment variable or default to local development
+    // Use environment variable or default to production
     if (import.meta.env.VITE_API_URL) {
       return import.meta.env.VITE_API_URL;
     }
@@ -19,8 +19,8 @@ export class OpenAIServiceAPI implements IAIService {
       return 'http://localhost:3001';
     }
     
-    // Production - you'll update this after Railway deployment
-    return 'https://your-railway-app.railway.app';
+    // Production - Railway backend
+    return 'https://api.finalyze.pro';
   }
 
   async analyzeImageWithText(request: AIRequest): Promise<AIResponse> {

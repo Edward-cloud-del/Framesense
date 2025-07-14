@@ -1,7 +1,7 @@
 use deadpool_postgres::{Config, Pool, Runtime};
-use tokio_postgres::NoTls;
+use tokio_postgres_rustls::{MakeRustlsConnect};
 use serde::{Deserialize, Serialize};
-use std::env;
+use rustls::{ClientConfig};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct User {
@@ -36,7 +36,14 @@ impl Database {
         // Enable SSL for Railway connection
         cfg.ssl_mode = Some(deadpool_postgres::SslMode::Require);
         
-        let pool = cfg.create_pool(Some(Runtime::Tokio1), tokio_postgres_rustls::MakeRustlsConnect::default())?;
+        // Create TLS config
+        let tls_config = ClientConfig::builder()
+            .with_safe_defaults()
+            .with_root_certificates(rustls::RootCertStore::empty())
+            .with_no_client_auth();
+            
+        let tls_connector = MakeRustlsConnect::new(tls_config);
+        let pool = cfg.create_pool(Some(Runtime::Tokio1), tls_connector)?;
         
         Ok(Database { pool })
     }

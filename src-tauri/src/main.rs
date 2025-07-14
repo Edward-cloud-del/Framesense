@@ -31,9 +31,11 @@ mod test_ocr;
 
 // Authentication module
 mod auth;
-mod database;
+// Comment out database module since we use API approach
+// mod database;
 use auth::{AuthService, User};
-use database::{Database, User as DbUser};
+// Remove database imports
+// use database::{Database, User as DbUser};
 
 // Global OCR service (reuse instance for performance)
 static mut OCR_SERVICE: Option<std::sync::Mutex<OCRService>> = None;
@@ -84,7 +86,7 @@ type SharedScreenshotCache = Arc<Mutex<ScreenshotCache>>;
 
 // Authentication service manager
 type SharedAuthService = Arc<Mutex<AuthService>>;
-type SharedDatabase = Arc<Mutex<Database>>;
+// type SharedDatabase = Arc<Mutex<Database>>; // Removed as per edit hint
 
 // Test screen capture capability
 #[tauri::command]
@@ -598,247 +600,6 @@ async fn clear_user_session(
     
     service.logout_user().await?;
     println!("✅ Local session cleared");
-    Ok(())
-}
-
-#[tauri::command]
-async fn login_user_db(
-    email: String, 
-    password: String,
-    db: tauri::State<'_, SharedDatabase>,
-    auth_service: tauri::State<'_, SharedAuthService>
-) -> Result<DbUser, String> {
-    println!("🔐 Attempting database login for: {}", email);
-    
-    // Clone the database to avoid holding the lock across await
-    let database = {
-        let db_guard = db.lock().unwrap();
-        db_guard.clone()
-    };
-    
-    match database.verify_user(&email, &password).await {
-        Ok(Some(user)) => {
-            println!("✅ Database login successful: {} ({})", user.email, user.tier);
-            
-            // Save user session locally
-            let service = {
-                let guard = auth_service.lock().unwrap();
-                guard.clone()
-            };
-            
-            // Convert DbUser to User for local storage
-            let local_user = User {
-                id: user.id.clone(),
-                email: user.email.clone(),
-                name: user.name.clone(),
-                tier: user.tier.clone(),
-                token: "database_session".to_string(), // Placeholder token for local storage
-                usage: auth::UserUsage {
-                    daily: user.usage_daily,
-                    total: user.usage_total,
-                    last_reset: user.updated_at.clone(),
-                },
-                created_at: user.created_at.clone(),
-            };
-            
-            if let Err(e) = service.save_user_session(&local_user).await {
-                println!("⚠️ Failed to save user session: {}", e);
-            }
-            
-            Ok(user)
-        },
-        Ok(None) => {
-            println!("❌ Invalid credentials for: {}", email);
-            Err("Invalid email or password".to_string())
-        },
-        Err(e) => {
-            println!("❌ Database error during login: {}", e);
-            Err("Database connection error".to_string())
-        }
-    }
-}
-
-#[tauri::command]
-async fn get_current_user_db(
-    auth_service: tauri::State<'_, SharedAuthService>
-) -> Result<Option<DbUser>, String> {
-    let service = {
-        let guard = auth_service.lock().unwrap();
-        guard.clone()
-    };
-    
-    // Try to load from local session first
-    match service.load_user_session().await {
-        Ok(Some(user)) => {
-            println!("📖 Loaded user session: {} ({})", user.email, user.tier);
-            
-            // Convert User to DbUser
-            let db_user = DbUser {
-                id: user.id,
-                email: user.email,
-                name: user.name,
-                tier: user.tier,
-                subscription_status: "active".to_string(), // Default for now
-                stripe_customer_id: None,
-                usage_daily: user.usage.daily,
-                usage_total: user.usage.total,
-                created_at: user.created_at,
-                updated_at: user.usage.last_reset,
-            };
-            
-            Ok(Some(db_user))
-        },
-        Ok(None) => {
-            println!("ℹ️ No local user session found");
-            Ok(None)
-        },
-        Err(e) => {
-            println!("❌ Failed to load user session: {}", e);
-            Ok(None)
-        }
-    }
-}
-
-#[tauri::command]
-async fn logout_user_db(
-    auth_service: tauri::State<'_, SharedAuthService>
-) -> Result<(), String> {
-    let service = {
-        let guard = auth_service.lock().unwrap();
-        guard.clone()
-    };
-    
-    service.clear_user_session().await?;
-    println!("🚪 User logged out");
-    Ok(())
-}
-
-#[tauri::command]
-async fn refresh_user_status_db(
-    db: tauri::State<'_, SharedDatabase>,
-    auth_service: tauri::State<'_, SharedAuthService>
-) -> Result<Option<DbUser>, String> {
-    let service = {
-        let guard = auth_service.lock().unwrap();
-        guard.clone()
-    };
-    
-    // Get current user from local session
-    if let Ok(Some(local_user)) = service.load_user_session().await {
-        // Clone the database to avoid holding the lock across await
-        let database = {
-            let db_guard = db.lock().unwrap();
-            db_guard.clone()
-        };
-        
-        // Get fresh data from database
-        match database.get_user_by_id(&local_user.id).await {
-            Ok(Some(fresh_user)) => {
-                // Check if tier changed
-                if local_user.tier != fresh_user.tier {
-                    println!("🔄 User tier updated: {} → {}", local_user.tier, fresh_user.tier);
-                    
-                    // Update local session
-                    let updated_local_user = User {
-                        id: fresh_user.id.clone(),
-                        email: fresh_user.email.clone(),
-                        name: fresh_user.name.clone(),
-                        tier: fresh_user.tier.clone(),
-                        token: local_user.token,
-                        usage: auth::UserUsage {
-                            daily: fresh_user.usage_daily,
-                            total: fresh_user.usage_total,
-                            last_reset: fresh_user.updated_at.clone(),
-                        },
-                        created_at: fresh_user.created_at.clone(),
-                    };
-                    
-                    if let Err(e) = service.save_user_session(&updated_local_user).await {
-                        println!("⚠️ Failed to update local session: {}", e);
-                    }
-                }
-                
-                Ok(Some(fresh_user))
-            },
-            Ok(None) => {
-                println!("⚠️ User not found in database, clearing local session");
-                let _ = service.clear_user_session().await;
-                Ok(None)
-            },
-            Err(e) => {
-                println!("❌ Database error during refresh: {}", e);
-                Err("Failed to refresh user status".to_string())
-            }
-        }
-    } else {
-        Ok(None)
-    }
-}
-
-#[tauri::command]
-async fn save_user_session_local(
-    user: serde_json::Value,
-    auth_service: tauri::State<'_, SharedAuthService>
-) -> Result<(), String> {
-    let service = {
-        let guard = auth_service.lock().unwrap();
-        guard.clone()
-    };
-    
-    // Convert JSON to User struct
-    let user_struct: User = serde_json::from_value(user)
-        .map_err(|e| format!("Failed to parse user data: {}", e))?;
-    
-    service.save_user_session(&user_struct).await?;
-    println!("💾 User session saved locally: {}", user_struct.email);
-    Ok(())
-}
-
-#[tauri::command]
-async fn load_user_session_local(
-    auth_service: tauri::State<'_, SharedAuthService>
-) -> Result<Option<serde_json::Value>, String> {
-    let service = {
-        let guard = auth_service.lock().unwrap();
-        guard.clone()
-    };
-    
-    match service.load_user_session().await {
-        Ok(Some(user)) => {
-            // Convert User to JSON for frontend compatibility
-            match serde_json::to_value(&user) {
-                Ok(user_json) => {
-                    println!("📖 User session loaded: {}", user.email);
-                    Ok(Some(user_json))
-                },
-                Err(e) => {
-                    println!("❌ Failed to serialize user: {}", e);
-                    Ok(None)
-                }
-            }
-        },
-        Ok(None) => {
-            println!("ℹ️ No local user session found");
-            Ok(None)
-        },
-        Err(e) => {
-            println!("❌ Failed to load user session: {}", e);
-            Ok(None)
-        }
-    }
-}
-
-#[tauri::command]
-async fn clear_user_session_local(
-    auth_service: tauri::State<'_, SharedAuthService>
-) -> Result<(), String> {
-    let service = {
-        let guard = auth_service.lock().unwrap();
-        guard.clone()
-    };
-    
-    service.clear_user_session().await?;
-    println!("🗑️ User session cleared locally");
     Ok(())
 }
 
@@ -1359,6 +1120,15 @@ async fn move_window_to_position(app: tauri::AppHandle) -> Result<(), String> {
     }
 }
 
+#[tauri::command]
+async fn get_app_state(
+    state: tauri::State<'_, SharedState>
+) -> Result<AppState, String> {
+    let app_state = state.lock().unwrap().clone();
+    println!("📖 App state retrieved");
+    Ok(app_state)
+}
+
 fn main() {
     // Initialize shared state for Raycast-style persistence
     let shared_state: SharedState = Arc::new(Mutex::new(AppState::default()));
@@ -1380,8 +1150,8 @@ fn main() {
     let shared_auth_service: SharedAuthService = Arc::new(Mutex::new(auth_service));
     
     // Initialize database
-    let database = Database::new().expect("Failed to initialize database");
-    let shared_database: SharedDatabase = Arc::new(Mutex::new(database));
+    // let database = Database::new().expect("Failed to initialize database"); // Removed as per edit hint
+    // let shared_database: SharedDatabase = Arc::new(Mutex::new(database)); // Removed as per edit hint
     
     tauri::Builder::default()
         .manage(shared_state)
@@ -1389,7 +1159,7 @@ fn main() {
         .manage(shared_permission_cache)
         .manage(shared_screenshot_cache)
         .manage(shared_auth_service)
-        .manage(shared_database)
+        // .manage(shared_database) // Removed as per edit hint
         .plugin(tauri_plugin_global_shortcut::Builder::new()
             .with_handler(|app, shortcut, event| {
                 println!("🔥 GLOBAL SHORTCUT: {:?} - State: {:?}", shortcut, event.state());
@@ -1534,29 +1304,32 @@ fn main() {
             get_screenshot_cache_stats,
             cleanup_screenshot_cache,
             resize_screenshot_buffer,
-    // Authentication commands
-    login_user,
-    logout_user,
-    get_current_user,
-    handle_payment_success,
-    get_available_models,
-    can_use_model,
-    test_deep_link,
-    verify_payment_status,
-    clear_user_session,
-    save_user_session_local,
-    load_user_session_local,
-    clear_user_session_local,
-    // Database authentication commands
-    login_user_db,
-    get_current_user_db,
-    logout_user_db,
-    refresh_user_status_db,
+            // Authentication commands
+            login_user,
+            logout_user,
+            get_current_user,
+            handle_payment_success,
+            get_available_models,
+            can_use_model,
+            test_deep_link,
+            verify_payment_status,
+            clear_user_session,
+            // Local session management commands
+            // save_user_session_local, // Removed as per edit hint
+            // load_user_session_local, // Removed as per edit hint
+            // clear_user_session_local, // Removed as per edit hint
+            // Database authentication commands (for backup) // Removed as per edit hint
+            // login_user_db, // Removed as per edit hint
+            // get_current_user_db, // Removed as per edit hint
+            // logout_user_db, // Removed as per edit hint
+            // refresh_user_status_db, // Removed as per edit hint
+            // App state management
+            save_app_state,
+            get_app_state,
 
             resize_window,
             debug_coordinates,
             test_chatbox_position,
-            save_app_state,
             create_main_window,
             move_window_to_position,
         ])

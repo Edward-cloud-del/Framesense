@@ -17,9 +17,10 @@ class AuthService {
     private currentUser: User | null = null;
     private authListeners: Array<(user: User | null) => void> = [];
     private apiUrl = 'https://api.finalyze.pro'; // Railway backend URL
+    private sessionKey = 'framesense_user_session';
 
     async initialize() {
-        // Load current user from Tauri storage
+        // Load current user from local storage
         await this.loadCurrentUser();
     }
 
@@ -49,8 +50,8 @@ class AuthService {
             const user = data.user;
             this.currentUser = user;
             
-            // Save user session locally using Tauri
-            await invoke('save_user_session_local', { user });
+            // Save user session locally using localStorage
+            this.saveUserSessionLocal(user);
             
             // Notify listeners
             this.notifyAuthListeners(user);
@@ -65,8 +66,8 @@ class AuthService {
 
     async logout(): Promise<void> {
         try {
-            // Clear user session using Tauri
-            await invoke('clear_user_session_local');
+            // Clear user session locally
+            this.clearUserSessionLocal();
             this.currentUser = null;
             
             // Notify listeners
@@ -81,7 +82,7 @@ class AuthService {
 
     async loadCurrentUser(): Promise<User | null> {
         try {
-            const user = await invoke<User | null>('load_user_session_local');
+            const user = this.loadUserSessionLocal();
             this.currentUser = user;
             
             if (user) {
@@ -124,7 +125,7 @@ class AuthService {
                 // Update local session if tier changed
                 if (freshUser.tier !== this.currentUser.tier) {
                     console.log('🔄 User tier updated:', this.currentUser.tier, '→', freshUser.tier);
-                    await invoke('save_user_session_local', { user: freshUser });
+                    this.saveUserSessionLocal(freshUser);
                 }
                 
                 this.currentUser = freshUser;
@@ -136,6 +137,40 @@ class AuthService {
         } catch (error) {
             console.error('❌ Failed to refresh user status:', error);
             return null;
+        }
+    }
+
+    // Local storage helper methods
+    private saveUserSessionLocal(user: User): void {
+        try {
+            localStorage.setItem(this.sessionKey, JSON.stringify(user));
+            console.log('💾 User session saved locally via localStorage');
+        } catch (error) {
+            console.error('❌ Failed to save user session to localStorage:', error);
+        }
+    }
+
+    private loadUserSessionLocal(): User | null {
+        try {
+            const userJson = localStorage.getItem(this.sessionKey);
+            if (userJson) {
+                const user: User = JSON.parse(userJson);
+                console.log('📖 User session loaded from localStorage:', user.email);
+                return user;
+            }
+            return null;
+        } catch (error) {
+            console.error('❌ Failed to load user session from localStorage:', error);
+            return null;
+        }
+    }
+
+    private clearUserSessionLocal(): void {
+        try {
+            localStorage.removeItem(this.sessionKey);
+            console.log('🗑️ User session cleared from localStorage');
+        } catch (error) {
+            console.error('❌ Failed to clear user session from localStorage:', error);
         }
     }
 
@@ -194,7 +229,7 @@ class AuthService {
 
     // Payment and upgrade functionality
     openUpgradePage(plan?: string): void {
-        const baseUrl = 'http://localhost:3001';
+        const baseUrl = import.meta.env.VITE_WEBSITE_URL || 'https://framesense.vercel.app';
         const upgradeUrl = plan 
             ? `${baseUrl}/payments?plan=${plan}`
             : `${baseUrl}/payments`;

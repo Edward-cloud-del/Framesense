@@ -153,7 +153,7 @@ class AuthService {
 
     // Payment and upgrade functionality
     openUpgradePage(plan?: string): void {
-        const baseUrl = import.meta.env.VITE_WEBSITE_URL || 'http://localhost:3000';
+        const baseUrl = import.meta.env.VITE_WEBSITE_URL || 'https://framesense.vercel.app';
         const upgradeUrl = plan 
             ? `${baseUrl}/payments?plan=${plan}`
             : `${baseUrl}/payments`;
@@ -285,7 +285,7 @@ class AuthService {
             console.log('🔄 Checking user status with server...');
             
             // Call backend to check current user status
-            const response = await fetch('http://localhost:3001/api/check-status', {
+            const response = await fetch(`${import.meta.env.VITE_API_URL || 'https://api.finalyze.pro'}/api/check-status`, {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${this.currentUser.token}`,

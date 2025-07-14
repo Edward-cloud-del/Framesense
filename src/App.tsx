@@ -14,8 +14,7 @@ import ModelSelector from './components/ModelSelector';
 
 import { useAppStore, AIResult } from './stores/app-store';
 import { authService, type User } from './services/auth-service-db';
-import LoginDialog from './components/LoginDialog';
-import UserMenu from './components/UserMenu';
+import ProfileDropdown from './components/ProfileDropdown';
 
 // 🤖 Real OpenAI Integration
 import { createAIService } from './services/openai-service';
@@ -79,13 +78,8 @@ function App() {
 	// Use auth service for user management
 	const [currentUser, setCurrentUser] = useState<User | null>(null);
 	const [debugMode, setDebugMode] = useState(true); // Auto-show debug info
-	const [showLoginDialog, setShowLoginDialog] = useState(false);
 	
 	// Login handlers - defined at component level
-	const handleLoginClick = () => {
-		setShowLoginDialog(true);
-	};
-
 	const handleLoginSuccess = (user: User) => {
 		setCurrentUser(user);
 		alert(`🎉 Welcome back, ${user.name}!\n\nYou now have ${user.tier} access!`);
@@ -137,8 +131,8 @@ function App() {
 		try {
 			console.log('🚀 Starting upgrade process for plan:', plan || 'default');
 			
-			// Open payment page on payments server
-			const baseUrl = 'http://localhost:8080';
+			// Open payment page on Vercel deployment
+			const baseUrl = 'https://framesense.vercel.app';
 			const upgradeUrl = plan 
 				? `${baseUrl}/payments?plan=${plan}`
 				: `${baseUrl}/payments`;
@@ -242,7 +236,7 @@ function App() {
 			} else if (error.message.includes('Image too large')) {
 				return '❌ **Image Too Large**\n\nThe selected image is too large. Please select a smaller area and try again.';
 			} else {
-				return `❌ **AI Error**\n\nSomething went wrong: ${error.message}\n\nPlease try again or select a different area.`;
+				return ` **I haven't integrated my api key!**\n\nIt will work in the future!: ${error.message}\n\n.`;
 			}
 		}
 	};
@@ -791,101 +785,28 @@ function App() {
 					<span className="text-xs font-medium text-white">FrameSense</span>
 					
 					{/* 🔍 DEBUG: Current User Display */}
-					<div className="flex items-center space-x-1">
-						<button
-							onClick={() => setDebugMode(!debugMode)}
-							className="text-xs text-white/50 hover:text-white/80 transition-colors"
-							title="Toggle debug info"
-						>
-							🔍
-						</button>
-						{debugMode && (
-							<div className="flex items-center space-x-1 px-2 py-0.5 bg-yellow-500/20 rounded border border-yellow-400/30 backdrop-blur-sm">
-								{currentUser ? (
-									<>
-										<span className="text-xs text-yellow-300 font-mono">
-											{currentUser.email.substring(0, 15)}...
-										</span>
-										<span className={`text-xs px-1 py-0.5 rounded font-mono ${
-											currentUser.tier === 'free' ? 'bg-gray-500/30 text-gray-300' :
-											currentUser.tier === 'premium' ? 'bg-blue-500/30 text-blue-300' :
-											currentUser.tier === 'pro' ? 'bg-purple-500/30 text-purple-300' :
-											'bg-yellow-500/30 text-yellow-300'
-										}`}>
-											{currentUser.tier.toUpperCase()}
-										</span>
-										<button
-											onClick={clearUserSession}
-											className="text-xs text-red-400 hover:text-red-300 ml-1"
-											title="Clear session"
-										>
-											🗑️
-										</button>
-										<button
-											onClick={refreshUserSession}
-											className="text-xs text-green-400 hover:text-green-300"
-											title="Refresh session"
-										>
-											🔄
-										</button>
-																			<button
-										onClick={clearPaymentFile}
-										className="text-xs text-orange-400 hover:text-orange-300"
-										title="Clear payment file"
-									>
-										📄
-									</button>
-									<button
-										onClick={testStatusCheck}
-										className="text-xs text-green-400 hover:text-green-300"
-										title="Test status check"
-									>
-										💳
-									</button>
-									<button
-										onClick={testPaymentsPage}
-										className="text-xs text-blue-400 hover:text-blue-300"
-										title="Test payments page"
-									>
-										🌐
-									</button>
-									</>
-								) : (
-									<span className="text-xs text-gray-400 font-mono">NO USER</span>
-								)}
-							</div>
-						)}
-					</div>
+					<ProfileDropdown
+						currentUser={currentUser}
+						debugMode={debugMode}
+						onLoginSuccess={handleLoginSuccess}
+						onLogout={handleLogout}
+						onUserUpdate={handleUserUpdate}
+						clearUserSession={clearUserSession}
+						refreshUserSession={refreshUserSession}
+						clearPaymentFile={clearPaymentFile}
+						testStatusCheck={testStatusCheck}
+						testPaymentsPage={testPaymentsPage}
+					/>
 					
 					{/* Screenshot result - BETWEEN LOGO AND BUTTON */}
 					{screenshotResult && (
-						<div className="flex items-center space-x-2 px-2 py-1 bg-gray-500/20 rounded border border-white/10 backdrop-blur-sm">
+						<div className="flex items-center space-x-1 px-1 py-0.5 bg-gray-500/20 rounded border border-white/10 backdrop-blur-sm">
 							<img 
 								src={screenshotResult} 
 								alt="Screenshot" 
-								className="w-6 h-4 object-cover rounded border border-white/20"
+								className="w-2 h-4 object-cover rounded border border-white/20"
 							/>
 						</div>
-					)}
-				</div>
-				
-				{/* User Authentication Section */}
-				<div className="flex items-center space-x-2">
-					{currentUser ? (
-						<UserMenu 
-							user={currentUser}
-							onLogout={handleLogout}
-							onUserUpdate={handleUserUpdate}
-						/>
-					) : (
-						<button
-							onClick={handleLoginClick}
-							className="flex items-center space-x-2 p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
-							title="Login with premium account"
-						>
-							<span>🔑</span>
-							<span className="text-white/80 text-sm">Login</span>
-						</button>
 					)}
 				</div>
 				
@@ -958,12 +879,12 @@ function App() {
 			{/* Main content area with fixed top and bottom margins */}
 			<div className="flex flex-col justify-between h-full overflow-hidden">
 				{/* Top margin from header - old AIResponse removed, now using ResultOverlay */}
-				<div className="mt-3 flex-shrink-0">
+				<div className="mt-0.1 flex-shrink-0">
 					{/* AI Response now handled by ResultOverlay component below */}
 				</div>
 
 				{/* Bottom elements with fixed margin from AI Response */}
-				<div className="flex flex-col flex-shrink-0 mt-2"> {/* mt-2 = 8px top margin */}
+				<div className="flex flex-col flex-shrink-0 mt-0.5"> {/* mt-2 = 8px top margin */}
 					<ThinkingAnimation
 						isVisible={isAiThinking}
 						currentStage={aiProcessingStage}
@@ -997,12 +918,7 @@ function App() {
 
 
 			
-			{/* Login Dialog */}
-			<LoginDialog
-				isOpen={showLoginDialog}
-				onClose={() => setShowLoginDialog(false)}
-				onLoginSuccess={handleLoginSuccess}
-			/>
+			{/* Login Dialog - Removed since login is now handled in ProfileDropdown */}
 
 			{/* ⚙️ Settings Dialog - Removed, now using Upgrade to Pro button */}
 

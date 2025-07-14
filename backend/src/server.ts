@@ -27,7 +27,8 @@ app.use(cors({
     'http://localhost:3000', // Website server
     'http://localhost:3001', // Local development
     'http://localhost:8080', // Payments server
-    process.env.FRONTEND_URL || '', // Production Vercel URL
+    'https://framesense.vercel.app', // Production Vercel URL
+    process.env.FRONTEND_URL || '', // Additional frontend URL from env
   ],
   credentials: true
 }));

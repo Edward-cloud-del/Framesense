@@ -1,0 +1,44 @@
+{
+  "version": 2,
+  "name": "framesense",
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/payments",
+      "dest": "/website/public/payments.html"
+    },
+    {
+      "src": "/success",
+      "dest": "/website/public/success.html"
+    },
+    {
+      "src": "/api/(.*)",
+      "dest": "https://api.finalyze.pro/api/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
+  ],
+  "functions": {
+    "website/payments-server.js": {
+      "runtime": "nodejs18.x"
+    }
+  },
+  "env": {
+    "VITE_API_URL": "https://api.finalyze.pro",
+    "VITE_WEBSITE_URL": "https://framesense.vercel.app"
+  },
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "installCommand": "npm install",
+  "framework": "vite"
+} 

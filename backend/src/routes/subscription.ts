@@ -62,8 +62,8 @@ router.post('/create-checkout-session', authenticateUser, async (req: Request, r
       JWT_SECRET,
       { expiresIn: '1h' }
     );
-            const successUrl = `http://localhost:8080/success?token=${paymentToken}&email=${encodeURIComponent(user.email)}&plan=${planName}`;
-        const cancelUrl = `http://localhost:8080/payments?canceled=true`;
+            const successUrl = `https://framesense.vercel.app/success?token=${paymentToken}&email=${encodeURIComponent(user.email)}&plan=${planName}`;
+        const cancelUrl = `https://framesense.vercel.app/payments?canceled=true`;
     
     // Create checkout session with user ID for webhook identification
     const session = await subscriptionService.createCheckoutSession(

@@ -1,0 +1,28 @@
+{
+  "version": 2,
+  "name": "framesense-website",
+  "builds": [
+    {
+      "src": "public/**/*",
+      "use": "@vercel/static"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/payments",
+      "dest": "/public/payments.html"
+    },
+    {
+      "src": "/success",
+      "dest": "/public/success.html"
+    },
+    {
+      "src": "/",
+      "dest": "/public/index.html"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/public/$1"
+    }
+  ]
+} 
