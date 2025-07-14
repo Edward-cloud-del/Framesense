@@ -71,7 +71,8 @@ router.post('/create-checkout-session', authenticateUser, async (req: Request, r
       priceId,
       successUrl,
       cancelUrl,
-      user.id // Pass user ID for webhook
+      user.id, // Pass user ID for webhook
+      planName // Pass plan name for webhook
     );
     
     console.log('✅ Checkout session created for user:', user.email, 'plan:', planName);
@@ -146,19 +147,20 @@ router.post('/webhooks/stripe', express.raw({ type: 'application/json' }), async
       const session = event.data.object;
       const userId = session.client_reference_id;
       const customerId = session.customer;
+      const planName = session.metadata?.planName || 'premium'; // Get plan from metadata
       
       if (userId) {
-        console.log('💳 Payment successful for user:', userId);
+        console.log('💳 Payment successful for user:', userId, 'plan:', planName);
         
         // Find user by ID and update tier
         const user = await UserService.getUserById(userId);
         
         if (user) {
-          // Update user tier to premium (can be enhanced based on price)
-          await UserService.updateUserTier(user.email, 'premium', 'active');
+          // Update user tier based on purchased plan
+          await UserService.updateUserTier(user.email, planName, 'active');
           await UserService.updateUserStripeCustomerId(user.email, customerId);
           
-          console.log(`✅ User ${user.email} upgraded to premium tier via webhook`);
+          console.log(`✅ User ${user.email} upgraded to ${planName} tier via webhook`);
         }
       }
     }

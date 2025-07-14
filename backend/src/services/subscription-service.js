@@ -41,7 +41,7 @@ class SubscriptionService {
   }
   
   // Create subscription checkout session with user ID for webhook
-  async createCheckoutSession(customerId, priceId, successUrl, cancelUrl, userId = null) {
+  async createCheckoutSession(customerId, priceId, successUrl, cancelUrl, userId = null, planName = null) {
     if (!this.stripe) throw new Error('Stripe not initialized');
     
     try {
@@ -66,7 +66,8 @@ class SubscriptionService {
         },
         metadata: {
           userId: userId,
-          source: 'framesense_app'
+          source: 'framesense_app',
+          planName: planName
         }
       });
       
