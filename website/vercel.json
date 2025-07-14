@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "name": "framesense-website",
+  "name": "framesense",
   "builds": [
     {
       "src": "public/**/*",
@@ -24,5 +24,8 @@
       "src": "/(.*)",
       "dest": "/public/$1"
     }
-  ]
+  ],
+  "env": {
+    "API_BASE_URL": "https://api.finalyze.pro"
+  }
 } 
