@@ -124,11 +124,10 @@ router.get('/subscription-status', authenticateUser, async (req: Request, res: R
 
 // --- SPLIT WEBHOOK ROUTER ---
 export const webhookRouter = express.Router();
-
-// Stripe webhook route (raw body, signature logging)
-webhookRouter.post('/webhooks/stripe', express.raw({ type: 'application/json' }), async (req: Request, res: Response) => {
+webhookRouter.post('/stripe', express.raw({ type: 'application/json' }), async (req, res) => {
   const signature = req.headers['stripe-signature'] as string;
   console.log('Stripe signature header:', signature);
+  console.log('TYPE OF REQ.BODY:', typeof req.body, Buffer.isBuffer(req.body));
   try {
     if (!signature) {
       return res.status(400).json({
