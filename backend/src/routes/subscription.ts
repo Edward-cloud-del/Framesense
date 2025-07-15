@@ -178,7 +178,8 @@ router.post('/webhooks/stripe', express.raw({ type: 'application/json' }), async
         
         const planName = priceId ? (priceToTierMap[priceId] || 'premium') : 'premium';
         
-        console.log('💳 PriceId:', priceId, 'mapped to plan:', planName);
+        // LOGGA PLANNAME
+        console.log('STRIPE WEBHOOK: priceId =', priceId, ', planName =', planName);
         
         // Find user by ID and update tier
         const user = await UserService.getUserById(userId);

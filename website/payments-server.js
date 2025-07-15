@@ -56,7 +56,7 @@ const server = http.createServer((req, res) => {
   }
 });
 
-const PORT = 8080;
+ = 8080;
 server.listen(PORT, () => {
   console.log(`Payments server running on http://localhost:${PORT}`);
 }); 
