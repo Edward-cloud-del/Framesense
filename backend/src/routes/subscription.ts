@@ -158,8 +158,8 @@ webhookRouter.post('/stripe', express.raw({ type: 'application/json' }), async (
         });
         const priceId = session?.line_items?.data[0]?.price?.id;
         const priceToTierMap: { [key: string]: string } = {
-          'price_1RjbPBGhaJA85Y4BoLQzZdGi': 'premium',
-          'price_1RjbOGGhaJA85Y4BimHpcWHs': 'pro',
+          'price_1RlABfGWc6GycnTBym7WZTsP': 'premium',
+          'price_1RlAC5GWc6GycnTBPDsPRabB': 'pro',
         };
         const planName = priceId ? (priceToTierMap[priceId] || 'premium') : 'premium';
         console.log('STRIPE WEBHOOK: priceId =', priceId, ', planName =', planName);
