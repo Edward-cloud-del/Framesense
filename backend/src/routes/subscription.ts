@@ -144,13 +144,30 @@ router.post('/webhooks/stripe', express.raw({ type: 'application/json' }), async
     
     // Handle checkout session completed (payment success)
     if (event.type === 'checkout.session.completed') {
-      const session = event.data.object;
-      const userId = session.client_reference_id;
-      const customerId = session.customer;
-      const planName = session.metadata?.planName || 'premium'; // Get plan from metadata
+      const sessionId = event.data.object.id;
+      const userId = event.data.object.client_reference_id;
+      const customerId = event.data.object.customer;
       
       if (userId) {
-        console.log('💳 Payment successful for user:', userId, 'plan:', planName);
+        console.log('💳 Payment successful for user:', userId);
+        
+        // Get full session with line_items to get priceId
+        const session = await subscriptionService.stripe.checkout.sessions.retrieve(sessionId, {
+          expand: ['line_items']
+        });
+        
+        const priceId = session?.line_items?.data[0]?.price?.id;
+        
+        // Map priceId to planName
+        const priceToTierMap = {
+          'price_1RjbPBGhaJA85Y4BoLQzZdGi': 'premium',
+          'price_1RjbOGGhaJA85Y4BimHpcWHs': 'pro',
+          // Add more price IDs as needed
+        };
+        
+        const planName = priceToTierMap[priceId] || 'premium';
+        
+        console.log('💳 PriceId:', priceId, 'mapped to plan:', planName);
         
         // Find user by ID and update tier
         const user = await UserService.getUserById(userId);
