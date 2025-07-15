@@ -1,3 +1,5 @@
+import dotenv from 'dotenv';
+dotenv.config();
 // Import modules (environment variables will be loaded by database connection)
 import express from 'express';
 import cors from 'cors';

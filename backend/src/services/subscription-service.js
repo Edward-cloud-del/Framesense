@@ -1,6 +1,3 @@
-// Load environment variables first
-import '../config/env.ts';
-
 import Stripe from 'stripe';
 
 
