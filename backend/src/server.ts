@@ -10,6 +10,9 @@ import { query } from './database/connection.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+// Remove: import { webhookRouter } from './routes/subscription.js';
+import { SubscriptionService } from './services/subscription-service.js';
+import UserService from './services/user-service.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -32,6 +35,62 @@ app.use(cors({
   ],
   credentials: true
 }));
+
+// Stripe webhook handler (mounted directly, before any body parser)
+const subscriptionService = new SubscriptionService();
+app.post('/webhooks/stripe', express.raw({ type: 'application/json' }), async (req, res) => {
+  const signature = req.headers['stripe-signature'];
+  console.log('Stripe signature header:', signature);
+  console.log('TYPE OF REQ.BODY:', typeof req.body, Buffer.isBuffer(req.body));
+  try {
+    if (!signature) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing stripe-signature header'
+      });
+    }
+    console.log('🎯 Processing Stripe webhook...');
+    const result = await subscriptionService.handleWebhook(req.body, signature);
+    const event = JSON.parse(req.body.toString());
+    console.log('---STRIPE WEBHOOK KOM IN---');
+    console.log('Event typ:', event.type);
+    console.log('client_reference_id:', event.data.object.client_reference_id);
+    console.log('customer:', event.data.object.customer);
+    console.log('sessionId:', event.data.object.id);
+    if (event.type === 'checkout.session.completed') {
+      const sessionId = event.data.object.id;
+      const userId = event.data.object.client_reference_id;
+      const customerId = event.data.object.customer;
+      if (userId) {
+        console.log('💳 Payment successful for user:', userId);
+        if (!subscriptionService.stripe) {
+          console.error('Stripe not initialized');
+          return;
+        }
+        const session = await subscriptionService.stripe.checkout.sessions.retrieve(sessionId, {
+          expand: ['line_items']
+        });
+        const priceId = session?.line_items?.data[0]?.price?.id;
+        const priceToTierMap: { [key: string]: string } = {
+          'price_1RjbPBGhaJA85Y4BoLQzZdGi': 'premium',
+          'price_1RjbOGGhaJA85Y4BimHpcWHs': 'pro',
+        };
+        const planName = priceId ? (priceToTierMap[priceId] || 'premium') : 'premium';
+        console.log('STRIPE WEBHOOK: priceId =', priceId, ', planName =', planName);
+        const user = await UserService.getUserById(userId);
+        if (user) {
+          await UserService.updateUserTier(user.email, planName, 'active');
+          await UserService.updateUserStripeCustomerId(user.email, customerId);
+          console.log(`✅ User ${user.email} upgraded to ${planName} tier via webhook`);
+        }
+      }
+    }
+    res.json({ success: true, received: true });
+  } catch (error: any) {
+    console.error('❌ Webhook error:', error);
+    res.status(400).json({ success: false, message: error.message });
+  }
+});
 
 // Body parsing middleware
 app.use(express.json({ limit: '50mb' }));
@@ -84,7 +143,7 @@ app.post('/admin/migrate', async (req, res) => {
 // Authentication routes
 app.use('/api/auth', authRoutes);
 
-// Subscription management routes
+// Subscription management routes (all others)
 app.use('/api', subscriptionRoutes);
 
 // AI analysis endpoint

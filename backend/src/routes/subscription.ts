@@ -122,78 +122,56 @@ router.get('/subscription-status', authenticateUser, async (req: Request, res: R
   }
 });
 
-// Handle Stripe webhooks (simple server-centralized method)
-router.post('/webhooks/stripe', express.raw({ type: 'application/json' }), async (req: Request, res: Response) => {
+// --- SPLIT WEBHOOK ROUTER ---
+export const webhookRouter = express.Router();
+
+// Stripe webhook route (raw body, signature logging)
+webhookRouter.post('/webhooks/stripe', express.raw({ type: 'application/json' }), async (req: Request, res: Response) => {
+  const signature = req.headers['stripe-signature'] as string;
+  console.log('Stripe signature header:', signature);
   try {
-    const signature = req.headers['stripe-signature'] as string;
-    
     if (!signature) {
       return res.status(400).json({
         success: false,
         message: 'Missing stripe-signature header'
       });
     }
-    
     console.log('🎯 Processing Stripe webhook...');
-    
-    // Get the event from webhook
     const result = await subscriptionService.handleWebhook(req.body, signature);
-    
-    // Parse raw event for checkout session completed
     const event = JSON.parse(req.body.toString());
-    // STRIPE DEBUG LOGGNING
     console.log('---STRIPE WEBHOOK KOM IN---');
     console.log('Event typ:', event.type);
     console.log('client_reference_id:', event.data.object.client_reference_id);
     console.log('customer:', event.data.object.customer);
     console.log('sessionId:', event.data.object.id);
-    
-    // Handle checkout session completed (payment success)
     if (event.type === 'checkout.session.completed') {
       const sessionId = event.data.object.id;
       const userId = event.data.object.client_reference_id;
       const customerId = event.data.object.customer;
-      
       if (userId) {
         console.log('💳 Payment successful for user:', userId);
-        
-        // Get full session with line_items to get priceId
         if (!subscriptionService.stripe) {
           console.error('Stripe not initialized');
           return;
         }
-        
         const session = await subscriptionService.stripe.checkout.sessions.retrieve(sessionId, {
           expand: ['line_items']
         });
-        
         const priceId = session?.line_items?.data[0]?.price?.id;
-        
-        // Map priceId to planName
         const priceToTierMap: { [key: string]: string } = {
           'price_1RjbPBGhaJA85Y4BoLQzZdGi': 'premium',
           'price_1RjbOGGhaJA85Y4BimHpcWHs': 'pro',
-          // Add more price IDs as needed
         };
-        
         const planName = priceId ? (priceToTierMap[priceId] || 'premium') : 'premium';
-        
-        // LOGGA PLANNAME
         console.log('STRIPE WEBHOOK: priceId =', priceId, ', planName =', planName);
-        
-        // Find user by ID and update tier
         const user = await UserService.getUserById(userId);
-        
         if (user) {
-          // Update user tier based on purchased plan
           await UserService.updateUserTier(user.email, planName, 'active');
           await UserService.updateUserStripeCustomerId(user.email, customerId);
-          
           console.log(`✅ User ${user.email} upgraded to ${planName} tier via webhook`);
         }
       }
     }
-    
     res.json({ success: true, received: true });
   } catch (error: any) {
     console.error('❌ Webhook error:', error);
