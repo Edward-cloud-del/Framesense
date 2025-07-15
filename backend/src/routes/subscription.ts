@@ -141,6 +141,12 @@ router.post('/webhooks/stripe', express.raw({ type: 'application/json' }), async
     
     // Parse raw event for checkout session completed
     const event = JSON.parse(req.body.toString());
+    // STRIPE DEBUG LOGGNING
+    console.log('---STRIPE WEBHOOK KOM IN---');
+    console.log('Event typ:', event.type);
+    console.log('client_reference_id:', event.data.object.client_reference_id);
+    console.log('customer:', event.data.object.customer);
+    console.log('sessionId:', event.data.object.id);
     
     // Handle checkout session completed (payment success)
     if (event.type === 'checkout.session.completed') {
