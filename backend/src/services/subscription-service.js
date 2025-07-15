@@ -1,5 +1,6 @@
-// 💳 SUBSCRIPTION SERVICE - Stripe integration and user management
-// =================================================================
+// Load environment variables first
+import '../config/env.ts';
+
 import Stripe from 'stripe';
 
 
