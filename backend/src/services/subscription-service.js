@@ -1,5 +1,9 @@
 // 💳 SUBSCRIPTION SERVICE - Stripe integration and user management
 // =================================================================
+import Stripe from 'stripe';
+
+
+
 
 class SubscriptionService {
   
@@ -161,8 +165,16 @@ class SubscriptionService {
     
     console.log(`✅ Payment succeeded for customer: ${customerId}`);
     
-    // TODO: Update payment history in database
-    // await this.recordPayment(customerId, invoice);
+    // Import UserService to update user tier
+    const { default: UserService } = await import('../services/user-service.js');
+    
+    // Find user by Stripe customer ID and ensure they have correct tier
+    const user = await UserService.getUserByStripeCustomerId(customerId);
+    if (user && user.tier === 'free') {
+      // User still has free tier, update to premium (fallback)
+      await UserService.updateUserTier(user.email, 'premium', 'active');
+      console.log(`✅ User ${user.email} tier updated to premium via invoice payment`);
+    }
     
     return { processed: true };
   }
