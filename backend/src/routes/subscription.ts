@@ -152,6 +152,11 @@ router.post('/webhooks/stripe', express.raw({ type: 'application/json' }), async
         console.log('💳 Payment successful for user:', userId);
         
         // Get full session with line_items to get priceId
+        if (!subscriptionService.stripe) {
+          console.error('Stripe not initialized');
+          return;
+        }
+        
         const session = await subscriptionService.stripe.checkout.sessions.retrieve(sessionId, {
           expand: ['line_items']
         });
@@ -159,13 +164,13 @@ router.post('/webhooks/stripe', express.raw({ type: 'application/json' }), async
         const priceId = session?.line_items?.data[0]?.price?.id;
         
         // Map priceId to planName
-        const priceToTierMap = {
+        const priceToTierMap: { [key: string]: string } = {
           'price_1RjbPBGhaJA85Y4BoLQzZdGi': 'premium',
           'price_1RjbOGGhaJA85Y4BimHpcWHs': 'pro',
           // Add more price IDs as needed
         };
         
-        const planName = priceToTierMap[priceId] || 'premium';
+        const planName = priceId ? (priceToTierMap[priceId] || 'premium') : 'premium';
         
         console.log('💳 PriceId:', priceId, 'mapped to plan:', planName);
         
