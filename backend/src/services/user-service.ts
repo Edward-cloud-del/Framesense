@@ -180,7 +180,7 @@ class UserService {
         return result.rows.length > 0 ? result.rows[0] : null;
     }
 
-    private async saveSession(userId: string, token: string): Promise<void> {
+    async saveSession(userId: string, token: string): Promise<void> {
         const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
         const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
 
