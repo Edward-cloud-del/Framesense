@@ -3,6 +3,8 @@
 // Graceful degradation system for service failures
 // Implements fallback chains: Premium → Pro → Free → Cache → Error
 
+import crypto from 'crypto';
+
 class FallbackManager {
   constructor(cacheManager, tierAccess) {
     this.cacheManager = cacheManager;
@@ -455,7 +457,6 @@ class FallbackManager {
    * Generate image hash for similarity matching
    */
   generateImageHash(imageData) {
-    const crypto = require('crypto');
     const buffer = Buffer.isBuffer(imageData) ? imageData : Buffer.from(imageData, 'base64');
     return crypto.createHash('sha256').update(buffer).digest('hex').substring(0, 16);
   }

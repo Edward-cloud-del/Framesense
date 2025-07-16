@@ -323,4 +323,4 @@ class EnhancedOCR {
   }
 }
 
-module.exports = { EnhancedOCR }; 
+export { EnhancedOCR }; 
