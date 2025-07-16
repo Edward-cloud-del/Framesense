@@ -8,6 +8,7 @@ import multer from 'multer';
 import { analyzeImageRoute } from './routes/ai.js';
 import authRoutes from './routes/auth.js';
 import subscriptionRoutes from './routes/subscription.js';
+import aiEnhancedRoutes from './routes/ai-enhanced.js';
 import { query } from './database/connection.js';
 import fs from 'fs';
 import path from 'path';
@@ -93,7 +94,10 @@ app.use('/api/auth', authRoutes);
 // Subscription management routes (all others)
 app.use('/api', subscriptionRoutes);
 
-// AI analysis endpoint
+// Enhanced AI API v2 endpoints (NEW)
+app.use('/api/v2', aiEnhancedRoutes);
+
+// Legacy AI analysis endpoint (v1 - backwards compatibility)
 app.post('/api/analyze', upload.single('image'), analyzeImageRoute);
 
 // Health check for optimization services

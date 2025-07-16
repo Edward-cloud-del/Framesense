@@ -1,14 +1,19 @@
 // Caching Services
 // Redis-based caching, cache management, and future similarity caching
 
-const BasicCache = require('./basic-cache');
-const CacheManager = require('./cache-manager');
+import basicCache from './basic-cache.js';
+import cacheKeyStrategy from './cache-key-strategy.js';
+import cacheManager from './cache-manager-simple.js';
+
+// Full cache manager with PostgreSQL (has dependency issues)
+// import fullCacheManager from './cache-manager.js';
 
 // Future similarity caching (will be implemented later)
-// const SimilarityCache = require('./similarity-cache');
+// import similarityCache from './similarity-cache.js';
 
-module.exports = {
-  BasicCache,
-  CacheManager,
-  // SimilarityCache // Will be uncommented when implemented
+export {
+  basicCache,
+  cacheKeyStrategy,
+  cacheManager, // Currently using simple Redis-only version
+  // similarityCache // Will be uncommented when implemented
 }; 

@@ -1,12 +1,13 @@
-// Routing Services
-// Smart routing, tier access control, cost optimization, and fallback management
+// 🎯 ROUTING SERVICES INDEX - DAY 3 IMPLEMENTATION
+// ===============================================
+// Central export for all routing and access control services
 
-const SmartRouter = require('./smart-router');
-const TierAccess = require('./tier-access');
-const CostOptimizer = require('./cost-optimizer');
-const FallbackManager = require('./fallback-manager');
+import { SmartRouter } from './smart-router.js';
+import { TierAccess } from './tier-access.js';
+import { CostOptimizer } from './cost-optimizer.js';
+import { FallbackManager } from './fallback-manager.js';
 
-module.exports = {
+export {
   SmartRouter,
   TierAccess,
   CostOptimizer,

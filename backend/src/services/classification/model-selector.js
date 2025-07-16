@@ -525,6 +525,42 @@ class ModelSelector {
       }))
       .sort((a, b) => b.qualityScore - a.qualityScore);
   }
+
+  /**
+   * Get detailed information about a specific model
+   * @param {string} modelId - The ID of the model to get info for
+   * @returns {Object|null} Model information object or null if not found
+   */
+  async getModelInfo(modelId) {
+    const model = this.modelRegistry[modelId];
+    
+    if (!model) {
+      console.warn(`⚠️ Model not found: ${modelId}`);
+      return null;
+    }
+
+    if (!model.enabled) {
+      console.warn(`⚠️ Model disabled: ${modelId}`);
+      return null;
+    }
+
+    return {
+      id: model.id,
+      name: model.name,
+      provider: model.provider,
+      type: model.type,
+      tier: model.tier,
+      useCase: model.useCase,
+      capabilities: model.capabilities,
+      estimatedCost: model.costPerRequest,
+      responseTime: `${model.avgResponseTime}s`,
+      qualityScore: model.qualityScore,
+      speed: model.speed,
+      cost: model.cost,
+      apiEndpoint: model.apiEndpoint,
+      enabled: model.enabled
+    };
+  }
 }
 
-module.exports = ModelSelector; 
+export { ModelSelector }; 

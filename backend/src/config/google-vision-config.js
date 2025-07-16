@@ -1,7 +1,9 @@
 /**
- * Google Vision API Configuration
- * This file handles Google Cloud Vision API credentials and settings
+ * Google Vision API Configuration (framsensev2)
+ * Fresh file created to fix export issues
  */
+
+console.log('🔧 Loading Google Vision config...');
 
 const GOOGLE_CLOUD_CONFIG = {
   projectId: 'orbital-anchor-466111-c9',
@@ -23,20 +25,17 @@ const GOOGLE_CLOUD_CONFIG = {
 
   // API Settings
   apiSettings: {
-    // Text Detection
     textDetection: {
       maxResults: 50,
-      languages: ['en', 'sv', 'de', 'fr', 'es'], // Multi-language support
+      languages: ['en', 'sv', 'de', 'fr', 'es'],
       confidence: 0.7
     },
     
-    // Object Detection
     objectDetection: {
       maxResults: 20,
       confidence: 0.8
     },
     
-    // Web Detection (Celebrity/Entity Detection)
     webDetection: {
       maxResults: 10,
       confidence: 0.75,
@@ -44,7 +43,6 @@ const GOOGLE_CLOUD_CONFIG = {
       websiteSearch: true
     },
     
-    // Face Detection (for celebrity identification)
     faceDetection: {
       maxResults: 10,
       landmarks: true,
@@ -80,20 +78,29 @@ const GOOGLE_CLOUD_CONFIG = {
   }
 };
 
+console.log('✅ GOOGLE_CLOUD_CONFIG skapad');
+console.log('📧 Client Email:', GOOGLE_CLOUD_CONFIG.credentials.client_email);
+
 // Validation function
 function validateGoogleVisionConfig() {
+  console.log('🔍 Validerar Google Vision config...');
+  
   const required = ['project_id', 'private_key', 'client_email'];
   const missing = required.filter(field => !GOOGLE_CLOUD_CONFIG.credentials[field]);
   
   if (missing.length > 0) {
+    console.log('❌ Saknade fält:', missing);
     throw new Error(`Missing required Google Vision credentials: ${missing.join(', ')}`);
   }
   
+  console.log('✅ Validering klar - alla fält finns');
   return true;
 }
 
-// Export configuration
-module.exports = {
-  GOOGLE_CLOUD_CONFIG,
-  validateGoogleVisionConfig
-}; 
+console.log('🚀 Preparing export med ES modules...');
+
+// ES Module export (package.json har "type": "module")
+export { GOOGLE_CLOUD_CONFIG };
+export { validateGoogleVisionConfig };
+
+console.log('✅ ES Module export klar - konfiguration tillgänglig'); 

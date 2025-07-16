@@ -6,8 +6,8 @@
  * Features: Text OCR, Object Detection, Celebrity ID, Logo Detection
  */
 
-const vision = require('@google-cloud/vision');
-const { GOOGLE_VISION_CONFIG, validateGoogleVisionConfig } = require('../../config/google-vision-config');
+import vision from '@google-cloud/vision';
+import { GOOGLE_CLOUD_CONFIG, validateGoogleVisionConfig } from '../../config/google-vision-config.js';
 
 /**
  * Google Vision Service Class
@@ -20,11 +20,11 @@ class GoogleVisionService {
     
     // Initialize Google Vision client
     this.client = new vision.ImageAnnotatorClient({
-      credentials: GOOGLE_VISION_CONFIG.credentials,
-      projectId: GOOGLE_VISION_CONFIG.credentials.project_id
+      credentials: GOOGLE_CLOUD_CONFIG.credentials,
+      projectId: GOOGLE_CLOUD_CONFIG.credentials.project_id
     });
     
-    this.config = GOOGLE_VISION_CONFIG;
+    this.config = GOOGLE_CLOUD_CONFIG;
     this.requestCounts = new Map(); // Track usage per user
     
     console.log('✅ Google Vision Service initialized');
@@ -78,7 +78,7 @@ class GoogleVisionService {
         },
         metadata: {
           responseTime: responseTime,
-          cost: this.config.features.textDetection.costPerRequest,
+          cost: 0.0015, // Standard Google Vision text detection cost
           regionsFound: textRegions.length,
           apiVersion: 'v1'
         }
@@ -144,7 +144,7 @@ class GoogleVisionService {
         },
         metadata: {
           responseTime: responseTime,
-          cost: this.config.features.objectLocalization.costPerRequest,
+          cost: 0.006, // Standard Google Vision object detection cost
           objectsDetected: localizedObjects.length,
           labelsDetected: labels.length
         }
@@ -240,7 +240,7 @@ class GoogleVisionService {
         },
         metadata: {
           responseTime: responseTime,
-          cost: this.config.features.webDetection.costPerRequest,
+          cost: 0.0035, // Standard Google Vision web detection cost
           entitiesFound: webEntities.length,
           facesFound: faces.length,
           tier: 'premium'
@@ -292,7 +292,7 @@ class GoogleVisionService {
         },
         metadata: {
           responseTime: responseTime,
-          cost: this.config.features.logoDetection.costPerRequest,
+          cost: 0.0015, // Standard Google Vision logo detection cost
           logosDetected: logos.length
         }
       };
@@ -575,7 +575,14 @@ class GoogleVisionService {
    * Handle errors with fallback suggestions
    */
   handleError(error, service) {
-    const fallbacks = this.config.errorHandling.fallbackServices[service] || [];
+    // Simple fallback mapping (simplified from old config structure)
+    const fallbackMap = {
+      'textDetection': ['tesseract'],
+      'webDetection': ['openai-vision'],
+      'objectLocalization': ['openai-vision'],
+      'logoDetection': ['openai-vision']
+    };
+    const fallbacks = fallbackMap[service] || [];
     
     return {
       success: false,
@@ -627,4 +634,4 @@ class GoogleVisionService {
   }
 }
 
-module.exports = GoogleVisionService; 
+export default GoogleVisionService; 

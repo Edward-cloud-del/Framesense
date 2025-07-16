@@ -1,10 +1,10 @@
 // Classification Services
 // Smart question type detection and model selection
 
-const QuestionClassifier = require('./question-classifier');
-const ModelSelector = require('./model-selector');
+import { QuestionClassifier } from './question-classifier.js';
+import { ModelSelector } from './model-selector.js';
 
-module.exports = {
+export {
   QuestionClassifier,
   ModelSelector
 }; 

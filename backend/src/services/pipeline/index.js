@@ -1,16 +1,14 @@
 // Pipeline Services
 // Main orchestration, response optimization, analytics, and plugin loading
 
-const EnhancedAIProcessor = require('./enhanced-ai-processor');
-const ResponseOptimizer = require('./response-optimizer');
-const AnalyticsTracker = require('./analytics-tracker');
+import responseOptimizer from './response-optimizer.js';
+import analyticsTracker from './analytics-tracker.js';
+import enhancedAIProcessor from './enhanced-ai-processor.js'; // ✅ IMPLEMENTED in MOMENT 5.1
+import pluginLoader from './plugin-loader.js'; // ✅ IMPLEMENTED in MOMENT 5.4
 
-// Future plugin loader (will be implemented in MOMENT 5.4)
-// const PluginLoader = require('./plugin-loader');
-
-module.exports = {
-  EnhancedAIProcessor,
-  ResponseOptimizer,
-  AnalyticsTracker,
-  // PluginLoader // Will be uncommented when implemented
+export {
+  responseOptimizer,
+  analyticsTracker,
+  enhancedAIProcessor, // ✅ NOW AVAILABLE - Main orchestration pipeline
+  pluginLoader // ✅ NOW AVAILABLE - Dynamic API loading system
 }; 

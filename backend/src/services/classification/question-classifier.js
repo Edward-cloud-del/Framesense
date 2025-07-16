@@ -379,4 +379,4 @@ class QuestionClassifier {
   }
 }
 
-module.exports = QuestionClassifier; 
+export { QuestionClassifier }; 
