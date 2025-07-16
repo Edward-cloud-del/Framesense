@@ -3,7 +3,7 @@
 // Hybrid OCR system: Tesseract.js + Google Vision fallback
 // Features: Image preprocessing, quality validation, intelligent fallback
 
-const crypto = require('crypto');
+import crypto from 'crypto';
 
 // Optional Tesseract.js integration
 async function getTesseract() {

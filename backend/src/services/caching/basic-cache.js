@@ -58,7 +58,7 @@ class BasicCache {
   }
   
   /**
-   * Initialize Redis connection with error handling
+   * Initialize Redis connection with error handling (non-blocking)
    */
   async initialize() {
     try {
@@ -81,7 +81,7 @@ class BasicCache {
       });
       
       this.client.on('error', (error) => {
-        console.error('❌ Redis Error:', error.message);
+        console.warn('⚠️ Redis Error (graceful fallback):', error.message);
         this.metrics.errors++;
         this.metrics.lastError = error.message;
         this.isConnected = false;
@@ -97,13 +97,18 @@ class BasicCache {
         this.configurePersistence();
       });
       
-      // Connect to Redis
-      await this.client.connect();
+      // Connect to Redis (non-blocking)
+      this.client.connect().catch(error => {
+        console.warn('⚠️ Redis connection failed (running without cache):', error.message);
+        this.isConnected = false;
+        this.metrics.lastError = error.message;
+      });
       
     } catch (error) {
-      console.error('❌ Redis initialization failed:', error.message);
+      console.warn('⚠️ Redis initialization failed (running without cache):', error.message);
       this.metrics.errors++;
       this.metrics.lastError = error.message;
+      this.isConnected = false;
     }
   }
   
