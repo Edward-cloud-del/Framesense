@@ -18,6 +18,7 @@ class AuthService {
     private authListeners: Array<(user: User | null) => void> = [];
     private apiUrl = 'https://api.finalyze.pro'; // Railway backend URL
     private sessionKey = 'framesense_user_session';
+    private debugTierOverride: string | null = null; // For testing purposes
 
     async initialize() {
         // Load current user from local storage
@@ -174,7 +175,43 @@ class AuthService {
         }
     }
 
+    // 🧪 DEBUG: Temporarily override user tier for testing premium models
+    debugSetTier(tier: 'free' | 'premium' | 'pro' | 'enterprise'): void {
+        console.log(`🧪 DEBUG: Setting tier override to ${tier}`);
+        this.debugTierOverride = tier;
+        
+        if (this.currentUser) {
+            // Create updated user with new tier
+            const updatedUser = { ...this.currentUser, tier };
+            this.currentUser = updatedUser;
+            
+            // Notify listeners to update UI
+            this.notifyAuthListeners(updatedUser);
+            
+            console.log(`✅ DEBUG: User tier temporarily set to ${tier} (UI updated)`);
+        }
+    }
+
+    // 🧪 DEBUG: Reset tier override
+    debugResetTier(): void {
+        console.log('🧪 DEBUG: Resetting tier override');
+        this.debugTierOverride = null;
+        
+        if (this.currentUser) {
+            // Reload user from backend to get real tier
+            this.refreshUserStatus().then(realUser => {
+                if (realUser) {
+                    console.log(`✅ DEBUG: Tier reset to real value: ${realUser.tier}`);
+                }
+            }).catch(console.error);
+        }
+    }
+
+    // Override getCurrentUser to use debug tier if set
     getCurrentUser(): User | null {
+        if (this.currentUser && this.debugTierOverride) {
+            return { ...this.currentUser, tier: this.debugTierOverride };
+        }
         return this.currentUser;
     }
 

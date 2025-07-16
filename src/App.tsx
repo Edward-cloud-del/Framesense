@@ -38,6 +38,15 @@ interface OCRResult {
 	has_text: boolean;
 }
 
+// 🧪 DEBUG: Global functions for testing (remove in production)
+declare global {
+	interface Window {
+		debugUpgradeTier?: (tier: 'free' | 'premium' | 'pro' | 'enterprise') => void;
+		debugResetTier?: () => void;
+		debugCurrentUser?: () => any;
+	}
+}
+
 function App() {
 	const [isReady, setIsReady] = useState(false);
 	const [screenshotResult, setScreenshotResult] = useState<string | null>(null);
@@ -761,6 +770,42 @@ function App() {
 		(window as any).testResultOverlay = testResultOverlay;
 		console.log('🔴 RED CIRCLE: Run testResultOverlay() in console to test UI');
 	}
+
+	// 🧪 DEBUG: Setup global debug functions for browser console testing
+	useEffect(() => {
+		// Make debug functions available globally
+		window.debugUpgradeTier = (tier: 'free' | 'premium' | 'pro' | 'enterprise') => {
+			console.log(`🧪 GLOBAL DEBUG: Upgrading to ${tier}`);
+			authService.debugSetTier(tier);
+			alert(`🧪 DEBUG: Tier set to ${tier}!\n\nNow check the Model Selector to see premium models!`);
+		};
+
+		window.debugResetTier = () => {
+			console.log('🧪 GLOBAL DEBUG: Resetting tier');
+			authService.debugResetTier();
+			alert('🧪 DEBUG: Tier reset to original value!');
+		};
+
+		window.debugCurrentUser = () => {
+			const user = authService.getCurrentUser();
+			console.log('🧪 Current user:', user);
+			return user;
+		};
+
+		console.log('🧪 DEBUG COMMANDS AVAILABLE:');
+		console.log('  window.debugUpgradeTier("premium") - Test premium tier');
+		console.log('  window.debugUpgradeTier("pro") - Test pro tier');
+		console.log('  window.debugUpgradeTier("enterprise") - Test enterprise tier');
+		console.log('  window.debugResetTier() - Reset to real tier');
+		console.log('  window.debugCurrentUser() - Show current user');
+
+		// Cleanup on unmount
+		return () => {
+			delete window.debugUpgradeTier;
+			delete window.debugResetTier;
+			delete window.debugCurrentUser;
+		};
+	}, []);
 
 	if (!isReady) {
 		return (
