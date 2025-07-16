@@ -97,4 +97,41 @@ router.post('/logout', async (req: Request, res: Response) => {
   }
 });
 
+// TEST ENDPOINT: Upgrade user tier for testing (remove in production)
+router.post('/test-upgrade-tier', async (req: Request, res: Response) => {
+  try {
+    const { email, tier } = req.body;
+    
+    if (!email || !tier) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Email and tier are required' 
+      });
+    }
+    
+    // Validate tier
+    const validTiers = ['free', 'premium', 'pro', 'enterprise'];
+    if (!validTiers.includes(tier)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Invalid tier. Must be: free, premium, pro, or enterprise' 
+      });
+    }
+    
+    // Update user tier
+    await UserService.updateUserTier(email, tier, 'active');
+    
+    console.log(`🧪 TEST: User ${email} tier updated to ${tier}`);
+    
+    res.json({ 
+      success: true, 
+      message: `User ${email} tier updated to ${tier}`,
+      tier: tier
+    });
+  } catch (error: any) {
+    console.error('❌ Test tier upgrade failed:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 export default router; 
