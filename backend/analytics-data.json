@@ -1,0 +1,54 @@
+{
+  "analytics": {
+    "requests": {
+      "total": 0,
+      "byService": {},
+      "byUser": {},
+      "byTier": {},
+      "byHour": {},
+      "byDay": {},
+      "successful": 0,
+      "failed": 0
+    },
+    "performance": {
+      "totalResponseTime": 0,
+      "averageResponseTime": 0,
+      "byService": {},
+      "slowestRequests": [],
+      "fastestRequests": []
+    },
+    "costs": {
+      "total": 0,
+      "saved": 0,
+      "byService": {},
+      "byUser": {},
+      "byTier": {},
+      "dailySpend": {},
+      "monthlySpend": {}
+    },
+    "cache": {
+      "totalRequests": 0,
+      "hits": 0,
+      "misses": 0,
+      "hitRate": 0,
+      "byService": {},
+      "savings": {
+        "time": 0,
+        "cost": 0
+      }
+    },
+    "quality": {
+      "averageConfidence": 0,
+      "byService": {},
+      "userSatisfaction": {},
+      "errorTypes": {}
+    },
+    "usage": {
+      "peakHours": {},
+      "popularServices": {},
+      "userPatterns": {},
+      "tierUtilization": {}
+    }
+  },
+  "savedAt": "2025-07-16T18:52:56.229Z"
+}

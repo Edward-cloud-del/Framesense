@@ -16,11 +16,11 @@ export class OpenAIServiceAPI implements IAIService {
     
     // Development fallback
     if (import.meta.env.DEV) {
-      return 'http://localhost:3001';
+      return 'http://localhost:8080';
     }
     
     // Production - Railway backend
-    return 'https://api.finalyze.pro';
+    return 'https://framesense-production.up.railway.app';
   }
 
   async analyzeImageWithText(request: AIRequest): Promise<AIResponse> {
