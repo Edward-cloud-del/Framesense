@@ -49,9 +49,11 @@ class AuthService {
             }
 
             const user = data.user;
+            // Add the token to the user object (backend returns it separately)
+            user.token = data.token;
             this.currentUser = user;
             
-            // Save user session locally using localStorage
+            // Save user session locally using localStorage (now includes token)
             this.saveUserSessionLocal(user);
             
             // Notify listeners
@@ -136,7 +138,7 @@ class AuthService {
             const response = await fetch(`${this.apiUrl}/api/auth/verify`, {
                 method: 'GET',
                 headers: {
-                    'Authorization': `Bearer ${this.currentUser.id}`, // Use user ID as simple auth
+                    'Authorization': `Bearer ${this.currentUser.token}`, // Use JWT token for auth
                 },
             });
 
