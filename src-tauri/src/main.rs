@@ -499,6 +499,18 @@ async fn get_current_user(
     service.get_current_user().await
 }
 
+// Load user session from storage
+#[tauri::command]
+async fn load_user_session(
+    auth_service: tauri::State<'_, SharedAuthService>
+) -> Result<Option<User>, String> {
+    let service = {
+        let guard = auth_service.lock().unwrap();
+        guard.clone()
+    };
+    service.load_user_session().await
+}
+
 // Handle payment success from deep link
 #[tauri::command]
 async fn handle_payment_success(
@@ -1301,6 +1313,7 @@ fn main() {
             login_user,
             logout_user,
             get_current_user,
+            load_user_session,
             handle_payment_success,
             get_available_models,
             can_use_model,

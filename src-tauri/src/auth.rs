@@ -15,6 +15,11 @@ pub struct User {
     pub token: String,
     pub usage: UserUsage,
     pub created_at: String,
+    pub subscription_status: Option<String>,
+    pub stripe_customer_id: Option<String>,
+    pub usage_daily: Option<i32>,
+    pub usage_total: Option<i32>,
+    pub updated_at: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -49,9 +54,23 @@ pub struct LoginRequest {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct BackendUser {
+    pub id: String,
+    pub email: String,
+    pub name: String,
+    pub tier: String,
+    pub subscription_status: Option<String>,
+    pub stripe_customer_id: Option<String>,
+    pub usage_daily: Option<i32>,
+    pub usage_total: Option<i32>,
+    pub created_at: Option<String>,
+    pub updated_at: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct AuthResponse {
     pub success: bool,
-    pub user: Option<User>,
+    pub user: Option<BackendUser>,
     pub token: Option<String>,
     pub message: Option<String>,
 }
@@ -99,8 +118,26 @@ impl AuthService {
                 .map_err(|e| format!("Parse error: {}", e))?;
             
             if auth_response.success {
-                if let (Some(mut user), Some(token)) = (auth_response.user, auth_response.token) {
-                    user.token = token;
+                if let (Some(backend_user), Some(token)) = (auth_response.user, auth_response.token) {
+                    // Convert backend user format to frontend User format
+                    let user = User {
+                        id: backend_user.id,
+                        email: backend_user.email,
+                        name: backend_user.name,
+                        tier: backend_user.tier,
+                        token: token.clone(),
+                        usage: UserUsage {
+                            daily: backend_user.usage_daily.unwrap_or(0),
+                            total: backend_user.usage_total.unwrap_or(0),
+                            last_reset: chrono::Utc::now().format("%Y-%m-%d").to_string(),
+                        },
+                        created_at: backend_user.created_at.unwrap_or_else(|| chrono::Utc::now().to_rfc3339()),
+                        subscription_status: backend_user.subscription_status,
+                        stripe_customer_id: backend_user.stripe_customer_id,
+                        usage_daily: backend_user.usage_daily,
+                        usage_total: backend_user.usage_total,
+                        updated_at: backend_user.updated_at,
+                    };
                     
                     // Save user session locally
                     self.save_user_session(&user).await?;
@@ -134,8 +171,26 @@ impl AuthService {
                 .map_err(|e| format!("Parse error: {}", e))?;
             
             if auth_response.success {
-                if let Some(mut user) = auth_response.user {
-                    user.token = token;
+                if let Some(backend_user) = auth_response.user {
+                    // Convert backend user format to frontend User format
+                    let user = User {
+                        id: backend_user.id,
+                        email: backend_user.email,
+                        name: backend_user.name,
+                        tier: backend_user.tier,
+                        token: token.clone(),
+                        usage: UserUsage {
+                            daily: backend_user.usage_daily.unwrap_or(0),
+                            total: backend_user.usage_total.unwrap_or(0),
+                            last_reset: chrono::Utc::now().format("%Y-%m-%d").to_string(),
+                        },
+                        created_at: backend_user.created_at.unwrap_or_else(|| chrono::Utc::now().to_rfc3339()),
+                        subscription_status: backend_user.subscription_status,
+                        stripe_customer_id: backend_user.stripe_customer_id,
+                        usage_daily: backend_user.usage_daily,
+                        usage_total: backend_user.usage_total,
+                        updated_at: backend_user.updated_at,
+                    };
                     
                     // Clear any old session before saving new one
                     self.clear_user_session().await?;
@@ -193,8 +248,26 @@ impl AuthService {
                 .map_err(|e| format!("Parse error: {}", e))?;
             
             if auth_response.success {
-                if let Some(mut user) = auth_response.user {
-                    user.token = token;
+                if let Some(backend_user) = auth_response.user {
+                    // Convert backend user format to frontend User format
+                    let user = User {
+                        id: backend_user.id,
+                        email: backend_user.email,
+                        name: backend_user.name,
+                        tier: backend_user.tier,
+                        token: token.clone(),
+                        usage: UserUsage {
+                            daily: backend_user.usage_daily.unwrap_or(0),
+                            total: backend_user.usage_total.unwrap_or(0),
+                            last_reset: chrono::Utc::now().format("%Y-%m-%d").to_string(),
+                        },
+                        created_at: backend_user.created_at.unwrap_or_else(|| chrono::Utc::now().to_rfc3339()),
+                        subscription_status: backend_user.subscription_status,
+                        stripe_customer_id: backend_user.stripe_customer_id,
+                        usage_daily: backend_user.usage_daily,
+                        usage_total: backend_user.usage_total,
+                        updated_at: backend_user.updated_at,
+                    };
                     Ok(user)
                 } else {
                     Err("Invalid response format".to_string())

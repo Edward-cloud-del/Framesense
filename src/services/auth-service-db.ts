@@ -67,6 +67,15 @@ class AuthService {
 
     async logout(): Promise<void> {
         try {
+            // Clear Tauri session first
+            try {
+                // @ts-ignore - invoke is available in Tauri context
+                await invoke('clear_user_session');
+                console.log('🗑️ Tauri session cleared');
+            } catch (error) {
+                console.log('ℹ️ Tauri session clear not available');
+            }
+            
             // Clear user session locally
             this.clearUserSessionLocal();
             this.currentUser = null;
@@ -83,11 +92,29 @@ class AuthService {
 
     async loadCurrentUser(): Promise<User | null> {
         try {
-            const user = this.loadUserSessionLocal();
+            // First try to load from Tauri storage (more reliable)
+            let user: User | null = null;
+            
+            try {
+                // @ts-ignore - invoke is available in Tauri context
+                user = await invoke('load_user_session');
+                if (user) {
+                    console.log('📖 Loaded user session from Tauri:', user.email, user.tier);
+                    // Sync to localStorage as backup
+                    this.saveUserSessionLocal(user);
+                }
+            } catch (tauriError) {
+                console.log('ℹ️ Tauri session not available, trying localStorage...');
+                // Fallback to localStorage
+                user = this.loadUserSessionLocal();
+                if (user) {
+                    console.log('📖 Loaded user session from localStorage:', user.email, user.tier);
+                }
+            }
+            
             this.currentUser = user;
             
             if (user) {
-                console.log('📖 Loaded user session:', user.email, user.tier);
                 // Notify listeners
                 this.notifyAuthListeners(user);
             }
