@@ -11,6 +11,7 @@
     "railway": "npm run build && npm start"
   },
   "dependencies": {
+    "@google-cloud/vision": "^5.3.0",
     "@types/pg": "^8.15.4",
     "@types/sqlite3": "^3.1.11",
     "bcryptjs": "^2.4.3",
