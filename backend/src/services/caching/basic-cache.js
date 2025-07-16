@@ -12,21 +12,24 @@ class BasicCache {
     this.client = null;
     this.isConnected = false;
     this.connectionAttempts = 0;
-    this.maxRetries = 5;
+    this.maxRetries = 3;
     
     // Connection pool configuration
     this.poolConfig = {
       socket: {
         host: process.env.REDIS_HOST || 'localhost',
         port: process.env.REDIS_PORT || 6379,
-        connectTimeout: 10000,
+        connectTimeout: 5000,
         lazyConnect: true,
         reconnectStrategy: (retries) => {
           if (retries > this.maxRetries) {
-            console.error('Redis: Max reconnection attempts reached');
+            console.warn('⚠️ Redis: Max reconnection attempts reached, running without cache');
             return false;
           }
-          return Math.min(retries * 50, 500);
+          // Less aggressive reconnection: 5s, 15s, 30s
+          const delay = Math.min(retries * 5000, 30000);
+          console.log(`🔄 Redis: Reconnecting in ${delay/1000}s... (attempt ${retries}/${this.maxRetries})`);
+          return delay;
         }
       },
       password: process.env.REDIS_PASSWORD,
@@ -81,14 +84,17 @@ class BasicCache {
       });
       
       this.client.on('error', (error) => {
-        console.warn('⚠️ Redis Error (graceful fallback):', error.message);
+        // Only log the first few errors to avoid spam
+        if (this.metrics.errors < 3) {
+          console.warn('⚠️ Redis Error (running without cache):', error.message);
+        }
         this.metrics.errors++;
         this.metrics.lastError = error.message;
         this.isConnected = false;
       });
       
       this.client.on('reconnecting', () => {
-        console.log('🔄 Redis: Reconnecting...');
+        // Reconnection logging is handled in reconnectStrategy
         this.connectionAttempts++;
       });
       
