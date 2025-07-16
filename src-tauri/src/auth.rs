@@ -72,7 +72,7 @@ pub struct AuthService {
 impl AuthService {
     pub fn new() -> Self {
         Self {
-            api_url: "http://localhost:3001".to_string(),
+            api_url: "https://api.finalyze.pro".to_string(), // Railway backend URL
             storage_path: None,
         }
     }

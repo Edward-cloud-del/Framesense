@@ -31,11 +31,8 @@ mod test_ocr;
 
 // Authentication module
 mod auth;
-// Comment out database module since we use API approach
-// mod database;
+// Using API approach - no direct database connection
 use auth::{AuthService, User};
-// Remove database imports
-// use database::{Database, User as DbUser};
 
 // Global OCR service (reuse instance for performance)
 static mut OCR_SERVICE: Option<std::sync::Mutex<OCRService>> = None;
@@ -86,7 +83,6 @@ type SharedScreenshotCache = Arc<Mutex<ScreenshotCache>>;
 
 // Authentication service manager
 type SharedAuthService = Arc<Mutex<AuthService>>;
-// type SharedDatabase = Arc<Mutex<Database>>; // Removed as per edit hint
 
 // Test screen capture capability
 #[tauri::command]
@@ -1149,9 +1145,7 @@ fn main() {
     let auth_service = AuthService::new().with_storage_path(app_data_dir);
     let shared_auth_service: SharedAuthService = Arc::new(Mutex::new(auth_service));
     
-    // Initialize database
-    // let database = Database::new().expect("Failed to initialize database"); // Removed as per edit hint
-    // let shared_database: SharedDatabase = Arc::new(Mutex::new(database)); // Removed as per edit hint
+    // Database access through backend API only - no direct connection
     
     tauri::Builder::default()
         .manage(shared_state)
@@ -1159,7 +1153,6 @@ fn main() {
         .manage(shared_permission_cache)
         .manage(shared_screenshot_cache)
         .manage(shared_auth_service)
-        // .manage(shared_database) // Removed as per edit hint
         .plugin(tauri_plugin_global_shortcut::Builder::new()
             .with_handler(|app, shortcut, event| {
                 println!("🔥 GLOBAL SHORTCUT: {:?} - State: {:?}", shortcut, event.state());
