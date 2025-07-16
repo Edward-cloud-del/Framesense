@@ -338,55 +338,86 @@ impl AuthService {
 
     // Local storage functions
     pub async fn save_user_session(&self, user: &User) -> Result<(), String> {
+        println!("🔍 DEBUG: save_user_session called for user: {} ({})", user.email, user.tier);
+        
         if let Some(storage_path) = &self.storage_path {
             let user_file = storage_path.join("user_session.json");
+            println!("🔍 DEBUG: Storage path: {:?}", user_file);
             
             // Ensure directory exists
             if let Some(parent) = user_file.parent() {
                 if !parent.exists() {
+                    println!("🔍 DEBUG: Creating storage directory: {:?}", parent);
                     fs::create_dir_all(parent)
                         .map_err(|e| format!("Failed to create storage directory: {}", e))?;
+                    println!("✅ DEBUG: Storage directory created");
+                } else {
+                    println!("🔍 DEBUG: Storage directory already exists");
                 }
             }
             
             let user_json = serde_json::to_string_pretty(user)
                 .map_err(|e| format!("Failed to serialize user: {}", e))?;
             
-            fs::write(&user_file, user_json)
+            println!("🔍 DEBUG: About to write {} bytes to file", user_json.len());
+            fs::write(&user_file, &user_json)
                 .map_err(|e| format!("Failed to write user session: {}", e))?;
             
-            println!("💾 User session saved locally");
+            println!("✅ DEBUG: User session saved to Tauri storage at: {:?}", user_file);
+        } else {
+            println!("❌ DEBUG: No storage path configured!");
+            return Err("No storage path configured".to_string());
         }
         Ok(())
     }
 
     pub async fn clear_user_session(&self) -> Result<(), String> {
+        println!("🔍 DEBUG: clear_user_session called");
+        
         if let Some(storage_path) = &self.storage_path {
             let user_file = storage_path.join("user_session.json");
+            println!("🔍 DEBUG: Looking for session file to delete at: {:?}", user_file);
+            
             if user_file.exists() {
+                println!("🔍 DEBUG: Session file exists, deleting...");
                 fs::remove_file(&user_file)
                     .map_err(|e| format!("Failed to remove user session: {}", e))?;
-                println!("🗑️ User session cleared");
+                println!("✅ DEBUG: User session file deleted successfully");
+            } else {
+                println!("ℹ️ DEBUG: No session file to delete (already cleared)");
             }
+        } else {
+            println!("❌ DEBUG: No storage path configured for clearing!");
         }
         Ok(())
     }
 
     pub async fn load_user_session(&self) -> Result<Option<User>, String> {
+        println!("🔍 DEBUG: load_user_session called");
+        
         if let Some(storage_path) = &self.storage_path {
             let user_file = storage_path.join("user_session.json");
+            println!("🔍 DEBUG: Looking for session file at: {:?}", user_file);
+            
             if user_file.exists() {
+                println!("✅ DEBUG: Session file exists, reading...");
                 let user_json = fs::read_to_string(&user_file)
                     .map_err(|e| format!("Failed to read user session: {}", e))?;
+                
+                println!("🔍 DEBUG: Read {} bytes from session file", user_json.len());
                 
                 let user: User = serde_json::from_str(&user_json)
                     .map_err(|e| format!("Failed to parse user session: {}", e))?;
                 
-                // TODO: Optionally verify token is still valid here
-                println!("📖 User session loaded: {} ({})", user.email, user.tier);
+                println!("✅ DEBUG: User session loaded successfully: {} ({})", user.email, user.tier);
                 return Ok(Some(user));
+            } else {
+                println!("❌ DEBUG: Session file does not exist at: {:?}", user_file);
             }
+        } else {
+            println!("❌ DEBUG: No storage path configured for loading!");
         }
+        println!("❌ DEBUG: Returning None from load_user_session");
         Ok(None)
     }
 }

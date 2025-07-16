@@ -109,20 +109,27 @@ function App() {
 
 	// Initialize auth service and listen for user changes
 	useEffect(() => {
+		console.log('🔍 DEBUG: App.tsx - Auth useEffect running (component mount/restart)');
+		
 		const handleUserChange = (user: User | null) => {
 			setCurrentUser(user);
-			console.log('🔍 User changed:', user ? `${user.email} (${user.tier})` : 'No user');
+			console.log('🔍 DEBUG: App.tsx - User changed via listener:', user ? `${user.email} (${user.tier})` : 'No user');
 		};
 
 		authService.addAuthListener(handleUserChange);
+		console.log('✅ DEBUG: App.tsx - Auth listener added');
 		
 		// Load current user
+		console.log('🔍 DEBUG: App.tsx - About to call loadCurrentUser()');
 		authService.loadCurrentUser().then(user => {
 			setCurrentUser(user);
-			console.log('🔍 Initial user loaded:', user ? `${user.email} (${user.tier})` : 'No user');
+			console.log('🔍 DEBUG: App.tsx - Initial user loaded from loadCurrentUser():', user ? `${user.email} (${user.tier})` : 'No user');
+		}).catch(error => {
+			console.error('❌ DEBUG: App.tsx - loadCurrentUser failed:', error);
 		});
 		
 		return () => {
+			console.log('🔍 DEBUG: App.tsx - Removing auth listener (component unmount)');
 			authService.removeAuthListener(handleUserChange);
 		};
 	}, []);
@@ -276,7 +283,9 @@ function App() {
 		
 		// Listen for save-state-and-close event from Rust (Raycast-style)
 		const unlistenSave = listen('save-state-and-close', () => {
-			console.log('💾 Saving state before window closes...');
+			console.log('🔍 DEBUG: App.tsx - save-state-and-close event received');
+			console.log('🔍 DEBUG: App.tsx - Current user before save:', currentUser ? `${currentUser.email} (${currentUser.tier})` : 'No user');
+			console.log('💾 DEBUG: Saving state before window closes...');
 			saveAppState();
 		});
 		
