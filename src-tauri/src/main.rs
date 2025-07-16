@@ -611,6 +611,28 @@ async fn clear_user_session(
     Ok(())
 }
 
+// Debug: Test model access for a tier
+#[tauri::command]
+fn debug_test_tier_models(
+    tier: String,
+    auth_service: tauri::State<'_, SharedAuthService>
+) -> Result<serde_json::Value, String> {
+    let service = auth_service.lock().unwrap();
+    let models = service.get_available_models(&tier);
+    
+    let result = serde_json::json!({
+        "tier": tier,
+        "available_models": models,
+        "model_count": models.len(),
+        "can_use_gpt4o": service.can_use_model(&tier, "GPT-4o"),
+        "can_use_gpt4o_mini": service.can_use_model(&tier, "GPT-4o-mini"),
+        "can_use_claude_haiku": service.can_use_model(&tier, "Claude 3 Haiku")
+    });
+    
+    println!("🧪 DEBUG: Tier {} model access: {}", tier, result);
+    Ok(result)
+}
+
 // Removed problematic HTML/JS-based overlay function - using React overlays only
 
 // Removed old process_screen_selection - using optimized version only
@@ -1320,6 +1342,7 @@ fn main() {
             test_deep_link,
             verify_payment_status,
             clear_user_session,
+            debug_test_tier_models,
             // Local session management commands
             // save_user_session_local, // Removed as per edit hint
             // load_user_session_local, // Removed as per edit hint

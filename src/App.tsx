@@ -758,10 +758,26 @@ function App() {
 		console.log('🔴 RED CIRCLE: Test result set - ResultOverlay should appear!');
 	};
 
+	// 🧪 Debug function for testing model access
+	const debugTestModelAccess = async (tier: string = 'premium') => {
+		try {
+			// @ts-ignore
+			const result = await invoke('debug_test_tier_models', { tier }) as any;
+			console.log(`🧪 Model access test for ${tier}:`, result);
+			alert(`🧪 Debug: ${tier} tier has ${result.model_count} models\n\nGPT-4o: ${result.can_use_gpt4o ? '✅' : '❌'}\nGPT-4o-mini: ${result.can_use_gpt4o_mini ? '✅' : '❌'}\nClaude Haiku: ${result.can_use_claude_haiku ? '✅' : '❌'}`);
+			return result;
+		} catch (error) {
+			console.error('❌ Debug test failed:', error);
+			alert('❌ Debug test failed: ' + error);
+		}
+	}
+
 	// 🔴 RED CIRCLE: Make test function available in browser console
 	if (typeof window !== 'undefined') {
 		(window as any).testResultOverlay = testResultOverlay;
+		(window as any).debugTestModelAccess = debugTestModelAccess;
 		console.log('🔴 RED CIRCLE: Run testResultOverlay() in console to test UI');
+		console.log('🧪 DEBUG: Run debugTestModelAccess("premium") to test model access');
 	}
 
 
