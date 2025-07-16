@@ -53,7 +53,14 @@ class AuthService {
             user.token = data.token;
             this.currentUser = user;
             
-            // Save user session locally using localStorage (now includes token)
+            // Save user session to BOTH Tauri storage AND localStorage
+            try {
+                // @ts-ignore - invoke is available in Tauri context
+                await invoke('save_user_session', { user });
+                console.log('💾 User session saved to Tauri storage');
+            } catch (error) {
+                console.log('ℹ️ Tauri storage not available, using localStorage only');
+            }
             this.saveUserSessionLocal(user);
             
             // Notify listeners
@@ -155,6 +162,14 @@ class AuthService {
                 // Update local session if tier changed
                 if (freshUser.tier !== this.currentUser.tier) {
                     console.log('🔄 User tier updated:', this.currentUser.tier, '→', freshUser.tier);
+                    // Save to BOTH Tauri storage AND localStorage when tier changes
+                    try {
+                        // @ts-ignore - invoke is available in Tauri context
+                        await invoke('save_user_session', { user: freshUser });
+                        console.log('💾 Updated tier saved to Tauri storage');
+                    } catch (error) {
+                        console.log('ℹ️ Tauri storage not available');
+                    }
                     this.saveUserSessionLocal(freshUser);
                 }
                 

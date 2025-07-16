@@ -499,6 +499,19 @@ async fn get_current_user(
     service.get_current_user().await
 }
 
+// Save user session to storage
+#[tauri::command]
+async fn save_user_session(
+    user: User,
+    auth_service: tauri::State<'_, SharedAuthService>
+) -> Result<(), String> {
+    let service = {
+        let guard = auth_service.lock().unwrap();
+        guard.clone()
+    };
+    service.save_user_session(&user).await
+}
+
 // Load user session from storage
 #[tauri::command]
 async fn load_user_session(
@@ -1335,6 +1348,7 @@ fn main() {
             login_user,
             logout_user,
             get_current_user,
+            save_user_session,
             load_user_session,
             handle_payment_success,
             get_available_models,
