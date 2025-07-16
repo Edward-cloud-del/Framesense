@@ -62,8 +62,35 @@ class AuthService {
             
             // Save user session to BOTH Tauri storage AND localStorage
             try {
+                // Convert user to Tauri-compatible format
+                const tauriUser = {
+                    id: user.id,
+                    email: user.email,
+                    name: user.name,
+                    tier: user.tier,
+                    token: user.token,
+                    usage: {
+                        daily: user.usage_daily || 0,
+                        total: user.usage_total || 0,
+                        last_reset: new Date().toISOString().split('T')[0] // YYYY-MM-DD format
+                    },
+                    created_at: user.created_at,
+                    subscription_status: user.subscription_status,
+                    stripe_customer_id: user.stripe_customer_id,
+                    usage_daily: user.usage_daily,
+                    usage_total: user.usage_total,
+                    updated_at: user.updated_at
+                };
+                
+                console.log('🔍 DEBUG: Converted user for Tauri:', {
+                    email: tauriUser.email,
+                    tier: tauriUser.tier,
+                    hasUsage: !!tauriUser.usage,
+                    usageDaily: tauriUser.usage.daily
+                });
+                
                 // @ts-ignore - invoke is available in Tauri context
-                await invoke('save_user_session', { user });
+                await invoke('save_user_session', { user: tauriUser });
                 console.log('✅ DEBUG: User session saved to Tauri storage successfully');
             } catch (error) {
                 console.error('❌ DEBUG: Failed to save to Tauri storage:', error);
@@ -199,11 +226,31 @@ class AuthService {
                     console.log('🔄 User tier updated:', this.currentUser.tier, '→', freshUser.tier);
                     // Save to BOTH Tauri storage AND localStorage when tier changes
                     try {
+                        // Convert freshUser to Tauri-compatible format
+                        const tauriUser = {
+                            id: freshUser.id,
+                            email: freshUser.email,
+                            name: freshUser.name,
+                            tier: freshUser.tier,
+                            token: this.currentUser.token, // Keep existing token
+                            usage: {
+                                daily: freshUser.usage_daily || 0,
+                                total: freshUser.usage_total || 0,
+                                last_reset: new Date().toISOString().split('T')[0]
+                            },
+                            created_at: freshUser.created_at,
+                            subscription_status: freshUser.subscription_status,
+                            stripe_customer_id: freshUser.stripe_customer_id,
+                            usage_daily: freshUser.usage_daily,
+                            usage_total: freshUser.usage_total,
+                            updated_at: freshUser.updated_at
+                        };
+                        
                         // @ts-ignore - invoke is available in Tauri context
-                        await invoke('save_user_session', { user: freshUser });
-                        console.log('💾 Updated tier saved to Tauri storage');
+                        await invoke('save_user_session', { user: tauriUser });
+                        console.log('✅ DEBUG: Updated tier saved to Tauri storage');
                     } catch (error) {
-                        console.log('ℹ️ Tauri storage not available');
+                        console.error('❌ DEBUG: Failed to save tier update to Tauri storage:', error);
                     }
                     this.saveUserSessionLocal(freshUser);
                 }
