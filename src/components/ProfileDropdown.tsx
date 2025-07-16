@@ -5,7 +5,7 @@ import { authService, type User } from '../services/auth-service-db';
 interface ProfileDropdownProps {
     currentUser: User | null;
     debugMode: boolean;
-    onLoginSuccess: (user: User) => void;
+    onLoginSuccess: (user: User) => void | Promise<void>;
     onLogout: () => void;
     onUserUpdate: (user: User) => void;
     clearUserSession: () => void;
@@ -83,7 +83,7 @@ export const ProfileDropdown: React.FC<ProfileDropdownProps> = ({
 
         try {
             const user = await authService.loginWithDatabase(email, password);
-            onLoginSuccess(user);
+            await Promise.resolve(onLoginSuccess(user));
             setShowLoginForm(false);
             setEmail('');
             setPassword('');

@@ -4,7 +4,7 @@ import { authService, type User } from '../services/auth-service-db';
 interface LoginDialogProps {
     isOpen: boolean;
     onClose: () => void;
-    onLoginSuccess: (user: User) => void;
+    onLoginSuccess: (user: User) => void | Promise<void>;
 }
 
 export const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLoginSuccess }) => {
@@ -20,7 +20,7 @@ export const LoginDialog: React.FC<LoginDialogProps> = ({ isOpen, onClose, onLog
 
         try {
             const user = await authService.loginWithDatabase(email, password);
-            onLoginSuccess(user);
+            await Promise.resolve(onLoginSuccess(user));
             onClose();
             setEmail('');
             setPassword('');

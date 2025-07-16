@@ -80,9 +80,20 @@ function App() {
 	const [debugMode, setDebugMode] = useState(true); // Auto-show debug info
 	
 	// Login handlers - defined at component level
-	const handleLoginSuccess = (user: User) => {
+	const handleLoginSuccess = async (user: User) => {
 		setCurrentUser(user);
-		alert(`🎉 Welcome back, ${user.name}!\n\nYou now have ${user.tier} access!`);
+		
+		// Force reload of user status to trigger model updates
+		setTimeout(async () => {
+			try {
+				await authService.refreshUserStatus();
+				console.log('✅ User status refreshed after login');
+			} catch (error) {
+				console.error('❌ Failed to refresh user status:', error);
+			}
+		}, 100);
+		
+		alert(`🎉 Welcome back, ${user.name}!\n\nYou now have ${user.tier} access!\n\nPremium models are now unlocked! 🔓`);
 	};
 
 	const handleLogout = () => {
