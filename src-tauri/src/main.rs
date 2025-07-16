@@ -545,11 +545,16 @@ fn get_available_models(
     user_tier: String,
     auth_service: tauri::State<'_, SharedAuthService>
 ) -> Result<Vec<String>, String> {
+    println!("🔍 DEBUG: get_available_models called for tier: {}", user_tier);
+    
     let service = auth_service.lock().unwrap();
-    let models = service.get_available_models(&user_tier)
+    let raw_models = service.get_available_models(&user_tier);
+    let models: Vec<String> = raw_models
         .iter()
         .map(|&s| s.to_string())
         .collect();
+    
+    println!("✅ DEBUG: get_available_models returning {} models: {:?}", models.len(), models);
     Ok(models)
 }
 
@@ -560,8 +565,13 @@ fn can_use_model(
     model: String,
     auth_service: tauri::State<'_, SharedAuthService>
 ) -> Result<bool, String> {
+    println!("🔍 DEBUG: can_use_model called - tier: '{}', model: '{}'", user_tier, model);
+    
     let service = auth_service.lock().unwrap();
-    Ok(service.can_use_model(&user_tier, &model))
+    let can_use = service.can_use_model(&user_tier, &model);
+    
+    println!("✅ DEBUG: can_use_model result: {} (tier: '{}', model: '{}')", can_use, user_tier, model);
+    Ok(can_use)
 }
 
 // Test deep link functionality (for development)

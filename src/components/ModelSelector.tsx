@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { authService, type User } from '../services/auth-service';
+import { authService, type User } from '../services/auth-service-db';
 
 interface ModelSelectorProps {
   isVisible: boolean;
@@ -34,21 +34,29 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({ isVisible, onClose, onMod
   }, [isVisible]);
 
   const loadUserAndModels = async () => {
+    console.log('🔍 DEBUG: ModelSelector - loadUserAndModels started');
     setLoading(true);
     try {
       const user = authService.getCurrentUser();
+      console.log('🔍 DEBUG: ModelSelector - Current user:', user ? `${user.email} (${user.tier})` : 'null');
       setCurrentUser(user);
       
       const tier = user?.tier || 'free';
+      console.log('🔍 DEBUG: ModelSelector - Using tier:', tier);
+      
       const models = await authService.getAvailableModels(tier);
+      console.log('🔍 DEBUG: ModelSelector - Available models:', models);
       setUserAvailableModels(models);
       
       // If selected model is not available, select first available
       if (!models.includes(selectedModel) && models.length > 0 && models[0]) {
+        console.log('🔍 DEBUG: ModelSelector - Selected model not available, switching to:', models[0]);
         onModelSelect(models[0]);
+      } else {
+        console.log('🔍 DEBUG: ModelSelector - Selected model is available:', selectedModel);
       }
     } catch (error) {
-      console.error('Failed to load user models:', error);
+      console.error('❌ DEBUG: ModelSelector - Failed to load user models:', error);
     } finally {
       setLoading(false);
     }
@@ -120,18 +128,26 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({ isVisible, onClose, onMod
   const allModels = [...accessibleModels, ...lockedModels];
 
   const handleModelSelect = async (modelName: string, isLocked: boolean) => {
+    console.log('🔍 DEBUG: ModelSelector - handleModelSelect called:', { modelName, isLocked });
+    
     if (isLocked) {
+      console.log('🔍 DEBUG: ModelSelector - Model is locked, opening upgrade page');
       handleUpgrade();
       return;
     }
     
     // Double-check with auth service
+    console.log('🔍 DEBUG: ModelSelector - Double-checking model access with auth service...');
     const canUse = await authService.canUseModel(modelName);
+    console.log('🔍 DEBUG: ModelSelector - Auth service canUseModel result:', canUse);
+    
     if (!canUse) {
+      console.log('🔍 DEBUG: ModelSelector - Auth service says model not available, opening upgrade page');
       handleUpgrade();
       return;
     }
     
+    console.log('🔍 DEBUG: ModelSelector - Model access confirmed, selecting model:', modelName);
     onModelSelect(modelName);
     onClose();
   };
@@ -175,7 +191,14 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({ isVisible, onClose, onMod
 
 
   const isModelLocked = (model: AIModel) => {
-    return !userAvailableModels.includes(model.name);
+    const isLocked = !userAvailableModels.includes(model.name);
+    console.log('🔍 DEBUG: ModelSelector - isModelLocked check:', {
+      modelName: model.name,
+      userAvailableModels: userAvailableModels,
+      isLocked: isLocked,
+      currentUserTier: currentUser?.tier
+    });
+    return isLocked;
   };
 
   const getModelDisplayName = (name: string) => {
@@ -319,7 +342,7 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({ isVisible, onClose, onMod
         {/* Usage info - very compact */}
         {currentUser && (
           <div className="text-xs text-white/50 flex justify-between items-center">
-            <span>{currentUser.usage.daily}/{authService.getDailyLimit()} today</span>
+            <span>{currentUser.usage_daily || 0}/{authService.getDailyLimit()} today</span>
             <div className="w-12 bg-white/10 rounded-full h-1">
               <div 
                 className="h-1 bg-blue-400 rounded-full transition-all duration-300" 

@@ -148,14 +148,38 @@ class AuthService {
             console.log('🔍 DEBUG: Attempting to load from Tauri storage...');
             try {
                 // @ts-ignore - invoke is available in Tauri context
-                user = await invoke('load_user_session');
-                if (user) {
-                    console.log('✅ DEBUG: Loaded user session from Tauri:', {
+                const tauriUser = await invoke('load_user_session');
+                if (tauriUser) {
+                    console.log('✅ DEBUG: Raw user from Tauri storage:', {
+                        email: tauriUser.email, 
+                        tier: tauriUser.tier,
+                        hasToken: !!tauriUser.token,
+                        hasUsage: !!tauriUser.usage,
+                        usageFormat: typeof tauriUser.usage
+                    });
+                    
+                    // Convert from Tauri format back to JavaScript format
+                    user = {
+                        id: tauriUser.id,
+                        email: tauriUser.email,
+                        name: tauriUser.name,
+                        tier: tauriUser.tier,
+                        token: tauriUser.token,
+                        created_at: tauriUser.created_at,
+                        subscription_status: tauriUser.subscription_status,
+                        stripe_customer_id: tauriUser.stripe_customer_id,
+                        usage_daily: tauriUser.usage?.daily || tauriUser.usage_daily || 0,
+                        usage_total: tauriUser.usage?.total || tauriUser.usage_total || 0,
+                        updated_at: tauriUser.updated_at
+                    };
+                    
+                    console.log('✅ DEBUG: Converted user from Tauri:', {
                         email: user.email, 
                         tier: user.tier,
                         hasToken: !!user.token,
-                        tokenLength: user.token ? user.token.length : 0
+                        usageDaily: user.usage_daily
                     });
+                    
                     // Sync to localStorage as backup
                     this.saveUserSessionLocal(user);
                 } else {
@@ -351,6 +375,53 @@ class AuthService {
         }
     }
 
+    // Get required tier for a specific model
+    getRequiredTier(model: string): string {
+        if (['GPT-4o 32k', 'Claude 3 Opus', 'Llama 3.1 405B'].includes(model)) {
+            return 'enterprise';
+        } else if (['GPT-4o', 'Claude 3.5 Sonnet', 'Llama 3.1 70B'].includes(model)) {
+            return 'pro';
+        } else if (['GPT-4o-mini', 'Claude 3 Haiku', 'Gemini Pro'].includes(model)) {
+            return 'premium';
+        } else {
+            return 'free';
+        }
+    }
+
+    // Get daily limit for user tier
+    getDailyLimit(tier?: string): number {
+        const userTier = tier || this.getUserTier();
+        switch (userTier) {
+            case 'free': return 50;
+            case 'premium': return 1000;
+            case 'pro': return 5000;
+            case 'enterprise': return 999999; // Unlimited
+            default: return 10;
+        }
+    }
+
+    // Get usage percentage
+    getUsagePercentage(): number {
+        if (!this.currentUser) return 0;
+        const daily = this.currentUser.usage_daily || 0;
+        const limit = this.getDailyLimit();
+        return Math.min(100, (daily / limit) * 100);
+    }
+
+    // Verify payment status (for manual checking)
+    async verifyPaymentStatus(): Promise<User | null> {
+        try {
+            if (!this.currentUser) return null;
+            
+            // Refresh user status to get latest tier
+            const updatedUser = await this.refreshUserStatus();
+            return updatedUser;
+        } catch (error) {
+            console.error('❌ Failed to verify payment status:', error);
+            return null;
+        }
+    }
+
     // Auth state listeners for UI updates
     addAuthListener(callback: (user: User | null) => void): void {
         this.authListeners.push(callback);
@@ -396,7 +467,16 @@ class AuthService {
         try {
             // @ts-ignore - invoke is available in Tauri context
             const tauriUser = await invoke('load_user_session');
-            console.log('🔍 DEBUG: Tauri storage result:', tauriUser ? `${tauriUser.email} (${tauriUser.tier})` : 'null');
+            if (tauriUser) {
+                console.log('🔍 DEBUG: Tauri storage result:', `${tauriUser.email} (${tauriUser.tier})`);
+                console.log('🔍 DEBUG: Tauri user structure:', {
+                    hasUsage: !!tauriUser.usage,
+                    usageDaily: tauriUser.usage?.daily,
+                    usageDailyField: tauriUser.usage_daily
+                });
+            } else {
+                console.log('🔍 DEBUG: Tauri storage result: null');
+            }
         } catch (error) {
             console.log('❌ DEBUG: Tauri storage error:', error);
         }
