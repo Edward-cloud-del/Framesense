@@ -665,4 +665,8 @@ class GoogleVisionService {
   }
 }
 
-export default GoogleVisionService; 
+// Create and export instance for use by Enhanced AI Processor
+const googleVisionService = new GoogleVisionService();
+
+export default googleVisionService;
+export { GoogleVisionService }; // Also export class for direct use 
