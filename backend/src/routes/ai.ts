@@ -120,35 +120,65 @@ export const analyzeImageRoute = async (req: Request, res: Response) => {
     // - OpenAI: response.result.content (direct text response)
     // - OCR: response.result.fullText (extracted text)
     const extractMessageFromResponse = (response: any) => {
+      console.log('🔍 === MESSAGE EXTRACTION DEBUG ===');
+      console.log('Response exists:', !!response);
+      console.log('Response.result exists:', !!response?.result);
+      
       if (!response?.result) {
+        console.log('No response.result, checking response.content:', response?.content);
         return response?.content || 'No response generated';
       }
       
+      console.log('Response.result type:', typeof response.result);
+      console.log('Response.result keys:', Object.keys(response.result));
+      
       // Google Vision services return summary text (check both standardized and original format)
       if (response.result.summary) {
+        console.log('✅ Found summary in response.result.summary:', response.result.summary);
         return response.result.summary;
       }
       
       // Check standardized format from response optimizer
       if (response.result.data?.summary) {
+        console.log('✅ Found summary in response.result.data.summary:', response.result.data.summary);
         return response.result.data.summary;
+      }
+      
+      // Check Google Vision specific fields
+      if (response.result.celebrityDetected && response.result.bestMatch) {
+        const celebMessage = `Celebrity detected: ${response.result.bestMatch.name} (confidence: ${Math.round(response.result.bestMatch.confidence * 100)}%)`;
+        console.log('✅ Found celebrity data, generating message:', celebMessage);
+        return celebMessage;
+      }
+      
+      // Check for objects data
+      if (response.result.objects && Array.isArray(response.result.objects)) {
+        const objectMessage = `Detected ${response.result.objects.length} objects including: ${response.result.objects.slice(0, 3).map(o => o.name).join(', ')}`;
+        console.log('✅ Found objects data, generating message:', objectMessage);
+        return objectMessage;
       }
       
       // OCR services return fullText
       if (response.result.fullText) {
+        console.log('✅ Found fullText:', response.result.fullText);
         return `Text found in image: "${response.result.fullText}"`;
       }
       
       // OpenAI and other text services return content
       if (response.result.content) {
+        console.log('✅ Found content:', response.result.content);
         return response.result.content;
       }
       
       // Fallback to any text-like field
       if (typeof response.result === 'string') {
+        console.log('✅ Found string result:', response.result);
         return response.result;
       }
       
+      console.log('❌ No extractable text found in response');
+      console.log('Available result fields:', Object.keys(response.result));
+      console.log('===============================');
       return 'Analysis completed, but no text response was generated.';
     };
 

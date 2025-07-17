@@ -589,8 +589,8 @@ class GoogleVisionService {
   getEnabledFeatures(requestedFeatures, userTier) {
     const tierFeatures = {
       free: ['text'],
-      pro: ['text', 'objects', 'logos'],
-      premium: ['text', 'objects', 'logos', 'celebrities']
+      premium: ['text', 'objects', 'logos'],
+      pro: ['text', 'objects', 'logos', 'celebrities'] // Pro is highest tier
     };
 
     const allowedFeatures = tierFeatures[userTier] || tierFeatures.free;
