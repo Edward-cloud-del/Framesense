@@ -399,39 +399,82 @@ class ResponseOptimizer {
         // FIXED: Improved blocks creation to handle different OCR response formats
         let blocks = [];
         
+        console.log('🔍 === RESPONSE OPTIMIZER OCR DEBUG ===');
+        console.log('Input response type:', typeof response);
+        console.log('Input response keys:', Object.keys(response || {}));
+        console.log('Response structure sample:', JSON.stringify(response, null, 2).substring(0, 500));
+        
         // Try different sources for text blocks/regions
         if (response.textAnnotations && Array.isArray(response.textAnnotations)) {
           // Google Vision format with textAnnotations
           blocks = response.textAnnotations;
+          console.log('✅ Found textAnnotations:', blocks.length);
         } else if (response.result?.textRegions && Array.isArray(response.result.textRegions)) {
           // Google Vision enhanced format with textRegions
           blocks = response.result.textRegions;
+          console.log('✅ Found result.textRegions:', blocks.length);
         } else if (response.textRegions && Array.isArray(response.textRegions)) {
           // Direct textRegions format
           blocks = response.textRegions;
+          console.log('✅ Found textRegions:', blocks.length);
         } else if (response.regions && Array.isArray(response.regions)) {
           // Enhanced OCR regions format
           blocks = response.regions;
-        } else if (response.text || response.result?.fullText || response.result?.text) {
+          console.log('✅ Found regions:', blocks.length);
+        } else if (response.text || response.result?.fullText || response.result?.text || response.fullText) {
           // If we have text but no blocks, create a single block
-          const text = response.text || response.result?.fullText || response.result?.text;
+          const text = response.text || response.result?.fullText || response.result?.text || response.fullText || '';
           blocks = [{
             text: text,
             confidence: response.confidence || response.result?.confidence || 0.9,
             boundingBox: null,
             source: 'consolidated'
           }];
+          console.log('✅ Created consolidated block from text:', text.length, 'chars');
+        } else {
+          console.log('❌ No text blocks/regions found in response');
+        }
+        
+        // ENHANCED: Try multiple text extraction strategies
+        let extractedText = '';
+        const textSources = [
+          response.text,
+          response.result?.fullText,
+          response.result?.text,
+          response.fullText,
+          response.fullTextAnnotation?.text,
+          // Try from blocks if available
+          blocks?.[0]?.text,
+          // Try from textAnnotations
+          response.textAnnotations?.[0]?.description
+        ];
+        
+        for (const source of textSources) {
+          if (source && typeof source === 'string' && source.length > 0) {
+            extractedText = source;
+            console.log('✅ Extracted text from source:', extractedText.substring(0, 50) + (extractedText.length > 50 ? '...' : ''));
+            break;
+          }
+        }
+        
+        if (!extractedText) {
+          console.log('❌ No text found in any source');
+          console.log('Available text sources check:');
+          textSources.forEach((source, index) => {
+            console.log(`  Source ${index}: ${typeof source} - "${String(source).substring(0, 30)}"`);
+          });
         }
         
         console.log(`🔧 OCR_RESULTS blocks creation: Found ${blocks.length} blocks from response`);
-        console.log(`📝 Available text: "${response.text || response.result?.fullText || response.result?.text || 'none'}"`);
+        console.log(`📝 Available text: "${extractedText || 'none'}"`);
+        console.log('=====================================');
         
         standardized.data = {
-          text: response.text || response.result?.fullText || response.result?.text || response.fullTextAnnotation?.text || '',
+          text: extractedText,
           confidence: response.confidence || response.result?.confidence || 0,
           blocks: blocks,
-          hasText: !!(response.text || response.result?.fullText || response.result?.text),
-          wordCount: response.wordCount || response.result?.wordCount || 0
+          hasText: !!(extractedText && extractedText.length > 0),
+          wordCount: extractedText ? extractedText.split(/\s+/).filter(w => w.length > 0).length : 0
         };
         break;
         

@@ -136,17 +136,49 @@ class EnhancedOCR {
         includeRegions: true
       });
 
+      console.log('🔍 === GOOGLE VISION RESPONSE DEBUG ===');
+      console.log('Raw Google Vision result:', JSON.stringify(result, null, 2));
+      console.log('result.result exists:', !!result.result);
+      console.log('result.result.fullText:', result.result?.fullText);
+      console.log('result.result.textRegions length:', result.result?.textRegions?.length || 0);
+      console.log('=====================================');
+
+      // FIXED: Extract text from correct Google Vision response format
+      const extractedText = result.result?.fullText || result.fullText || result.text || '';
+      const extractedRegions = result.result?.textRegions || result.textRegions || result.regions || [];
+      const extractedConfidence = result.result?.confidence || result.confidence || 0.9;
+      const extractedWordCount = result.result?.wordCount || result.wordCount || extractedText.split(/\s+/).filter(w => w.length > 0).length;
+
+      console.log('🔍 === EXTRACTED VALUES DEBUG ===');
+      console.log('Extracted text:', `"${extractedText}"`);
+      console.log('Extracted text length:', extractedText.length);
+      console.log('Extracted regions count:', extractedRegions.length);
+      console.log('Extracted confidence:', extractedConfidence);
+      console.log('Extracted word count:', extractedWordCount);
+      console.log('================================');
+
       // Convert Google Vision format to standard OCR format
-      return {
-        text: result.text || '',
-        confidence: result.confidence || 0.9,
-        has_text: (result.text || '').length > 0,
-        word_count: (result.text || '').split(/\s+/).length,
+      const ocrResult = {
+        text: extractedText,
+        confidence: extractedConfidence,
+        has_text: extractedText.length > 0,
+        word_count: extractedWordCount,
         language_detected: language,
-        regions: result.regions || [],
-        cost: result.cost || 0.0015,
-        preprocessing_used: false
+        regions: extractedRegions,
+        cost: result.metadata?.cost || result.cost || 0.0015,
+        preprocessing_used: false,
+        // ADDED: Include both format variations for compatibility
+        fullText: extractedText,
+        textRegions: extractedRegions
       };
+
+      console.log('🔍 === FINAL OCR RESULT DEBUG ===');
+      console.log('OCR Result:', JSON.stringify(ocrResult, null, 2));
+      console.log('OCR Result has text:', ocrResult.has_text);
+      console.log('OCR Result text field:', `"${ocrResult.text}"`);
+      console.log('================================');
+
+      return ocrResult;
 
     } catch (error) {
       console.error('❌ Google Vision fallback failed:', error);
