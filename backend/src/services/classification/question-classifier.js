@@ -223,9 +223,9 @@ class QuestionClassifier {
     
     console.log(`Best Match:`, bestMatch);
     
-    // If no good match found (score < 0.5), use fallback
-    if (bestMatch.score < 0.5) {
-      console.log(`Using fallback (score < 0.5): ${this.fallbackType.id}`);
+    // If no good match found (score < 0.3), use fallback (lowered threshold for better matching)
+    if (bestMatch.score < 0.3) {
+      console.log(`Using fallback (score < 0.3): ${this.fallbackType.id}`);
       const result = {
         ...this.fallbackType,
         confidence: 0.3,
