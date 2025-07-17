@@ -76,7 +76,7 @@ class SmartRouter {
   async routeRequest(questionType, userModelChoice, userProfile, options = {}) {
     const startTime = Date.now();
     console.log(`🎯 === SMART ROUTER DEBUG ===`);
-    console.log(`Question Type: ${questionType.type}`);
+    console.log(`Question Type: ${questionType.id}`);
     console.log(`User Tier: ${userProfile.tier}`);
     console.log(`User Model Choice: ${userModelChoice || 'none'}`);
     console.log(`User Profile:`, {
@@ -89,7 +89,7 @@ class SmartRouter {
 
     try {
       // 1. Validate tier access for question type
-      console.log(`🔒 Checking tier access for question type: ${questionType.type}`);
+      console.log(`🔒 Checking tier access for question type: ${questionType.id}`);
       const accessCheck = await this.tierAccess.validateAccess(questionType, userProfile);
       console.log(`🔍 Access Check Result:`, {
         allowed: accessCheck.allowed,
@@ -99,7 +99,7 @@ class SmartRouter {
       
       if (!accessCheck.allowed) {
         console.error(`🚫 TIER ACCESS DENIED: ${accessCheck.reason}`);
-        console.error(`   Question Type: ${questionType.type}`);
+        console.error(`   Question Type: ${questionType.id}`);
         console.error(`   User Tier: ${userProfile.tier}`);
         console.error(`   Suggested Tier: ${accessCheck.suggestedTier}`);
         return this.getFallbackRoute(questionType, userProfile, accessCheck.suggestedTier);
@@ -160,7 +160,7 @@ class SmartRouter {
     }
 
     // Use default model for question type
-    const defaultRoute = this.DEFAULT_ROUTES[questionType.type];
+    const defaultRoute = this.DEFAULT_ROUTES[questionType.id];
     if (defaultRoute) {
       const defaultModel = defaultRoute.model;
       
@@ -182,12 +182,12 @@ class SmartRouter {
    */
   async getServiceConfiguration(questionType, selectedModel, userProfile) {
     const modelInfo = await this.modelSelector.getModelInfo(selectedModel);
-    const defaultRoute = this.DEFAULT_ROUTES[questionType.type];
+    const defaultRoute = this.DEFAULT_ROUTES[questionType.id];
 
     // Determine primary service based on model
     let primaryService;
     if (modelInfo.provider === 'google') {
-      primaryService = this.getGoogleVisionService(questionType.type);
+      primaryService = this.getGoogleVisionService(questionType.id);
     } else if (modelInfo.provider === 'openai') {
       primaryService = 'openai-vision';
     } else if (modelInfo.provider === 'hybrid') {
@@ -236,7 +236,7 @@ class SmartRouter {
     // Add service-specific parameters
     if (modelInfo.provider === 'google') {
       baseParams.confidenceThreshold = 0.8;
-      baseParams.maxResults = questionType.type === 'COUNT_OBJECTS' ? 50 : 10;
+      baseParams.maxResults = questionType.id === 'COUNT_OBJECTS' ? 50 : 10;
     }
 
     if (modelInfo.provider === 'openai') {

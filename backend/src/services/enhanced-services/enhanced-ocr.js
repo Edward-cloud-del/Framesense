@@ -114,55 +114,10 @@ class EnhancedOCR {
   async tesseractOCR(imageData, options = {}) {
     const { language = 'eng', preprocessing = true } = options;
     
-    const Tesseract = await getTesseract();
-    if (!Tesseract) {
-      throw new Error('Tesseract.js not available');
-    }
-
-    try {
-      console.log('📝 Starting Tesseract OCR with robust error handling...');
-      
-      // Preprocess image if enabled
-      let processedImage = imageData;
-      if (preprocessing) {
-        processedImage = await this.preprocessImageForOCR(imageData);
-      }
-
-      // Run Tesseract OCR with timeout and better error handling
-      const result = await Promise.race([
-        Tesseract.recognize(processedImage, language, {
-          logger: m => {
-            if (m.status === 'recognizing text') {
-              console.log(`📝 Tesseract: ${Math.round(m.progress * 100)}% complete`);
-            }
-          },
-          tessedit_pageseg_mode: Tesseract.PSM.AUTO,
-          tessedit_ocr_engine_mode: Tesseract.OEM.LSTM_ONLY,
-          preserve_interword_spaces: '1'
-        }),
-        new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Tesseract timeout after 30s')), 30000)
-        )
-      ]);
-
-      // Extract text and confidence
-      const extractedText = result.data.text.trim();
-      const confidence = result.data.confidence / 100; // Convert to 0-1 range
-
-      return {
-        text: extractedText,
-        confidence: confidence,
-        has_text: extractedText.length > 0,
-        word_count: extractedText.split(/\s+/).length,
-        language_detected: language,
-        regions: result.data.words || [],
-        preprocessing_used: preprocessing
-      };
-
-    } catch (error) {
-      console.error('❌ Tesseract OCR failed:', error);
-      throw error;
-    }
+    // Temporarily disable Tesseract due to 404 training data download issue
+    console.log('⚠️ Tesseract OCR: Temporarily disabled due to training data download issue (404 error)');
+    console.log('🔄 Falling back to Google Vision...');
+    throw new Error('Tesseract temporarily disabled - training data download failing with 404');
   }
 
   /**

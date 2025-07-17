@@ -83,7 +83,7 @@ class TierAccess {
   async validateAccess(questionType, userProfile) {
     const startTime = Date.now();
     console.log(`🛡️ === TIER ACCESS VALIDATION ===`);
-    console.log(`Question Type: ${questionType.type}`);
+    console.log(`Question Type: ${questionType.id}`);
     console.log(`User Tier: ${userProfile.tier}`);
     console.log(`User ID: ${userProfile.id}`);
     console.log(`================================`);
@@ -103,9 +103,9 @@ class TierAccess {
       }
 
       // Check if question type is allowed for tier
-      const requiredTier = this.QUESTION_TYPE_TIERS[questionType.type];
+      const requiredTier = this.QUESTION_TYPE_TIERS[questionType.id];
       console.log(`🔍 Question Type Tier Requirements:`, {
-        questionType: questionType.type,
+        questionType: questionType.id,
         requiredTier: requiredTier || 'NOT DEFINED',
         userTier: userProfile.tier
       });
@@ -115,11 +115,11 @@ class TierAccess {
       console.log(`✅ Tier Access Check Result: ${canAccess}`);
       
       if (!canAccess) {
-        console.error(`❌ TIER INSUFFICIENT: ${questionType.type} requires ${requiredTier}, user has ${userProfile.tier}`);
+        console.error(`❌ TIER INSUFFICIENT: ${questionType.id} requires ${requiredTier}, user has ${userProfile.tier}`);
         return this.createAccessDeniedResult(
           'tier_insufficient', 
           requiredTier, 
-          `${questionType.type} requires ${requiredTier} tier or higher`
+          `${questionType.id} requires ${requiredTier} tier or higher`
         );
       }
 
@@ -344,7 +344,7 @@ class TierAccess {
       if (this.analyticsTracker) {
         await this.analyticsTracker.trackRequest({
           userId,
-          questionType: questionType.type,
+          questionType: questionType.id,
           service,
           cost,
           timestamp: new Date(),

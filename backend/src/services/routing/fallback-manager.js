@@ -90,11 +90,11 @@ class FallbackManager {
    * @returns {Array} Ordered array of fallback options
    */
   async buildFallbackChain(primaryService, questionType, userTier = 'free') {
-    console.log(`🔄 Fallback Manager: Building chain for ${primaryService} (${questionType.type})`);
+    console.log(`🔄 Fallback Manager: Building chain for ${primaryService} (${questionType.id})`);
 
     try {
       // Get base fallback chain for question type
-      const baseChain = this.FALLBACK_CHAINS[questionType.type] || this.FALLBACK_CHAINS.DESCRIBE_SCENE;
+      const baseChain = this.FALLBACK_CHAINS[questionType.id] || this.FALLBACK_CHAINS.DESCRIBE_SCENE;
       
       // Filter services by user tier access
       const accessibleServices = [];
@@ -132,7 +132,7 @@ class FallbackManager {
 
     } catch (error) {
       console.error('❌ Fallback Manager: Chain building failed:', error);
-      return this.getEmergencyFallbackChain(questionType.type);
+      return this.getEmergencyFallbackChain(questionType.id);
     }
   }
 
@@ -483,7 +483,7 @@ class FallbackManager {
     
     return {
       primaryService,
-      questionType: questionType.type,
+      questionType: questionType.id,
       userTier,
       fallbackChain: chain,
       totalOptions: chain.length,

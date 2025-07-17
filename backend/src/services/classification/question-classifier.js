@@ -189,13 +189,17 @@ class QuestionClassifier {
   classifyQuestion(questionText) {
     console.log(`🎯 === QUESTION CLASSIFIER DEBUG ===`);
     console.log(`Input Question: "${questionText}"`);
+    console.log(`Question Type: ${typeof questionText}`);
+    console.log(`Question Length: ${questionText?.length}`);
     
     if (!questionText || typeof questionText !== 'string') {
+      console.error(`❌ Invalid question text provided:`, questionText);
       throw new Error('Invalid question text provided');
     }
 
     const normalizedQuestion = questionText.toLowerCase().trim();
     console.log(`Normalized Question: "${normalizedQuestion}"`);
+    console.log(`Available Question Types:`, Object.keys(this.questionTypes));
     
     // Score each question type based on pattern matches
     const scores = {};
@@ -238,6 +242,9 @@ class QuestionClassifier {
     };
     
     console.log(`Final Result:`, result);
+    console.log(`Final Result ID:`, result.id);
+    console.log(`Final Result Type:`, result.type);
+    console.log(`Result Keys:`, Object.keys(result));
     console.log(`=================================`);
     return result;
   }

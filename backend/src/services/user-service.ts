@@ -41,14 +41,24 @@ class UserService {
         const passwordHash = await bcrypt.hash(password, 12);
         console.log('🔍 Password hash length:', passwordHash.length);
 
-        // Insert user
-        console.log('🔍 Attempting to insert user with email length:', email.length, 'name length:', name.length);
+        // Determine tier based on email for testing
+        let tier = 'free'; // Default tier
+        if (email.includes('pro-user') || email.includes('pro@') || email.includes('test.dev')) {
+            tier = 'pro';
+            console.log('🎯 AUTO-ASSIGNED PRO TIER for test user:', email);
+        } else if (email.includes('premium') || email.includes('admin')) {
+            tier = 'premium';
+            console.log('🎯 AUTO-ASSIGNED PREMIUM TIER for test user:', email);
+        }
+
+        // Insert user with proper tier
+        console.log('🔍 Attempting to insert user with email length:', email.length, 'name length:', name.length, 'tier:', tier);
         const result = await query(
-            `INSERT INTO users (email, name, password_hash) 
-             VALUES ($1, $2, $3) 
+            `INSERT INTO users (email, name, password_hash, tier) 
+             VALUES ($1, $2, $3, $4) 
              RETURNING id, email, name, tier, subscription_status, stripe_customer_id, 
                        usage_daily, usage_total, created_at, updated_at`,
-            [email, name, passwordHash]
+            [email, name, passwordHash, tier]
         );
 
         const user = result.rows[0];

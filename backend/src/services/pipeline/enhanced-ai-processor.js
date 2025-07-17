@@ -179,7 +179,7 @@ class EnhancedAIProcessor {
       await this.analyticsTracker.trackRequest({
         userId,
         userTier: userProfile.tier,
-        questionType: questionType.type,
+        questionType: questionType.id,
         service: routing.service,
         model: routing.model,
         responseTime: serviceResponseTime,
