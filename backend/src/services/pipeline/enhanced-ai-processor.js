@@ -273,23 +273,57 @@ class EnhancedAIProcessor {
           });
           
         case 'google-vision-text':
-          console.log(`👁️ Executing Google Vision Text Detection for tier: ${userProfile.tier}`);
-          return await this.googleVision.detectText(imageData, userProfile.tier);
+          console.log(`👁️ === GOOGLE VISION TEXT DETECTION EXECUTION ===`);
+          console.log(`User ID: ${userProfile.id}`);
+          console.log(`User Tier: ${userProfile.tier}`);
+          console.log(`User Email: ${userProfile.email}`);
+          console.log(`Required Tier: free+ (available to all)`);
+          console.log(`==============================================`);
+          const textOptions = {
+            userTier: userProfile.tier,
+            userId: userProfile.id,
+            userEmail: userProfile.email,
+            languageHints: ['en', 'sv', 'es', 'fr', 'de']
+          };
+          return await this.googleVision.detectText(imageData, textOptions);
           
         case 'google-vision-objects':
-          console.log(`🎯 Executing Google Vision Object Detection for tier: ${userProfile.tier}`);
-          return await this.googleVision.detectObjects(imageData, userProfile.tier);
+          console.log(`🎯 === GOOGLE VISION OBJECTS EXECUTION ===`);
+          console.log(`User ID: ${userProfile.id}`);
+          console.log(`User Tier: ${userProfile.tier}`);
+          console.log(`User Email: ${userProfile.email}`);
+          console.log(`Required Tier: pro+`);
+          console.log(`=====================================`);
+          const objectOptions = {
+            userTier: userProfile.tier,
+            userId: userProfile.id,
+            userEmail: userProfile.email,
+            maxResults: 50,
+            maxLabels: 20
+          };
+          return await this.googleVision.detectObjects(imageData, objectOptions);
           
         case 'google-vision-web':
-          console.log(`⭐ Attempting Google Vision Celebrity Detection...`);
+          console.log(`⭐ === GOOGLE VISION CELEBRITY DETECTION EXECUTION ===`);
+          console.log(`User ID: ${userProfile.id}`);
+          console.log(`User Tier: ${userProfile.tier}`);
+          console.log(`User Email: ${userProfile.email}`);
           console.log(`🔒 Tier Check: User tier '${userProfile.tier}' vs required 'premium'`);
+          console.log(`========================================================`);
           // Premium feature - celebrity identification
           if (userProfile.tier !== 'premium') {
             console.error(`❌ TIER ACCESS DENIED: User tier '${userProfile.tier}' cannot access celebrity identification (premium required)`);
             throw new Error('Celebrity identification requires premium subscription');
           }
           console.log(`✅ TIER ACCESS GRANTED: Proceeding with celebrity detection`);
-          return await this.googleVision.detectCelebritiesAndWeb(imageData, userProfile.tier);
+          const webOptions = {
+            userTier: userProfile.tier,
+            userId: userProfile.id,
+            userEmail: userProfile.email,
+            maxResults: 20,
+            maxFaces: 10
+          };
+          return await this.googleVision.detectCelebritiesAndWeb(imageData, webOptions);
           
         case 'google-vision-logo':
           console.log(`🏷️ Executing Google Vision Logo Detection for tier: ${userProfile.tier}`);

@@ -35,10 +35,13 @@ class GoogleVisionService {
    * High-accuracy text extraction with language detection
    */
   async detectText(imageData, options = {}) {
-    console.log(`👁️ === GOOGLE VISION TEXT DETECTION ===`);
-    console.log(`User Tier: ${options || 'not provided'}`);
-    console.log(`Options:`, options);
-    console.log(`=====================================`);
+    console.log(`👁️ === GOOGLE VISION TEXT DETECTION START ===`);
+    console.log(`User Tier: ${options.userTier || 'not provided'}`);
+    console.log(`User ID: ${options.userId || 'not provided'}`);
+    console.log(`Options:`, JSON.stringify(options, null, 2));
+    console.log(`Image Data Length: ${imageData ? imageData.length : 0}`);
+    console.log(`API Config Available: ${!!this.client}`);
+    console.log(`============================================`);
     
     try {
       const startTime = Date.now();
@@ -105,10 +108,14 @@ class GoogleVisionService {
    * Detect and count objects with bounding boxes
    */
   async detectObjects(imageData, options = {}) {
-    console.log(`🎯 === GOOGLE VISION OBJECT DETECTION ===`);
-    console.log(`User Tier: ${options || 'not provided'}`);
-    console.log(`Options:`, options);
-    console.log(`=======================================`);
+    console.log(`🎯 === GOOGLE VISION OBJECT DETECTION START ===`);
+    console.log(`User Tier: ${options.userTier || 'not provided'}`);
+    console.log(`User ID: ${options.userId || 'not provided'}`);
+    console.log(`Options:`, JSON.stringify(options, null, 2));
+    console.log(`Image Data Length: ${imageData ? imageData.length : 0}`);
+    console.log(`API Config Available: ${!!this.client}`);
+    console.log(`Service Access: Pro+ required for object detection`);
+    console.log(`==============================================`);
     
     try {
       const startTime = Date.now();
@@ -177,11 +184,15 @@ class GoogleVisionService {
    * Identify celebrities, public figures, and web entities
    */
   async detectCelebritiesAndWeb(imageData, options = {}) {
-    console.log(`⭐ === GOOGLE VISION CELEBRITY DETECTION ===`);
-    console.log(`User Tier: ${options || 'not provided'}`);
-    console.log(`Options:`, options);
+    console.log(`⭐ === GOOGLE VISION CELEBRITY DETECTION START ===`);
+    console.log(`User Tier: ${options.userTier || options || 'not provided'}`);
+    console.log(`User ID: ${options.userId || 'not provided'}`);
+    console.log(`Options:`, JSON.stringify(options, null, 2));
+    console.log(`Image Data Length: ${imageData ? imageData.length : 0}`);
+    console.log(`API Config Available: ${!!this.client}`);
     console.log(`NOTE: This is a PREMIUM-only feature`);
-    console.log(`==========================================`);
+    console.log(`Service Access: Premium required for celebrity detection`);
+    console.log(`================================================`);
     
     try {
       const startTime = Date.now();
