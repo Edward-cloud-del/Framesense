@@ -378,6 +378,23 @@ class ResponseOptimizer {
         };
         break;
         
+      case 'GOOGLE_VISION_OBJECTS':
+        // Extract the essential data and preserve the summary text for text extraction
+        standardized.data = {
+          objects: response.result?.objects || [],
+          labels: response.result?.labels || [],
+          objectCounts: response.result?.objectCounts || {},
+          totalObjects: response.result?.totalObjects || 0,
+          summary: response.result?.summary || 'No objects detected',
+          confidence: response.metadata?.confidence || 0.9
+        };
+        standardized.metadata = {
+          responseTime: response.metadata?.responseTime || 0,
+          cost: response.metadata?.cost || 0,
+          objectsDetected: response.result?.objects?.length || 0
+        };
+        break;
+        
       case 'OCR_RESULTS':
         standardized.data = {
           text: response.text || response.fullTextAnnotation?.text || '',

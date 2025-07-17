@@ -124,9 +124,14 @@ export const analyzeImageRoute = async (req: Request, res: Response) => {
         return response?.content || 'No response generated';
       }
       
-      // Google Vision services return summary text
+      // Google Vision services return summary text (check both standardized and original format)
       if (response.result.summary) {
         return response.result.summary;
+      }
+      
+      // Check standardized format from response optimizer
+      if (response.result.data?.summary) {
+        return response.result.data.summary;
       }
       
       // OCR services return fullText
