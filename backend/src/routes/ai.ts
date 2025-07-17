@@ -80,24 +80,64 @@ export const analyzeImageRoute = async (req: Request, res: Response) => {
       usage: { daily: user?.usage_daily || 0, monthly: user?.usage_total || 0 }
     };
 
-    console.log(`🔍 === LEGACY AI PROCESSOR USER CONTEXT ===`);
+    console.log(`🔍 === ENHANCED AI PROCESSOR VIA LEGACY ROUTE ===`);
     console.log(`User ID: ${userContext.userId}`);
     console.log(`User Tier: ${userContext.userTier}`);
     console.log(`User Usage: Daily=${userContext.usage.daily}, Monthly=${userContext.usage.monthly}`);
-    console.log(`============================================`);
+    console.log(`📍 ROUTE: /api/analyze (legacy) → Enhanced AI Processor`);
+    console.log(`🎯 PURPOSE: Enable Google Vision for pro users via legacy endpoint`);
+    console.log(`================================================`);
 
-    // Use optimized AI processor with fallback strategies AND USER CONTEXT
-    const request = {
-      message,
-      imageData,
-      start_time: startTime
+    // Import Enhanced AI Processor for Google Vision support
+    const { default: enhancedAIProcessor } = await import('../services/pipeline/enhanced-ai-processor.js');
+
+    // Use Enhanced AI Processor instead of legacy processor
+    const options = {
+      modelPreference: null, // Let system choose best model
+      forceModel: false,
+      cacheStrategy: 'default'
     };
 
-    const openaiClient = getOpenAIClient();
-    const response = await AIProcessor.processWithFallback(request, openaiClient, userContext);
+    const response = await enhancedAIProcessor.processAnalysisRequest(
+      imageData,
+      message,
+      userContext.userId,
+      options
+    );
 
-    console.log('✅ Optimized AI processing completed');
-    res.json(response);
+    console.log('✅ Enhanced AI processing completed via legacy route');
+    
+    // Convert Enhanced AI Processor response to legacy format for frontend compatibility
+    const legacyResponse = {
+      message: response.result?.content || response.content || 'No response generated',
+      success: response.success !== false,
+      processing_info: {
+        question_type: response.questionType || 'unknown',
+        optimization_strategy: response.metadata?.service || 'enhanced',
+        ocr_used: false, // Will be set by Enhanced AI Processor if OCR was used
+        image_optimized: !!response.metadata?.optimized,
+        processing_time: {
+          ocr: 0,
+          total: response.metadata?.responseTime || (Date.now() - startTime)
+        }
+      },
+      usage: {
+        requestCount: 1,
+        remainingRequests: 999,
+        timestamp: new Date().toISOString()
+      },
+      // Enhanced metadata (backwards compatible addition)
+      enhanced_metadata: response.metadata
+    };
+    
+    console.log('📤 Legacy response formatted:', {
+      messageLength: legacyResponse.message.length,
+      service: response.metadata?.service,
+      tier: response.metadata?.user?.tier,
+      cached: response.metadata?.cached
+    });
+    
+    res.json(legacyResponse);
 
   } catch (error: any) {
     console.error('❌ AI processing error:', error);
