@@ -153,7 +153,7 @@ export const analyzeImageRoute = async (req: Request, res: Response) => {
       
       // Check for objects data
       if (response.result.objects && Array.isArray(response.result.objects)) {
-        const objectMessage = `Detected ${response.result.objects.length} objects including: ${response.result.objects.slice(0, 3).map(o => o.name).join(', ')}`;
+        const objectMessage = `Detected ${response.result.objects.length} objects including: ${response.result.objects.slice(0, 3).map((o: any) => o.name).join(', ')}`;
         console.log('✅ Found objects data, generating message:', objectMessage);
         return objectMessage;
       }
