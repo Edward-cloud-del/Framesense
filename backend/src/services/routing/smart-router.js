@@ -40,7 +40,7 @@ class SmartRouter {
       },
       IDENTIFY_CELEBRITY: {
         primary: 'google-vision-web',
-        fallback: 'openai-vision',
+        fallback: 'openai-vision', // OpenAI vision as fallback for celebrity ID
         model: 'google-vision',
         tier: 'premium'
       },

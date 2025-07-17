@@ -12,12 +12,18 @@ const QUESTION_TYPES = {
     id: 'PURE_TEXT',
     patterns: [
       /what does (this|it) say/i,
+      /what does.*text.*say/i,
       /read (the )?text/i,
+      /read this/i,
       /transcribe/i,
       /extract text/i,
       /what is written/i,
+      /what.*written/i,
       /what text/i,
-      /can you read/i
+      /can you read/i,
+      /text.*says?/i,
+      /what.*says?.*text/i,
+      /translate.*text/i
     ],
     services: ['enhanced-ocr'],
     defaultModel: 'tesseract',
@@ -182,7 +188,8 @@ const QUESTION_TYPES = {
 class QuestionClassifier {
   constructor() {
     this.questionTypes = QUESTION_TYPES;
-    this.fallbackType = QUESTION_TYPES.DESCRIBE_SCENE; // Default fallback
+    // COST OPTIMIZATION: Use OCR as fallback instead of expensive OpenAI vision
+    this.fallbackType = QUESTION_TYPES.PURE_TEXT; // OCR fallback for cost savings
   }
 
   /**
