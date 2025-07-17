@@ -349,9 +349,21 @@ class EnhancedAIProcessor {
           throw new Error('OpenAI Enhanced service not yet implemented');
           
         case 'open-source-api':
-          console.log(`🔌 Attempting Open Source API...`);
-          // TODO: Implement plugin system
-          throw new Error('Open source API plugins not yet implemented');
+          console.log(`🔌 === FALLBACK FROM OPEN-SOURCE-API ===`);
+          console.log(`⚠️ TEMPORARY FALLBACK: Redirecting open-source-api to enhanced-ocr`);
+          console.log(`🔍 This indicates Smart Router is still directing to unimplemented service`);
+          console.log(`📝 Question: "${question}"`);
+          console.log(`👤 User Tier: ${userProfile.tier}`);
+          console.log(`🎯 Model: ${model}`);
+          console.log(`=============================================`);
+          
+          // TEMPORARY FALLBACK: Use enhanced-ocr instead of failing
+          console.log(`🔄 Falling back to Enhanced OCR...`);
+          return await this.enhancedOCR.extractText(imageData, {
+            ...parameters,
+            language: parameters?.language || 'eng',
+            preprocessing: true
+          });
           
         default:
           console.error(`❌ UNKNOWN SERVICE: ${service}`);
@@ -649,4 +661,4 @@ class EnhancedAIProcessor {
 // Create and export singleton instance
 const enhancedAIProcessor = new EnhancedAIProcessor();
 
-export default enhancedAIProcessor; 
+export default enhancedAIProcessor;
