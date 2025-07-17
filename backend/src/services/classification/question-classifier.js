@@ -52,14 +52,18 @@ const QUESTION_TYPES = {
   IDENTIFY_CELEBRITY: {
     id: 'IDENTIFY_CELEBRITY',
     patterns: [
-      /who is (this|that)/i,
+      /who is (this|that)(\s+person)?/i,
+      /who is.*person/i,
+      /who is.*actor/i,
+      /who is.*celebrity/i,
       /identify (person|actor|celebrity)/i,
       /name of (this )?person/i,
       /recognize (person|face)/i,
       /famous person/i,
       /celebrity/i,
       /actor/i,
-      /actress/i
+      /actress/i,
+      /who.*this.*person/i
     ],
     services: ['google-vision-web'],
     defaultModel: 'google-vision',
