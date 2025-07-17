@@ -110,17 +110,21 @@ class EnhancedAIProcessor {
     console.log(`🚀 Enhanced AI Processor: Starting request ${requestId} for user ${userId}`);
     console.log(`🔍 Call Stack Check: ${Error().stack?.split('\n').length || 'unknown'} levels deep`);
     
-    // Prevent infinite recursion
+    // FIXED: Better recursion protection using user+question key instead of unique requestId
+    const recursionKey = `${userId}_${question}_${imageData ? 'with_image' : 'no_image'}`;
     if (!this.activeRequests) {
       this.activeRequests = new Set();
     }
     
-    if (this.activeRequests.has(requestId)) {
-      console.error(`❌ INFINITE RECURSION DETECTED: Request ${requestId} already processing`);
-      throw new Error('Infinite recursion detected in Enhanced AI Processor');
+    if (this.activeRequests.has(recursionKey)) {
+      console.error(`❌ CIRCULAR RECURSION DETECTED: User ${userId} question "${question}" already processing`);
+      console.error(`🔄 Active requests: ${Array.from(this.activeRequests).join(', ')}`);
+      console.error(`📍 Stack trace:`, Error().stack);
+      throw new Error('Circular recursion detected in Enhanced AI Processor - same user question already processing');
     }
     
-    this.activeRequests.add(requestId);
+    this.activeRequests.add(recursionKey);
+    console.log(`✅ Recursion protection: Added ${recursionKey} to active requests`);
     
     try {
       this.metrics.totalRequests++;
@@ -239,7 +243,7 @@ class EnhancedAIProcessor {
       console.log(`✅ Enhanced AI Processor: Request ${requestId} completed successfully in ${totalResponseTime}ms`);
       
       // Cleanup active request tracking
-      this.activeRequests?.delete(requestId);
+      this.activeRequests?.delete(recursionKey);
       
       return response;
       
@@ -248,7 +252,7 @@ class EnhancedAIProcessor {
       this.metrics.failedRequests++;
       
       // Cleanup active request tracking on error
-      this.activeRequests?.delete(requestId);
+      this.activeRequests?.delete(recursionKey);
       
       return await this.handleError(error, question, userId, requestId, Date.now() - startTime);
     }
