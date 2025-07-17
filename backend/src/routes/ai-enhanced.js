@@ -17,6 +17,190 @@ const upload = multer({
   }
 });
 
+// 👑 ADMIN ENDPOINT: Upgrade user tier (for testing premium features)
+router.post('/admin/upgrade-tier', async (req, res) => {
+  try {
+    const { email, tier, adminSecret } = req.body;
+    
+    // Simple admin protection (use environment variable in production)
+    if (adminSecret !== 'framesense-admin-2024') {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Unauthorized admin access' 
+      });
+    }
+    
+    if (!email || !tier) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Email and tier are required' 
+      });
+    }
+    
+    if (!['free', 'pro', 'premium'].includes(tier)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Tier must be free, pro, or premium' 
+      });
+    }
+    
+    console.log(`👑 ADMIN: Upgrading user ${email} to ${tier} tier`);
+    
+    // Update user tier in database
+    await UserService.updateUserTier(email, tier, 'active');
+    
+    // Verify the update
+    const user = await UserService.getUserByEmail(email);
+    console.log(`✅ ADMIN: User tier updated successfully:`, {
+      email: user.email,
+      tier: user.tier,
+      subscription_status: user.subscription_status
+    });
+    
+    res.json({
+      success: true,
+      message: `User ${email} successfully upgraded to ${tier} tier`,
+      user: {
+        id: user.id,
+        email: user.email,
+        tier: user.tier,
+        subscription_status: user.subscription_status
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ ADMIN: Tier upgrade failed:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
+  }
+});
+
+// 🔍 ADMIN ENDPOINT: Get user tier information
+router.get('/admin/user-tier/:email', async (req, res) => {
+  try {
+    const { email } = req.params;
+    const { adminSecret } = req.query;
+    
+    if (adminSecret !== 'framesense-admin-2024') {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Unauthorized admin access' 
+      });
+    }
+    
+    const user = await UserService.getUserByEmail(email);
+    if (!user) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'User not found' 
+      });
+    }
+    
+    res.json({
+      success: true,
+      user: {
+        id: user.id,
+        email: user.email,
+        tier: user.tier,
+        subscription_status: user.subscription_status,
+        usage_daily: user.usage_daily,
+        usage_total: user.usage_total,
+        created_at: user.created_at,
+        updated_at: user.updated_at
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ ADMIN: User lookup failed:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
+  }
+});
+
+// 🧪 ADMIN ENDPOINT: Test celebrity identification (premium feature)
+router.post('/admin/test-celebrity', async (req, res) => {
+  try {
+    const { adminSecret } = req.body;
+    
+    if (adminSecret !== 'framesense-admin-2024') {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Unauthorized admin access' 
+      });
+    }
+    
+    // Test celebrity identification with mock data
+    const testQuestion = "Who is this person?";
+    const testImageData = "data:image/jpeg;base64,mock";
+    const testUserId = "admin-test";
+    
+    console.log('🧪 ADMIN: Testing celebrity identification feature...');
+    
+    // Create mock premium user profile
+    const mockPremiumUser = {
+      id: testUserId,
+      email: 'admin@test.premium',
+      tier: 'premium',
+      subscription_status: 'active',
+      preferences: {},
+      usage: { daily: 0, monthly: 0 },
+      budget: { daily: 100.0, monthly: 1000.0 },
+      costOptimization: false
+    };
+    
+    // Test question classification
+    const questionClassifier = new QuestionClassifier();
+    const questionType = questionClassifier.classifyQuestion(testQuestion);
+    
+    console.log('🧪 ADMIN: Question classification result:', {
+      id: questionType.id,
+      tier: questionType.tier,
+      services: questionType.services
+    });
+    
+    // Test tier access
+    const tierAccess = new TierAccess(UserService, analyticsTracker);
+    const accessCheck = await tierAccess.validateAccess(questionType, mockPremiumUser);
+    
+    console.log('🧪 ADMIN: Tier access check result:', {
+      allowed: accessCheck.allowed,
+      tier: accessCheck.tier,
+      reason: accessCheck.reason
+    });
+    
+    res.json({
+      success: true,
+      test_results: {
+        question_classification: {
+          id: questionType.id,
+          tier_required: questionType.tier,
+          services: questionType.services,
+          confidence: questionType.confidence
+        },
+        tier_access: {
+          allowed: accessCheck.allowed,
+          user_tier: mockPremiumUser.tier,
+          reason: accessCheck.reason || 'Access granted',
+          permissions: accessCheck.permissions
+        },
+        system_status: 'Celebrity identification testing completed'
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ ADMIN: Celebrity test failed:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: error.message,
+      error_details: error.stack
+    });
+  }
+});
+
 // Authentication middleware
 const authenticateUser = async (req, res, next) => {
   try {
@@ -31,9 +215,20 @@ const authenticateUser = async (req, res, next) => {
     }
     
     const user = await UserService.verifyToken(token);
+    
+    // 🔍 ENHANCED USER TIER DEBUGGING
+    console.log(`🔍 === USER AUTHENTICATION DEBUG ===`);
+    console.log(`User ID: ${user.id}`);
+    console.log(`User Email: ${user.email}`);
+    console.log(`User Tier: ${user.tier}`);
+    console.log(`Subscription Status: ${user.subscription_status}`);
+    console.log(`Token Valid: true`);
+    console.log(`======================================`);
+    
     req.user = user;
     next();
   } catch (error) {
+    console.error(`❌ Authentication failed:`, error.message);
     res.status(401).json({ 
       success: false, 
       message: error.message,

@@ -41,14 +41,19 @@ class UserService {
         const passwordHash = await bcrypt.hash(password, 12);
         console.log('🔍 Password hash length:', passwordHash.length);
 
-        // Determine tier based on email for testing
-        let tier = 'free'; // Default tier
+        // Determine tier based on email - NEVER CREATE FREE ACCOUNTS
+        let tier = 'premium'; // Default to premium tier (no more free accounts)
+        
         if (email.includes('pro-user') || email.includes('pro@') || email.includes('test.dev')) {
             tier = 'pro';
             console.log('🎯 AUTO-ASSIGNED PRO TIER for test user:', email);
-        } else if (email.includes('premium') || email.includes('admin')) {
+        } else if (email.includes('premium') || email.includes('admin') || email.includes('celebrity') || email.includes('vision')) {
             tier = 'premium';
             console.log('🎯 AUTO-ASSIGNED PREMIUM TIER for test user:', email);
+        } else {
+            // Default all new accounts to premium for testing premium features
+            tier = 'premium';
+            console.log('🎯 AUTO-ASSIGNED PREMIUM TIER (default) for user:', email);
         }
 
         // Insert user with proper tier
@@ -185,6 +190,17 @@ class UserService {
                     usage_daily, usage_total, created_at, updated_at
              FROM users WHERE id = $1`,
             [userId]
+        );
+
+        return result.rows.length > 0 ? result.rows[0] : null;
+    }
+
+    async getUserByEmail(email: string): Promise<User | null> {
+        const result = await query(
+            `SELECT id, email, name, tier, subscription_status, stripe_customer_id,
+                    usage_daily, usage_total, created_at, updated_at
+             FROM users WHERE email = $1`,
+            [email]
         );
 
         return result.rows.length > 0 ? result.rows[0] : null;
