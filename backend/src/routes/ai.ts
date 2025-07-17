@@ -98,27 +98,30 @@ export const analyzeImageRoute = async (req: Request, res: Response) => {
       cacheStrategy: 'default'
     };
 
+    // Ensure imageData is properly typed - Enhanced AI Processor can handle undefined
+    const processedImageData = imageData || undefined;
+
     const response = await enhancedAIProcessor.processAnalysisRequest(
-      imageData,
+      processedImageData,
       message,
       userContext.userId,
       options
-    );
+    ) as any; // Type assertion to handle Enhanced AI Processor response
 
     console.log('✅ Enhanced AI processing completed via legacy route');
     
     // Convert Enhanced AI Processor response to legacy format for frontend compatibility
     const legacyResponse = {
-      message: response.result?.content || response.content || 'No response generated',
-      success: response.success !== false,
+      message: response?.result?.content || response?.content || 'No response generated',
+      success: response?.success !== false,
       processing_info: {
-        question_type: response.questionType || 'unknown',
-        optimization_strategy: response.metadata?.service || 'enhanced',
+        question_type: response?.questionType || 'unknown',
+        optimization_strategy: response?.metadata?.service || 'enhanced',
         ocr_used: false, // Will be set by Enhanced AI Processor if OCR was used
-        image_optimized: !!response.metadata?.optimized,
+        image_optimized: !!response?.metadata?.optimized,
         processing_time: {
           ocr: 0,
-          total: response.metadata?.responseTime || (Date.now() - startTime)
+          total: response?.metadata?.responseTime || (Date.now() - startTime)
         }
       },
       usage: {
@@ -127,14 +130,14 @@ export const analyzeImageRoute = async (req: Request, res: Response) => {
         timestamp: new Date().toISOString()
       },
       // Enhanced metadata (backwards compatible addition)
-      enhanced_metadata: response.metadata
+      enhanced_metadata: response?.metadata || {}
     };
     
     console.log('📤 Legacy response formatted:', {
       messageLength: legacyResponse.message.length,
-      service: response.metadata?.service,
-      tier: response.metadata?.user?.tier,
-      cached: response.metadata?.cached
+      service: response?.metadata?.service || 'unknown',
+      tier: response?.metadata?.user?.tier || 'unknown',
+      cached: response?.metadata?.cached || false
     });
     
     res.json(legacyResponse);
