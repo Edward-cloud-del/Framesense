@@ -108,10 +108,47 @@ export const analyzeImageRoute = async (req: Request, res: Response) => {
     ) as any; // Type assertion to handle Enhanced AI Processor response
 
     console.log('✅ Enhanced AI processing completed via legacy route');
+    console.log('🔍 === ENHANCED AI PROCESSOR RESPONSE DEBUG ===');
+    console.log('Response structure:', JSON.stringify(response, null, 2));
+    console.log('Response.result type:', typeof response?.result);
+    console.log('Response.result keys:', response?.result ? Object.keys(response.result) : 'no result');
+    console.log('==============================================');
     
     // Convert Enhanced AI Processor response to legacy format for frontend compatibility
+    // Enhanced AI Processor returns different formats depending on service:
+    // - Google Vision: response.result.summary (text description of objects/scene)
+    // - OpenAI: response.result.content (direct text response)
+    // - OCR: response.result.fullText (extracted text)
+    const extractMessageFromResponse = (response: any) => {
+      if (!response?.result) {
+        return response?.content || 'No response generated';
+      }
+      
+      // Google Vision services return summary text
+      if (response.result.summary) {
+        return response.result.summary;
+      }
+      
+      // OCR services return fullText
+      if (response.result.fullText) {
+        return `Text found in image: "${response.result.fullText}"`;
+      }
+      
+      // OpenAI and other text services return content
+      if (response.result.content) {
+        return response.result.content;
+      }
+      
+      // Fallback to any text-like field
+      if (typeof response.result === 'string') {
+        return response.result;
+      }
+      
+      return 'Analysis completed, but no text response was generated.';
+    };
+
     const legacyResponse = {
-      message: response?.result?.content || response?.content || 'No response generated',
+      message: extractMessageFromResponse(response),
       success: response?.success !== false,
       processing_info: {
         question_type: response?.questionType || 'unknown',
