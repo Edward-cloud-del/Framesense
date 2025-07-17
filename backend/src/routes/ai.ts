@@ -123,6 +123,7 @@ export const analyzeImageRoute = async (req: Request, res: Response) => {
       console.log('🔍 === MESSAGE EXTRACTION DEBUG ===');
       console.log('Response exists:', !!response);
       console.log('Response.result exists:', !!response?.result);
+      console.log('Full response structure:', JSON.stringify(response, null, 2));
       
       if (!response?.result) {
         console.log('No response.result, checking response.content:', response?.content);
@@ -131,6 +132,7 @@ export const analyzeImageRoute = async (req: Request, res: Response) => {
       
       console.log('Response.result type:', typeof response.result);
       console.log('Response.result keys:', Object.keys(response.result));
+      console.log('Response.result structure:', JSON.stringify(response.result, null, 2));
       
       // Google Vision services return summary text (check both standardized and original format)
       if (response.result.summary) {
@@ -170,14 +172,70 @@ export const analyzeImageRoute = async (req: Request, res: Response) => {
         return response.result.content;
       }
       
+      // NEW: Check for nested text fields
+      if (response.result.text) {
+        console.log('✅ Found text field:', response.result.text);
+        return response.result.text;
+      }
+      
+      // NEW: Check for message field
+      if (response.result.message) {
+        console.log('✅ Found message field:', response.result.message);
+        return response.result.message;
+      }
+      
+      // NEW: Check for response field
+      if (response.result.response) {
+        console.log('✅ Found response field:', response.result.response);
+        return response.result.response;
+      }
+      
+      // NEW: Check if result has a nested result field
+      if (response.result.result) {
+        console.log('✅ Found nested result field, recursing:', response.result.result);
+        return extractMessageFromResponse({ result: response.result.result });
+      }
+      
       // Fallback to any text-like field
       if (typeof response.result === 'string') {
         console.log('✅ Found string result:', response.result);
         return response.result;
       }
       
+      // NEW: Deep search for any text-containing fields
+      const textFields = ['text', 'content', 'message', 'summary', 'description', 'result', 'answer', 'response'];
+      for (const field of textFields) {
+        if (response.result[field] && typeof response.result[field] === 'string') {
+          console.log(`✅ Found text in ${field}:`, response.result[field]);
+          return response.result[field];
+        }
+      }
+      
+      // NEW: Check if there's any string value in the object
+      const findStringValue = (obj: any, depth = 0): string | null => {
+        if (depth > 3) return null; // Prevent infinite recursion
+        
+        for (const [key, value] of Object.entries(obj)) {
+          if (typeof value === 'string' && value.length > 0) {
+            console.log(`✅ Found string value in ${key}:`, value);
+            return value;
+          }
+          if (typeof value === 'object' && value !== null) {
+            const nestedString = findStringValue(value, depth + 1);
+            if (nestedString) return nestedString;
+          }
+        }
+        return null;
+      };
+      
+      const foundString = findStringValue(response.result);
+      if (foundString) {
+        return foundString;
+      }
+      
       console.log('❌ No extractable text found in response');
       console.log('Available result fields:', Object.keys(response.result));
+      console.log('Response.result full dump:', response.result);
       console.log('===============================');
       return 'Analysis completed, but no text response was generated.';
     };
