@@ -14,13 +14,9 @@ export class OpenAIServiceAPI implements IAIService {
       return import.meta.env.VITE_API_URL;
     }
     
-    // Development fallback
-    if (import.meta.env.DEV) {
-      return 'http://localhost:8080';
-    }
-    
-    // Production - Railway backend
-    return 'https://framesense-production.up.railway.app';
+    // Always use Railway in production - based on RAILWAY-SETUP.md
+    // Development can also use Railway to avoid localhost issues
+    return 'https://api.finalyze.pro';
   }
 
   async analyzeImageWithText(request: AIRequest): Promise<AIResponse> {
