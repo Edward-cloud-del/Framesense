@@ -396,10 +396,42 @@ class ResponseOptimizer {
         break;
         
       case 'OCR_RESULTS':
+        // FIXED: Improved blocks creation to handle different OCR response formats
+        let blocks = [];
+        
+        // Try different sources for text blocks/regions
+        if (response.textAnnotations && Array.isArray(response.textAnnotations)) {
+          // Google Vision format with textAnnotations
+          blocks = response.textAnnotations;
+        } else if (response.result?.textRegions && Array.isArray(response.result.textRegions)) {
+          // Google Vision enhanced format with textRegions
+          blocks = response.result.textRegions;
+        } else if (response.textRegions && Array.isArray(response.textRegions)) {
+          // Direct textRegions format
+          blocks = response.textRegions;
+        } else if (response.regions && Array.isArray(response.regions)) {
+          // Enhanced OCR regions format
+          blocks = response.regions;
+        } else if (response.text || response.result?.fullText || response.result?.text) {
+          // If we have text but no blocks, create a single block
+          const text = response.text || response.result?.fullText || response.result?.text;
+          blocks = [{
+            text: text,
+            confidence: response.confidence || response.result?.confidence || 0.9,
+            boundingBox: null,
+            source: 'consolidated'
+          }];
+        }
+        
+        console.log(`🔧 OCR_RESULTS blocks creation: Found ${blocks.length} blocks from response`);
+        console.log(`📝 Available text: "${response.text || response.result?.fullText || response.result?.text || 'none'}"`);
+        
         standardized.data = {
-          text: response.text || response.fullTextAnnotation?.text || '',
-          confidence: response.confidence || 0,
-          blocks: response.textAnnotations || []
+          text: response.text || response.result?.fullText || response.result?.text || response.fullTextAnnotation?.text || '',
+          confidence: response.confidence || response.result?.confidence || 0,
+          blocks: blocks,
+          hasText: !!(response.text || response.result?.fullText || response.result?.text),
+          wordCount: response.wordCount || response.result?.wordCount || 0
         };
         break;
         

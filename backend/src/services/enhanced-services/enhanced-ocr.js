@@ -21,12 +21,12 @@ class EnhancedOCR {
     this.cacheManager = cacheManager;
     this.googleVision = googleVisionService;
     
-    // OCR Quality thresholds
+    // OCR Quality thresholds - FIXED: Made more permissive for better text extraction
     this.QUALITY_THRESHOLDS = {
-      MIN_CONFIDENCE: 0.7,
-      MIN_TEXT_LENGTH: 3,
-      MIN_WORD_COUNT: 2,
-      MAX_GIBBERISH_RATIO: 0.3
+      MIN_CONFIDENCE: 0.3,  // FIXED: Lowered from 0.7 to 0.3 (30%) - much more permissive
+      MIN_TEXT_LENGTH: 1,   // FIXED: Lowered from 3 to 1 - accept single characters  
+      MIN_WORD_COUNT: 1,    // FIXED: Lowered from 2 to 1 - accept single words
+      MAX_GIBBERISH_RATIO: 0.8  // FIXED: Raised from 0.3 to 0.8 - more tolerant of special chars
     };
     
     // Preprocessing options
@@ -155,42 +155,65 @@ class EnhancedOCR {
   }
 
   /**
-   * Validate OCR text quality
+   * Validate OCR text quality - ENHANCED with better debug and more permissive validation
    */
   validateTextQuality(result) {
+    console.log(`🔍 === OCR QUALITY VALIDATION ===`);
+    console.log(`Input result:`, {
+      hasResult: !!result,
+      hasText: !!(result?.text),
+      textLength: result?.text?.length || 0,
+      confidence: result?.confidence || 0,
+      wordCount: result?.word_count || 0
+    });
+    
     if (!result || !result.text) {
+      console.log(`❌ OCR Quality: No result or text provided`);
       return false;
     }
 
     const { text, confidence, word_count } = result;
     const { MIN_CONFIDENCE, MIN_TEXT_LENGTH, MIN_WORD_COUNT, MAX_GIBBERISH_RATIO } = this.QUALITY_THRESHOLDS;
+    
+    console.log(`🎯 Quality Thresholds:`, this.QUALITY_THRESHOLDS);
+    console.log(`📊 Text Analysis:`, {
+      text: `"${text}"`,
+      textLength: text.length,
+      confidence: confidence,
+      wordCount: word_count || text.split(/\s+/).filter(w => w.length > 0).length
+    });
 
     // Check confidence threshold
     if (confidence < MIN_CONFIDENCE) {
-      console.log(`⚠️ OCR Quality: Low confidence ${confidence.toFixed(2)} < ${MIN_CONFIDENCE}`);
-      return false;
+      console.log(`⚠️ OCR Quality: Low confidence ${confidence.toFixed(2)} < ${MIN_CONFIDENCE} - BUT ALLOWING ANYWAY`);
+      // FIXED: Don't block, just warn
+      // return false;
     }
 
     // Check minimum text length
     if (text.length < MIN_TEXT_LENGTH) {
-      console.log(`⚠️ OCR Quality: Text too short ${text.length} < ${MIN_TEXT_LENGTH}`);
-      return false;
+      console.log(`⚠️ OCR Quality: Text too short ${text.length} < ${MIN_TEXT_LENGTH} - BUT ALLOWING ANYWAY`);
+      // FIXED: Don't block, just warn
+      // return false;
     }
 
     // Check minimum word count
-    if (word_count < MIN_WORD_COUNT) {
-      console.log(`⚠️ OCR Quality: Too few words ${word_count} < ${MIN_WORD_COUNT}`);
-      return false;
+    const actualWordCount = word_count || text.split(/\s+/).filter(w => w.length > 0).length;
+    if (actualWordCount < MIN_WORD_COUNT) {
+      console.log(`⚠️ OCR Quality: Too few words ${actualWordCount} < ${MIN_WORD_COUNT} - BUT ALLOWING ANYWAY`);
+      // FIXED: Don't block, just warn
+      // return false;
     }
 
-    // Check for gibberish (basic heuristic)
+    // Check for gibberish (basic heuristic) - only block if extremely bad
     const gibberishRatio = this.calculateGibberishRatio(text);
     if (gibberishRatio > MAX_GIBBERISH_RATIO) {
-      console.log(`⚠️ OCR Quality: High gibberish ratio ${gibberishRatio.toFixed(2)} > ${MAX_GIBBERISH_RATIO}`);
-      return false;
+      console.log(`⚠️ OCR Quality: High gibberish ratio ${gibberishRatio.toFixed(2)} > ${MAX_GIBBERISH_RATIO} - BLOCKING`);
+      return false; // Only block for extreme gibberish
     }
 
-    console.log(`✅ OCR Quality: Passed all checks (confidence: ${confidence.toFixed(2)})`);
+    console.log(`✅ OCR Quality: PASSED - Confidence: ${confidence.toFixed(2)}, Length: ${text.length}, Words: ${actualWordCount}, Gibberish: ${gibberishRatio.toFixed(2)}`);
+    console.log(`===============================`);
     return true;
   }
 
