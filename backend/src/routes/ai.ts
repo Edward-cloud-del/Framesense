@@ -98,11 +98,10 @@ export const analyzeImageRoute = async (req: Request, res: Response) => {
       cacheStrategy: 'default'
     };
 
-    // Ensure imageData is properly typed - Enhanced AI Processor can handle undefined
-    const processedImageData = imageData || undefined;
-
+    // Enhanced AI Processor expects string | Buffer, use empty base64 for text-only requests
+    const defaultImageData = 'data:image/png;base64,'; // Empty but valid base64 format
     const response = await enhancedAIProcessor.processAnalysisRequest(
-      processedImageData,
+      imageData || defaultImageData, // Pass valid empty base64 for text-only requests
       message,
       userContext.userId,
       options
