@@ -181,20 +181,42 @@ class SmartRouter {
    * Get service configuration for model and question type
    */
   async getServiceConfiguration(questionType, selectedModel, userProfile) {
+    console.log(`🔧 === SERVICE CONFIGURATION DEBUG ===`);
+    console.log(`Question Type: ${questionType.id}`);
+    console.log(`Selected Model: ${selectedModel}`);
+    
     const modelInfo = await this.modelSelector.getModelInfo(selectedModel);
+    console.log(`Model Info:`, {
+      id: modelInfo?.id,
+      provider: modelInfo?.provider,
+      type: modelInfo?.type,
+      enabled: modelInfo?.enabled
+    });
+    
     const defaultRoute = this.DEFAULT_ROUTES[questionType.id];
+    console.log(`Default Route:`, defaultRoute);
 
-    // Determine primary service based on model
+    // Determine primary service based on model provider with safer fallback logic
     let primaryService;
+    
     if (modelInfo.provider === 'google') {
       primaryService = this.getGoogleVisionService(questionType.id);
+      console.log(`✅ Google provider → ${primaryService}`);
     } else if (modelInfo.provider === 'openai') {
       primaryService = 'openai-vision';
-    } else if (modelInfo.provider === 'hybrid') {
+      console.log(`✅ OpenAI provider → ${primaryService}`);
+    } else if (modelInfo.provider === 'hybrid' || modelInfo.provider === 'tesseract') {
+      // Both hybrid and tesseract use enhanced-ocr service
       primaryService = 'enhanced-ocr';
+      console.log(`✅ OCR provider (${modelInfo.provider}) → ${primaryService}`);
     } else {
-      primaryService = 'open-source-api';
+      // FIXED: Use default route or enhanced-ocr instead of unimplemented open-source-api
+      primaryService = defaultRoute?.primary || 'enhanced-ocr';
+      console.log(`⚠️ Unknown provider (${modelInfo.provider}) → fallback to ${primaryService}`);
     }
+
+    console.log(`Final Service Selection: ${primaryService}`);
+    console.log(`=====================================`);
 
     // Build service configuration
     return {
