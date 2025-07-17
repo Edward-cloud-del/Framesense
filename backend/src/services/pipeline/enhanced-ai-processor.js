@@ -133,9 +133,33 @@ class EnhancedAIProcessor {
       const validatedData = await this.validateRequest(imageData, question, userId);
       console.log(`✅ Request validation completed for ${requestId}`);
       
+      // NEW: Check for text-only requests without valid image data
+      const hasValidImage = this.hasValidImageData(validatedData.imageData);
+      console.log(`📷 Image validation: ${hasValidImage ? 'Valid image present' : 'No valid image data'}`);
+      
       // 2. Question classification
       const questionType = this.questionClassifier.classifyQuestion(question);
       console.log(`🎯 Question classified as: ${questionType.id} for ${requestId}`);
+      
+      // NEW: Handle text-only requests gracefully
+      if (!hasValidImage && this.isTextOnlyRequest(questionType, question)) {
+        console.log(`💬 === TEXT-ONLY REQUEST DETECTED ===`);
+        console.log(`Question: "${question}"`);
+        console.log(`Question Type: ${questionType.id}`);
+        console.log(`No image provided - handling as text-only request`);
+        console.log(`====================================`);
+        
+        const textOnlyResponse = this.handleTextOnlyRequest(question, questionType);
+        
+        // Cleanup active request tracking
+        this.activeRequests?.delete(recursionKey);
+        
+        return this.formatResponse(textOnlyResponse, 'text-only-handler', {
+          requestId,
+          responseTime: Date.now() - startTime,
+          textOnly: true
+        });
+      }
       
       // 3. Get user profile and preferences
       const userProfile = await this.getUserProfile(userId);
@@ -446,6 +470,138 @@ class EnhancedAIProcessor {
       imageData: processedImageData,
       imageSize,
       userId
+    };
+  }
+  
+  /**
+   * Check if image data contains a valid image
+   * @param {string|Buffer|null} imageData - The image data to validate
+   * @returns {boolean} True if valid image data is present
+   */
+  hasValidImageData(imageData) {
+    if (!imageData) {
+      return false;
+    }
+    
+    // Check for empty base64 data URLs (like from legacy routes)
+    if (typeof imageData === 'string') {
+      // Empty or minimal base64 data URL
+      if (imageData === 'data:image/png;base64,' || 
+          imageData === 'data:image/jpeg;base64,' ||
+          imageData.length < 50) { // Very short base64 strings are likely empty
+        return false;
+      }
+      
+      // Check if it's a proper data URL with actual content
+      if (imageData.startsWith('data:image/')) {
+        const base64Part = imageData.split(',')[1];
+        return base64Part && base64Part.length > 20; // Minimal content check
+      }
+      
+      return false;
+    }
+    
+    // Check buffer data
+    if (Buffer.isBuffer(imageData)) {
+      return imageData.length > 100; // Minimal buffer size check
+    }
+    
+    return false;
+  }
+  
+  /**
+   * Determine if this is a text-only request that should not go to OCR
+   * @param {Object} questionType - The classified question type
+   * @param {string} question - The user's question
+   * @returns {boolean} True if this is a text-only conversational request
+   */
+  isTextOnlyRequest(questionType, question) {
+    const normalizedQuestion = question.toLowerCase().trim();
+    
+    // Common conversational greetings and text-only interactions
+    const textOnlyPatterns = [
+      /^(hej|hello|hi|hey)$/i,
+      /^(tack|thanks|thank you)$/i,
+      /^(hej där|hello there)$/i,
+      /^(god morgon|good morning)$/i,
+      /^(god kväll|good evening)$/i,
+      /^(vad heter du|what's your name)$/i,
+      /^(hur mår du|how are you)$/i,
+      /^(vad kan du göra|what can you do)$/i,
+      /^(hjälp|help)$/i,
+      /^(test|testing)$/i
+    ];
+    
+    // Check if question matches text-only patterns
+    if (textOnlyPatterns.some(pattern => pattern.test(normalizedQuestion))) {
+      return true;
+    }
+    
+    // If classified as PURE_TEXT but doesn't seem to be asking about image content
+    if (questionType.id === 'PURE_TEXT') {
+      const imageContentKeywords = [
+        'image', 'picture', 'photo', 'bild', 'foto',
+        'text', 'read', 'written', 'skrivet', 'läs',
+        'this', 'it', 'det här', 'detta'
+      ];
+      
+      const hasImageContentKeywords = imageContentKeywords.some(keyword => 
+        normalizedQuestion.includes(keyword)
+      );
+      
+      // If PURE_TEXT but no image content keywords, likely conversational
+      if (!hasImageContentKeywords) {
+        return true;
+      }
+    }
+    
+    return false;
+  }
+  
+  /**
+   * Handle text-only requests with appropriate responses
+   * @param {string} question - The user's question
+   * @param {Object} questionType - The classified question type
+   * @returns {Object} Response object for text-only request
+   */
+  handleTextOnlyRequest(question, questionType) {
+    const normalizedQuestion = question.toLowerCase().trim();
+    
+    let responseText = '';
+    
+    // Generate contextual responses based on the question
+    if (/^(hej|hello|hi|hey)/.test(normalizedQuestion)) {
+      responseText = 'Hej! Jag är FrameSense AI. Ladda upp en bild så kan jag analysera den för dig. Jag kan läsa text, identifiera objekt, känna igen kändisar och mycket mer!';
+    } else if (/^(tack|thanks|thank you)/.test(normalizedQuestion)) {
+      responseText = 'Varsågod! Jag hjälper gärna till. Ladda upp en bild om du vill att jag ska analysera något.';
+    } else if (/^(vad kan du göra|what can you do)/.test(normalizedQuestion)) {
+      responseText = 'Jag kan analysera bilder på många sätt:\n• Läsa text (OCR)\n• Identifiera objekt och räkna dem\n• Känna igen kändisar\n• Beskriva vad som händer i bilder\n• Analysera dokument\n\nLadda bara upp en bild och ställ en fråga!';
+    } else if (/^(hjälp|help)/.test(normalizedQuestion)) {
+      responseText = 'Så här använder du FrameSense:\n1. Ladda upp en bild\n2. Ställ en fråga om bilden\n3. Jag analyserar och svarar!\n\nExempel: "Vad står det här?", "Hur många bilar finns det?", "Vem är den här personen?"';
+    } else if (/^(god morgon|good morning)/.test(normalizedQuestion)) {
+      responseText = 'God morgon! Redo att analysera bilder idag? Ladda upp en bild så kör vi igång!';
+    } else if (/^(god kväll|good evening)/.test(normalizedQuestion)) {
+      responseText = 'God kväll! Ladda upp en bild om du vill att jag ska analysera något innan dagen är slut.';
+    } else if (/^(vad heter du|what's your name)/.test(normalizedQuestion)) {
+      responseText = 'Jag heter FrameSense AI! Jag är specialiserad på bildanalys. Ladda upp en bild så visar jag vad jag kan göra.';
+    } else if (/^(hur mår du|how are you)/.test(normalizedQuestion)) {
+      responseText = 'Jag mår bra och är redo att analysera bilder! Hur kan jag hjälpa dig idag? Ladda upp en bild så kör vi igång.';
+    } else if (/^(test|testing)/.test(normalizedQuestion)) {
+      responseText = 'Test fungerar! Systemet är igång och redo. Ladda upp en testbild om du vill prova bildanalysfunktionerna.';
+    } else {
+      // General response for other text-only questions
+      responseText = `Jag förstår att du skrev "${question}", men jag behöver en bild för att kunna hjälpa dig. Ladda upp en bild och ställ en fråga om den, så analyserar jag den åt dig!`;
+    }
+    
+    return {
+      text: responseText,
+      confidence: 1.0,
+      hasText: true,
+      wordCount: responseText.split(/\s+/).length,
+      textOnly: true,
+      service: 'text-only-handler',
+      questionType: questionType.id,
+      timestamp: new Date().toISOString()
     };
   }
   
