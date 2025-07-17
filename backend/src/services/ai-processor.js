@@ -195,19 +195,23 @@ class AIProcessor {
   }
   
   // Process multiple strategies and return best result
-  static async processWithFallback(request, openaiClient) {
+  static async processWithFallback(request, openaiClient, userContext = {}) {
     const strategies = [
       'intelligent', // Full pipeline
       'simple',      // Skip OCR
       'minimal'      // Basic processing
     ];
     
+    console.log(`🔍 === AI PROCESSOR WITH FALLBACK ===`);
+    console.log(`User Context:`, JSON.stringify(userContext, null, 2));
+    console.log(`===================================`);
+    
     for (const strategy of strategies) {
       try {
         console.log(`🔄 Trying strategy: ${strategy}`);
         
         if (strategy === 'intelligent') {
-          return await this.processRequest(request, openaiClient);
+          return await this.processRequest(request, openaiClient, userContext);
         } else if (strategy === 'simple') {
           return await this.processSimple(request, openaiClient);
         } else {

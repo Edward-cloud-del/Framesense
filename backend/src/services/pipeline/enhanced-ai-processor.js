@@ -108,6 +108,19 @@ class EnhancedAIProcessor {
     const requestId = this.generateRequestId();
     
     console.log(`🚀 Enhanced AI Processor: Starting request ${requestId} for user ${userId}`);
+    console.log(`🔍 Call Stack Check: ${Error().stack?.split('\n').length || 'unknown'} levels deep`);
+    
+    // Prevent infinite recursion
+    if (!this.activeRequests) {
+      this.activeRequests = new Set();
+    }
+    
+    if (this.activeRequests.has(requestId)) {
+      console.error(`❌ INFINITE RECURSION DETECTED: Request ${requestId} already processing`);
+      throw new Error('Infinite recursion detected in Enhanced AI Processor');
+    }
+    
+    this.activeRequests.add(requestId);
     
     try {
       this.metrics.totalRequests++;
@@ -210,11 +223,18 @@ class EnhancedAIProcessor {
       this.updateMetrics(totalResponseTime, routing.estimatedCost);
       
       console.log(`✅ Enhanced AI Processor: Request ${requestId} completed successfully in ${totalResponseTime}ms`);
+      
+      // Cleanup active request tracking
+      this.activeRequests?.delete(requestId);
+      
       return response;
       
     } catch (error) {
       console.error(`❌ Enhanced AI Processor: Request ${requestId} failed:`, error.message);
       this.metrics.failedRequests++;
+      
+      // Cleanup active request tracking on error
+      this.activeRequests?.delete(requestId);
       
       return await this.handleError(error, question, userId, requestId, Date.now() - startTime);
     }
@@ -369,28 +389,42 @@ class EnhancedAIProcessor {
    * Get user profile with tier and preferences
    */
   async getUserProfile(userId) {
+    console.log(`🔍 === ENHANCED AI PROCESSOR: GET USER PROFILE ===`);
+    console.log(`User ID: ${userId}`);
+    
     try {
+      console.log(`🔍 Calling userService.getUserById(${userId})...`);
       const user = await this.userService.getUserById(userId);
+      console.log(`🔍 UserService raw result:`, JSON.stringify(user, null, 2));
       
       if (!user) {
+        console.error(`❌ User not found in database: ${userId}`);
         throw new Error('User not found');
       }
       
-      return {
+      const userProfile = {
         id: user.id,
         email: user.email,
         tier: user.tier || 'free',
+        subscription_status: user.subscription_status,
         preferences: user.preferences || {},
         usage: user.usage || { daily: 0, monthly: 0 },
         budget: user.budget || { daily: 5.0, monthly: 100.0 },
         costOptimization: user.costOptimization || false
       };
       
+      console.log(`✅ Enhanced AI Processor: User profile created:`, JSON.stringify(userProfile, null, 2));
+      console.log(`🎯 TIER CONFIRMED: ${userProfile.tier}`);
+      console.log(`==============================================`);
+      
+      return userProfile;
+      
     } catch (error) {
-      console.warn(`⚠️ Failed to load user profile for ${userId}, using defaults:`, error.message);
+      console.error(`❌ Enhanced AI Processor: Failed to load user profile for ${userId}:`, error.message);
+      console.error(`Stack trace:`, error.stack);
       
       // Return default profile for graceful degradation
-      return {
+      const defaultProfile = {
         id: userId,
         email: 'unknown@example.com',
         tier: 'free',
@@ -399,6 +433,9 @@ class EnhancedAIProcessor {
         budget: { daily: 1.0, monthly: 25.0 },
         costOptimization: true
       };
+      
+      console.warn(`⚠️ Using default profile:`, JSON.stringify(defaultProfile, null, 2));
+      return defaultProfile;
     }
   }
   

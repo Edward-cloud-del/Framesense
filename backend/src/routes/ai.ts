@@ -72,7 +72,21 @@ export const analyzeImageRoute = async (req: Request, res: Response) => {
       messageLength: message.length 
     });
 
-    // Use optimized AI processor with fallback strategies
+    // Extract user information from request (now available via authentication middleware)
+    const user = (req as any).user;
+    const userContext = {
+      userId: user?.id,
+      userTier: user?.tier || 'free',
+      usage: { daily: user?.usage_daily || 0, monthly: user?.usage_total || 0 }
+    };
+
+    console.log(`🔍 === LEGACY AI PROCESSOR USER CONTEXT ===`);
+    console.log(`User ID: ${userContext.userId}`);
+    console.log(`User Tier: ${userContext.userTier}`);
+    console.log(`User Usage: Daily=${userContext.usage.daily}, Monthly=${userContext.usage.monthly}`);
+    console.log(`============================================`);
+
+    // Use optimized AI processor with fallback strategies AND USER CONTEXT
     const request = {
       message,
       imageData,
@@ -80,7 +94,7 @@ export const analyzeImageRoute = async (req: Request, res: Response) => {
     };
 
     const openaiClient = getOpenAIClient();
-    const response = await AIProcessor.processWithFallback(request, openaiClient);
+    const response = await AIProcessor.processWithFallback(request, openaiClient, userContext);
 
     console.log('✅ Optimized AI processing completed');
     res.json(response);

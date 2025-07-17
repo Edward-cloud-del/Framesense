@@ -97,8 +97,41 @@ app.use('/api', subscriptionRoutes);
 // Enhanced AI API v2 endpoints (NEW)
 app.use('/api/v2', aiEnhancedRoutes);
 
-// Legacy AI analysis endpoint (v1 - backwards compatibility)
-app.post('/api/analyze', upload.single('image'), analyzeImageRoute);
+// Authentication middleware for legacy route
+const authenticateUserLegacy = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    
+    if (!token) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Authentication token required' 
+      });
+    }
+    
+    const { default: UserService } = await import('./services/user-service.js');
+    const user = await UserService.verifyToken(token);
+    
+    console.log(`🔍 === LEGACY AI ROUTE AUTHENTICATION ===`);
+    console.log(`User ID: ${user.id}`);
+    console.log(`User Email: ${user.email}`);
+    console.log(`User Tier: ${user.tier}`);
+    console.log(`User subscription_status: ${user.subscription_status}`);
+    console.log(`=========================================`);
+    
+    (req as any).user = user;
+    next();
+  } catch (error: any) {
+    console.error(`❌ Legacy AI route authentication failed:`, error.message);
+    res.status(401).json({ 
+      success: false, 
+      message: error.message 
+    });
+  }
+};
+
+// Legacy AI analysis endpoint (v1 - backwards compatibility) - NOW WITH AUTHENTICATION
+app.post('/api/analyze', authenticateUserLegacy, upload.single('image'), analyzeImageRoute);
 
 // Health check for optimization services
 app.get('/api/health/optimizations', async (req, res) => {
