@@ -396,14 +396,63 @@ class ResponseOptimizer {
         break;
         
       case 'OCR_RESULTS':
-        // FIXED: Improved blocks creation to handle different OCR response formats
+        // FIXED: Enhanced to handle both simple OCR and two-step OCR + AI analysis
         let blocks = [];
         
         console.log('🔍 === RESPONSE OPTIMIZER OCR DEBUG ===');
         console.log('Input response type:', typeof response);
         console.log('Input response keys:', Object.keys(response || {}));
+        console.log('Two-step process detected:', !!response.twoStepProcess || !!response.metadata?.twoStepProcess);
+        console.log('Combined response available:', !!response.combinedResponse);
         console.log('Response structure sample:', JSON.stringify(response, null, 2).substring(0, 500));
         
+        // Handle two-step process results (OCR + AI Analysis)
+        if (response.combinedResponse || response.metadata?.twoStepProcess) {
+          console.log('✅ === HANDLING TWO-STEP OCR + AI RESULT ===');
+          console.log('OCR Text:', response.text);
+          console.log('Combined Response:', response.combinedResponse);
+          console.log('AI Service:', response.metadata?.aiService);
+          
+          // For two-step results, use the combined response as the main text
+          const finalText = response.combinedResponse || response.basicResponse || response.text || '';
+          
+          standardized.data = {
+            text: finalText,
+            extractedText: response.text, // Original OCR text
+            hasText: finalText.length > 0,
+            wordCount: finalText.split(/\s+/).filter(w => w.length > 0).length,
+            confidence: response.confidence || 0.9,
+            twoStepProcess: true,
+            ocrService: response.ocrService || 'enhanced-ocr',
+            aiService: response.metadata?.aiService || 'none',
+            blocks: [{
+              text: finalText,
+              confidence: response.confidence || 0.9,
+              source: 'two-step-ocr-ai'
+            }]
+          };
+          
+          standardized.metadata = {
+            responseTime: response.metadata?.responseTime || 0,
+            cost: response.metadata?.cost || 0,
+            textLength: finalText.length,
+            wordsExtracted: standardized.data.wordCount,
+            twoStepProcess: true,
+            ocrService: response.ocrService,
+            aiService: response.metadata?.aiService,
+            aiFollowUpFailed: response.metadata?.aiFollowUpFailed || false
+          };
+          
+          console.log('✅ Two-step result processed:', {
+            finalTextLength: finalText.length,
+            wordCount: standardized.data.wordCount,
+            confidence: standardized.data.confidence
+          });
+          
+          break;
+        }
+        
+        // Original OCR-only handling
         // Try different sources for text blocks/regions
         if (response.textAnnotations && Array.isArray(response.textAnnotations)) {
           // Google Vision format with textAnnotations
