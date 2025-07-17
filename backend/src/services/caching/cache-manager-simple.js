@@ -50,9 +50,107 @@ class SimpleCacheManager {
   }
   
   /**
-   * Get from cache (Redis only)
+   * Generate cache key for Enhanced AI Processor integration
+   * Maps to appropriate cache strategy based on question type and image data
    */
-  async get(serviceType, imageData, options = {}) {
+  async generateKey(imageData, question, questionType, userTier) {
+    try {
+      console.log(`🔑 === CACHE KEY GENERATION (SIMPLE) ===`);
+      console.log(`Question Type: ${questionType}`);
+      console.log(`User Tier: ${userTier}`);
+      console.log(`Question: ${question}`);
+      console.log(`=====================================`);
+      
+      // Map question types to cache strategies
+      const serviceTypeMapping = {
+        'PURE_TEXT': 'OCR_RESULTS',
+        'COUNT_OBJECTS': 'GOOGLE_VISION_OBJECTS',
+        'DETECT_OBJECTS': 'GOOGLE_VISION_OBJECTS',
+        'IDENTIFY_CELEBRITY': 'GOOGLE_VISION_WEB',
+        'DESCRIBE_SCENE': 'OPENAI_RESPONSES',
+        'CUSTOM_ANALYSIS': 'OPENAI_RESPONSES'
+      };
+      
+      const serviceType = serviceTypeMapping[questionType] || 'OPENAI_RESPONSES';
+      console.log(`🎯 Mapped to service type: ${serviceType}`);
+      
+             // Use cache key strategy to generate the key
+       let cacheResult;
+       if (serviceType === 'OPENAI_RESPONSES') {
+         cacheResult = await cacheKeyStrategy.generateOpenAIKey(imageData, question);
+       } else {
+         cacheResult = await cacheKeyStrategy.generateCacheKey(serviceType, imageData, {
+           language: 'en', // Default language
+           questionText: question,
+           userTier: userTier
+         });
+       }
+       
+       // Extract the actual key string from the result object
+       const cacheKey = typeof cacheResult === 'object' ? cacheResult.key : cacheResult;
+       console.log(`✅ Generated cache key: ${cacheKey}`);
+       return cacheKey;
+      
+    } catch (error) {
+      console.error(`❌ Cache key generation failed:`, error.message);
+      // Fallback to simple key
+      return `fallback:${Date.now()}:${Math.random().toString(36).substr(2, 9)}`;
+    }
+  }
+  
+  /**
+   * Get from cache using cache key (Enhanced AI Processor interface)
+   */
+  async get(cacheKey) {
+    // If called with just a cache key (Enhanced AI Processor style)
+    if (typeof cacheKey === 'string' && arguments.length === 1) {
+      const startTime = Date.now();
+      this.metrics.totalRequests++;
+      
+      try {
+        console.log(`🔍 Cache GET with key: ${cacheKey}`);
+        
+        // Try Redis
+        let result = await this.redisCache.get(cacheKey);
+        
+        if (result !== null) {
+          console.log(`✅ Cache HIT for key: ${cacheKey}`);
+          this.metrics.redisHits++;
+          
+          // Handle decompression if needed
+          if (result && result._compressed) {
+            try {
+              const compressedBuffer = Buffer.from(result._data, 'base64');
+              const decompressedBuffer = await gunzip(compressedBuffer);
+              result = JSON.parse(decompressedBuffer.toString());
+            } catch (decompressionError) {
+              console.error('❌ Decompression failed:', decompressionError.message);
+              result = null;
+            }
+          }
+          
+          return result;
+        } else {
+          console.log(`❌ Cache MISS for key: ${cacheKey}`);
+          this.metrics.misses++;
+          return null;
+        }
+        
+      } catch (error) {
+        console.error(`❌ Cache GET error:`, error.message);
+        this.metrics.misses++;
+        return null;
+      }
+    }
+    
+    // Fallback to original interface for backwards compatibility
+    return this.getByServiceType(...arguments);
+  }
+  
+  /**
+   * Get from cache (original interface - Redis only)
+   */
+  async getByServiceType(serviceType, imageData, options = {}) {
     const startTime = Date.now();
     this.metrics.totalRequests++;
     
@@ -118,9 +216,76 @@ class SimpleCacheManager {
   }
   
   /**
-   * Set cache value with compression
+   * Set cache value (Enhanced AI Processor interface)
    */
-  async set(serviceType, imageData, data, options = {}) {
+  async set(cacheKeyOrServiceType, dataOrImageData, optionsOrData, optionsParam = {}) {
+    // Enhanced AI Processor interface: set(cacheKey, data, options)
+    if (typeof cacheKeyOrServiceType === 'string' && arguments.length <= 3 && 
+        (typeof optionsOrData === 'object' && !Buffer.isBuffer(optionsOrData))) {
+      return this.setByKey(cacheKeyOrServiceType, dataOrImageData, optionsOrData || {});
+    }
+    
+    // Original interface: set(serviceType, imageData, data, options)
+    return this.setByServiceType(cacheKeyOrServiceType, dataOrImageData, optionsOrData, optionsParam);
+  }
+  
+  /**
+   * Set cache value using cache key (Enhanced AI Processor interface)
+   */
+  async setByKey(cacheKey, data, options = {}) {
+    const startTime = Date.now();
+    
+    try {
+      console.log(`💾 Cache SET with key: ${cacheKey}`);
+      
+      // Use TTL from options or default
+      const ttl = options.ttl || 3600; // 1 hour default
+      
+      // Compress data if needed
+      let finalData = data;
+      let isCompressed = false;
+      let originalSize = JSON.stringify(data).length;
+      
+      if (this.compressionConfig.enabled && originalSize > this.compressionConfig.minSizeBytes) {
+        try {
+          const dataBuffer = Buffer.from(JSON.stringify(data));
+          const compressedBuffer = await gzip(dataBuffer);
+          
+          finalData = {
+            _compressed: true,
+            _data: compressedBuffer.toString('base64'),
+            _originalSize: originalSize
+          };
+          
+          isCompressed = true;
+          console.log(`🗜️ Data compressed: ${originalSize} -> ${compressedBuffer.length} bytes`);
+        } catch (compressionError) {
+          console.error('❌ Compression failed:', compressionError.message);
+          finalData = data;
+        }
+      }
+      
+      // Set in Redis
+      await this.redisCache.set(cacheKey, finalData, ttl);
+      
+      // Track cost savings
+      if (options.cost) {
+        this.trackCostSavings(options.cost, 'redis');
+      }
+      
+      console.log(`✅ Cache SET successful: ${cacheKey} (TTL: ${ttl}s)`);
+      return true;
+      
+    } catch (error) {
+      console.error(`❌ Cache SET error:`, error.message);
+      return false;
+    }
+  }
+  
+  /**
+   * Set cache value (original interface)
+   */
+  async setByServiceType(serviceType, imageData, data, options = {}) {
     const startTime = Date.now();
     
     try {

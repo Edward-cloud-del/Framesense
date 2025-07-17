@@ -117,8 +117,8 @@ class EnhancedAIProcessor {
       console.log(`✅ Request validation completed for ${requestId}`);
       
       // 2. Question classification
-      const questionType = await this.questionClassifier.classifyQuestion(question);
-      console.log(`🎯 Question classified as: ${questionType.type} for ${requestId}`);
+      const questionType = this.questionClassifier.classifyQuestion(question);
+      console.log(`🎯 Question classified as: ${questionType.id} for ${requestId}`);
       
       // 3. Get user profile and preferences
       const userProfile = await this.getUserProfile(userId);
@@ -128,14 +128,14 @@ class EnhancedAIProcessor {
       const cacheKey = await this.cacheManager.generateKey(
         validatedData.imageData, 
         question, 
-        questionType.type,
+        questionType.id,
         userProfile.tier
       );
       
       const cachedResult = await this.cacheManager.get(cacheKey);
       if (cachedResult) {
         console.log(`💾 Cache hit for ${requestId}`);
-        await this.analyticsTracker.trackCacheHit(cacheKey, userId);
+        // await this.analyticsTracker.trackCacheHit(cacheKey, userId); // Temporarily disabled for debugging
         
         const response = this.formatResponse(cachedResult, 'cache', {
           requestId,
@@ -227,11 +227,25 @@ class EnhancedAIProcessor {
   async executeService(routing, imageData, question, userProfile) {
     const { service, model, parameters } = routing;
     
-    console.log(`🔧 Executing service: ${service} with model: ${model}`);
+    console.log(`🔧 === SERVICE EXECUTION DEBUG ===`);
+    console.log(`👤 User Profile:`, {
+      id: userProfile.id,
+      email: userProfile.email,
+      tier: userProfile.tier,
+      subscription_status: userProfile.subscription_status
+    });
+    console.log(`🎯 Routing Decision:`, {
+      service,
+      model,
+      parameters: parameters || 'none'
+    });
+    console.log(`📝 Question:`, question);
+    console.log(`================================`);
     
     try {
       switch (service) {
         case 'enhanced-ocr':
+          console.log(`📝 Executing Enhanced OCR...`);
           return await this.enhancedOCR.extractText(imageData, {
             ...parameters,
             language: parameters?.language || 'eng',
@@ -239,35 +253,49 @@ class EnhancedAIProcessor {
           });
           
         case 'google-vision-text':
+          console.log(`👁️ Executing Google Vision Text Detection for tier: ${userProfile.tier}`);
           return await this.googleVision.detectText(imageData, userProfile.tier);
           
         case 'google-vision-objects':
+          console.log(`🎯 Executing Google Vision Object Detection for tier: ${userProfile.tier}`);
           return await this.googleVision.detectObjects(imageData, userProfile.tier);
           
         case 'google-vision-web':
+          console.log(`⭐ Attempting Google Vision Celebrity Detection...`);
+          console.log(`🔒 Tier Check: User tier '${userProfile.tier}' vs required 'premium'`);
           // Premium feature - celebrity identification
           if (userProfile.tier !== 'premium') {
+            console.error(`❌ TIER ACCESS DENIED: User tier '${userProfile.tier}' cannot access celebrity identification (premium required)`);
             throw new Error('Celebrity identification requires premium subscription');
           }
+          console.log(`✅ TIER ACCESS GRANTED: Proceeding with celebrity detection`);
           return await this.googleVision.detectCelebritiesAndWeb(imageData, userProfile.tier);
           
         case 'google-vision-logo':
+          console.log(`🏷️ Executing Google Vision Logo Detection for tier: ${userProfile.tier}`);
           return await this.googleVision.detectLogos(imageData, userProfile.tier);
           
         case 'openai-vision':
+          console.log(`🧠 Attempting OpenAI Vision...`);
           // TODO: Implement OpenAI Enhanced service
           throw new Error('OpenAI Enhanced service not yet implemented');
           
         case 'open-source-api':
+          console.log(`🔌 Attempting Open Source API...`);
           // TODO: Implement plugin system
           throw new Error('Open source API plugins not yet implemented');
           
         default:
+          console.error(`❌ UNKNOWN SERVICE: ${service}`);
           throw new Error(`Unknown service: ${service}`);
       }
       
     } catch (error) {
-      console.error(`❌ Service execution failed for ${service}:`, error.message);
+      console.error(`❌ === SERVICE EXECUTION ERROR ===`);
+      console.error(`Service: ${service}`);
+      console.error(`User Tier: ${userProfile.tier}`);
+      console.error(`Error: ${error.message}`);
+      console.error(`================================`);
       
       // Attempt fallback if available
       if (routing.fallback) {

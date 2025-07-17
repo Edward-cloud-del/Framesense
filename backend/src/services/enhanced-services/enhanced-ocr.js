@@ -76,22 +76,10 @@ class EnhancedOCR {
 
       let result;
       
-      // Force Google Vision or try Tesseract first
-      if (forceGoogleVision) {
-        result = await this.googleVisionFallback(imageData, language);
-      } else {
-        // Try Tesseract first
-        result = await this.tesseractOCR(imageData, { language, preprocessing });
-        
-        // Validate quality and fallback if needed
-        if (!this.validateTextQuality(result)) {
-          console.log('⚠️ Enhanced OCR: Tesseract quality below threshold, falling back to Google Vision');
-          result = await this.googleVisionFallback(imageData, language);
-          result.fallback_used = 'google-vision';
-        } else {
-          result.fallback_used = 'none';
-        }
-      }
+      // TEMPORARY: Force Google Vision to avoid Tesseract crashes
+      console.log('🔧 Enhanced OCR: Using Google Vision (temporarily disabled Tesseract)');
+      result = await this.googleVisionFallback(imageData, language);
+      result.fallback_used = 'google-vision-forced';
 
       // Add metadata
       result.processing_time = Date.now() - startTime;
@@ -121,7 +109,7 @@ class EnhancedOCR {
   }
 
   /**
-   * Tesseract OCR with preprocessing
+   * Tesseract OCR with preprocessing (with robust error handling)
    */
   async tesseractOCR(imageData, options = {}) {
     const { language = 'eng', preprocessing = true } = options;
@@ -132,23 +120,30 @@ class EnhancedOCR {
     }
 
     try {
+      console.log('📝 Starting Tesseract OCR with robust error handling...');
+      
       // Preprocess image if enabled
       let processedImage = imageData;
       if (preprocessing) {
         processedImage = await this.preprocessImageForOCR(imageData);
       }
 
-      // Run Tesseract OCR with optimized settings
-      const result = await Tesseract.recognize(processedImage, language, {
-        logger: m => {
-          if (m.status === 'recognizing text') {
-            console.log(`📝 Tesseract: ${Math.round(m.progress * 100)}% complete`);
-          }
-        },
-        tessedit_pageseg_mode: Tesseract.PSM.AUTO,
-        tessedit_ocr_engine_mode: Tesseract.OEM.LSTM_ONLY,
-        preserve_interword_spaces: '1'
-      });
+      // Run Tesseract OCR with timeout and better error handling
+      const result = await Promise.race([
+        Tesseract.recognize(processedImage, language, {
+          logger: m => {
+            if (m.status === 'recognizing text') {
+              console.log(`📝 Tesseract: ${Math.round(m.progress * 100)}% complete`);
+            }
+          },
+          tessedit_pageseg_mode: Tesseract.PSM.AUTO,
+          tessedit_ocr_engine_mode: Tesseract.OEM.LSTM_ONLY,
+          preserve_interword_spaces: '1'
+        }),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Tesseract timeout after 30s')), 30000)
+        )
+      ]);
 
       // Extract text and confidence
       const extractedText = result.data.text.trim();

@@ -82,18 +82,40 @@ class TierAccess {
    */
   async validateAccess(questionType, userProfile) {
     const startTime = Date.now();
-    console.log(`🛡️ Tier Access: Validating ${questionType.type} for tier ${userProfile.tier}`);
+    console.log(`🛡️ === TIER ACCESS VALIDATION ===`);
+    console.log(`Question Type: ${questionType.type}`);
+    console.log(`User Tier: ${userProfile.tier}`);
+    console.log(`User ID: ${userProfile.id}`);
+    console.log(`================================`);
 
     try {
       // Get user's tier permissions
       const tierPermissions = this.TIER_PERMISSIONS[userProfile.tier];
+      console.log(`📋 Tier Permissions:`, {
+        services: tierPermissions?.services || 'NOT FOUND',
+        questionTypes: tierPermissions?.questionTypes || 'NOT FOUND',
+        dailyLimit: tierPermissions?.dailyLimit || 'NOT FOUND'
+      });
+      
       if (!tierPermissions) {
+        console.error(`❌ INVALID TIER: ${userProfile.tier}`);
         return this.createAccessDeniedResult('invalid_tier', 'premium', 'Invalid user tier');
       }
 
       // Check if question type is allowed for tier
       const requiredTier = this.QUESTION_TYPE_TIERS[questionType.type];
-      if (!this.canAccessTier(userProfile.tier, requiredTier)) {
+      console.log(`🔍 Question Type Tier Requirements:`, {
+        questionType: questionType.type,
+        requiredTier: requiredTier || 'NOT DEFINED',
+        userTier: userProfile.tier
+      });
+      
+      console.log(`🔒 Checking if user tier '${userProfile.tier}' can access required tier '${requiredTier}'`);
+      const canAccess = this.canAccessTier(userProfile.tier, requiredTier);
+      console.log(`✅ Tier Access Check Result: ${canAccess}`);
+      
+      if (!canAccess) {
+        console.error(`❌ TIER INSUFFICIENT: ${questionType.type} requires ${requiredTier}, user has ${userProfile.tier}`);
         return this.createAccessDeniedResult(
           'tier_insufficient', 
           requiredTier, 

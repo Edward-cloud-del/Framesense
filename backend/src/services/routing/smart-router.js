@@ -75,21 +75,47 @@ class SmartRouter {
    */
   async routeRequest(questionType, userModelChoice, userProfile, options = {}) {
     const startTime = Date.now();
-    console.log(`🎯 Smart Router: Routing ${questionType.type} for tier ${userProfile.tier}`);
+    console.log(`🎯 === SMART ROUTER DEBUG ===`);
+    console.log(`Question Type: ${questionType.type}`);
+    console.log(`User Tier: ${userProfile.tier}`);
+    console.log(`User Model Choice: ${userModelChoice || 'none'}`);
+    console.log(`User Profile:`, {
+      id: userProfile.id,
+      email: userProfile.email,
+      tier: userProfile.tier,
+      subscription_status: userProfile.subscription_status
+    });
+    console.log(`============================`);
 
     try {
       // 1. Validate tier access for question type
+      console.log(`🔒 Checking tier access for question type: ${questionType.type}`);
       const accessCheck = await this.tierAccess.validateAccess(questionType, userProfile);
+      console.log(`🔍 Access Check Result:`, {
+        allowed: accessCheck.allowed,
+        reason: accessCheck.reason || 'none',
+        suggestedTier: accessCheck.suggestedTier || 'none'
+      });
+      
       if (!accessCheck.allowed) {
-        console.log(`🚫 Smart Router: Access denied - ${accessCheck.reason}`);
+        console.error(`🚫 TIER ACCESS DENIED: ${accessCheck.reason}`);
+        console.error(`   Question Type: ${questionType.type}`);
+        console.error(`   User Tier: ${userProfile.tier}`);
+        console.error(`   Suggested Tier: ${accessCheck.suggestedTier}`);
         return this.getFallbackRoute(questionType, userProfile, accessCheck.suggestedTier);
       }
+      
+      console.log(`✅ TIER ACCESS GRANTED: Proceeding with routing`);
 
       // 2. Get available models for user's tier
+      console.log(`🔍 Getting available models for tier: ${userProfile.tier}`);
       const availableModels = await this.modelSelector.getAvailableModels(userProfile.tier);
+      console.log(`📋 Available Models:`, availableModels.map(m => `${m.id} (${m.tier})`));
       
       // 3. Determine model choice (user preference or default)
+      console.log(`🎯 Selecting model...`);
       const selectedModel = this.selectModel(questionType, userModelChoice, availableModels, userProfile);
+      console.log(`✅ Selected Model: ${selectedModel}`);
       
       // 4. Get service configuration for selected model
       const serviceConfig = await this.getServiceConfiguration(questionType, selectedModel, userProfile);

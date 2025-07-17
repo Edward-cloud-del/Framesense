@@ -116,6 +116,53 @@ class CacheManager {
   }
   
   /**
+   * Generate cache key for Enhanced AI Processor integration
+   * Maps to appropriate cache strategy based on question type and image data
+   */
+  async generateKey(imageData, question, questionType, userTier) {
+    try {
+      console.log(`🔑 === CACHE KEY GENERATION ===`);
+      console.log(`Question Type: ${questionType}`);
+      console.log(`User Tier: ${userTier}`);
+      console.log(`Question: ${question}`);
+      console.log(`=============================`);
+      
+      // Map question types to cache strategies
+      const serviceTypeMapping = {
+        'PURE_TEXT': 'OCR_RESULTS',
+        'COUNT_OBJECTS': 'GOOGLE_VISION_OBJECTS',
+        'DETECT_OBJECTS': 'GOOGLE_VISION_OBJECTS',
+        'IDENTIFY_CELEBRITY': 'GOOGLE_VISION_WEB',
+        'DESCRIBE_SCENE': 'OPENAI_RESPONSES',
+        'CUSTOM_ANALYSIS': 'OPENAI_RESPONSES'
+      };
+      
+      const serviceType = serviceTypeMapping[questionType] || 'OPENAI_RESPONSES';
+      console.log(`🎯 Mapped to service type: ${serviceType}`);
+      
+      // Use cache key strategy to generate the key
+      let cacheKey;
+      if (serviceType === 'OPENAI_RESPONSES') {
+        cacheKey = await cacheKeyStrategy.generateOpenAIKey(imageData, question);
+      } else {
+        cacheKey = await cacheKeyStrategy.generateCacheKey(serviceType, imageData, {
+          language: 'en', // Default language
+          questionText: question,
+          userTier: userTier
+        });
+      }
+      
+      console.log(`✅ Generated cache key: ${cacheKey}`);
+      return cacheKey;
+      
+    } catch (error) {
+      console.error(`❌ Cache key generation failed:`, error.message);
+      // Fallback to simple key
+      return `fallback:${Date.now()}:${Math.random().toString(36).substr(2, 9)}`;
+    }
+  }
+  
+  /**
    * Get from cache (multi-layer lookup)
    */
   async get(serviceType, imageData, options = {}) {

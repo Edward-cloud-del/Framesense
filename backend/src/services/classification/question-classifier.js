@@ -187,40 +187,59 @@ class QuestionClassifier {
    * @returns {Object} Question type object with routing information
    */
   classifyQuestion(questionText) {
+    console.log(`🎯 === QUESTION CLASSIFIER DEBUG ===`);
+    console.log(`Input Question: "${questionText}"`);
+    
     if (!questionText || typeof questionText !== 'string') {
       throw new Error('Invalid question text provided');
     }
 
     const normalizedQuestion = questionText.toLowerCase().trim();
+    console.log(`Normalized Question: "${normalizedQuestion}"`);
     
     // Score each question type based on pattern matches
     const scores = {};
     
     for (const [typeId, questionType] of Object.entries(this.questionTypes)) {
-      scores[typeId] = this.calculateScore(normalizedQuestion, questionType);
+      const score = this.calculateScore(normalizedQuestion, questionType);
+      scores[typeId] = score;
+      console.log(`  ${typeId}: score=${score.toFixed(3)} (patterns: ${questionType.patterns.length})`);
     }
+    
+    console.log(`Scores:`, scores);
     
     // Find the highest scoring type
     const bestMatch = Object.entries(scores).reduce((best, [typeId, score]) => {
       return score > best.score ? { typeId, score } : best;
     }, { typeId: null, score: 0 });
     
+    console.log(`Best Match:`, bestMatch);
+    
     // If no good match found (score < 0.5), use fallback
     if (bestMatch.score < 0.5) {
-      return {
+      console.log(`Using fallback (score < 0.5): ${this.fallbackType.id}`);
+      const result = {
         ...this.fallbackType,
         confidence: 0.3,
         reasoning: 'No clear pattern match, using scene description fallback'
       };
+      console.log(`Final Result (fallback):`, result);
+      console.log(`=================================`);
+      return result;
     }
     
     const selectedType = this.questionTypes[bestMatch.typeId];
+    console.log(`Selected Type:`, selectedType);
     
-    return {
+    const result = {
       ...selectedType,
       confidence: Math.min(bestMatch.score, 1.0),
       reasoning: `Matched patterns for ${selectedType.description.toLowerCase()}`
     };
+    
+    console.log(`Final Result:`, result);
+    console.log(`=================================`);
+    return result;
   }
 
   /**

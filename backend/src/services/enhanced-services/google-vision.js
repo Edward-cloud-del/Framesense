@@ -35,6 +35,11 @@ class GoogleVisionService {
    * High-accuracy text extraction with language detection
    */
   async detectText(imageData, options = {}) {
+    console.log(`👁️ === GOOGLE VISION TEXT DETECTION ===`);
+    console.log(`User Tier: ${options || 'not provided'}`);
+    console.log(`Options:`, options);
+    console.log(`=====================================`);
+    
     try {
       const startTime = Date.now();
       
@@ -47,8 +52,10 @@ class GoogleVisionService {
         }
       };
 
+      console.log(`📡 Calling Google Vision API for text detection...`);
       // Call Google Vision API
       const [result] = await this.client.annotateImage(request);
+      console.log(`✅ Google Vision API response received`);
       const responseTime = Date.now() - startTime;
 
       // Process results
@@ -98,8 +105,14 @@ class GoogleVisionService {
    * Detect and count objects with bounding boxes
    */
   async detectObjects(imageData, options = {}) {
+    console.log(`🎯 === GOOGLE VISION OBJECT DETECTION ===`);
+    console.log(`User Tier: ${options || 'not provided'}`);
+    console.log(`Options:`, options);
+    console.log(`=======================================`);
+    
     try {
       const startTime = Date.now();
+      console.log(`📡 Calling Google Vision API for object detection...`);
 
       // Prepare request for object detection
       const request = {
@@ -164,9 +177,16 @@ class GoogleVisionService {
    * Identify celebrities, public figures, and web entities
    */
   async detectCelebritiesAndWeb(imageData, options = {}) {
+    console.log(`⭐ === GOOGLE VISION CELEBRITY DETECTION ===`);
+    console.log(`User Tier: ${options || 'not provided'}`);
+    console.log(`Options:`, options);
+    console.log(`NOTE: This is a PREMIUM-only feature`);
+    console.log(`==========================================`);
+    
     try {
       const startTime = Date.now();
 
+      console.log(`📡 Calling Google Vision API for celebrity/web detection...`);
       // Prepare request for web detection
       const request = {
         image: this.prepareImageData(imageData),
