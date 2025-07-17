@@ -180,7 +180,21 @@ class EnhancedAIProcessor {
       console.log(`⚡ Service execution completed in ${serviceResponseTime}ms for ${requestId}`);
       
       // 7. Optimize response for caching and transmission
-      const optimizedResult = await this.responseOptimizer.optimizeForCache(result, routing.service);
+      // Map service names to response optimizer constants
+      const serviceTypeMapping = {
+        'google-vision-objects': 'GOOGLE_VISION_OBJECTS',
+        'google-vision-web': 'GOOGLE_VISION_WEB', 
+        'google-vision-text': 'OCR_RESULTS',
+        'enhanced-ocr': 'OCR_RESULTS',
+        'openai-vision': 'OPENAI_RESPONSES',
+        'openai-gpt4': 'OPENAI_RESPONSES',
+        'openai-gpt35': 'OPENAI_RESPONSES'
+      };
+      
+      const optimizerServiceType = serviceTypeMapping[routing.service] || 'OCR_RESULTS';
+      console.log(`🎯 Mapping service '${routing.service}' to optimizer type '${optimizerServiceType}'`);
+      
+      const optimizedResult = await this.responseOptimizer.optimizeForCache(result, optimizerServiceType);
       
       // 8. Cache the optimized result
       await this.cacheManager.set(cacheKey, optimizedResult.optimized, {
