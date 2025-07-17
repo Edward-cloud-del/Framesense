@@ -1,122 +1,76 @@
-HTTP Logs
+n: who is this?
 
-Filter
+================================
 
+🎯 === GOOGLE VISION OBJECTS EXECUTION ===
 
+User ID: 6c660bd2-1c88-4ec4-8f23-2d0dc3370801
 
+User Tier: pro
 
-You reached the start of the range → Jul 17, 2025 at 11:38 AM
+User Email: pro-test.dev@framesense.pro
 
-Starting Container
+Required Tier: pro+
 
-✅ ES Module export klar - konfiguration tillgänglig
+=====================================
 
-🔍 Validerar Google Vision config...
+🎯 === GOOGLE VISION OBJECT DETECTION START ===
 
-✅ Validering klar - alla fält finns
+User Tier: pro
 
-✅ Google Vision Service initialized
+User ID: 6c660bd2-1c88-4ec4-8f23-2d0dc3370801
 
-✅ Enhanced AI Processor initialized
+Options: {
 
-✅ Stripe initialized
+  "userTier": "pro",
 
-(node:16) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+  "userId": "6c660bd2-1c88-4ec4-8f23-2d0dc3370801",
 
-(Use `node --trace-deprecation ...` to show where the warning was created)
+  "userEmail": "pro-test.dev@framesense.pro",
 
-🚀 FrameSense API running on port 8080
+  "maxResults": 50,
 
-🔗 Health check: http://localhost:8080/health
+  "maxLabels": 20
 
-🔐 Auth endpoints: http://localhost:8080/api/auth/*
+}
 
-💳 Subscription endpoints: http://localhost:8080/api/*
+Image Data Length: 179138
 
-🔄 Redis: Reconnecting in 0s... (attempt 0/3)
+API Config Available: true
 
-⚠️ Redis Error (running without cache): 
+Service Access: Pro+ required for object detection
 
-🔄 Redis: Reconnecting in 0s... (attempt 0/3)
+==============================================
 
-⚠️ Redis Error (running without cache): 
+📡 Calling Google Vision API for object detection...
 
-🔄 Redis: Reconnecting in 0s... (attempt 0/3)
+🔍 Object detection completed: 1 objects, 20 labels
 
-⚠️ Redis Error (running without cache): 
+⚡ Service execution completed in 314ms for req_1752746429705_dwebuyuxf
 
-📊 Analytics data loaded from file
+🎯 Mapping service 'openai-vision' to optimizer type 'OPENAI_RESPONSES'
 
-💾 Analytics persistence started
+🎯 Cache optimization complete for OPENAI_RESPONSES (1ms)
 
-⏱️ Real-time tracking started
+💾 Cache SET with key: openai:c44865e54c4d:8001feff381f181f23ce87ee27e6058605e647ee066e06ee014e11def81ea5d7:gpt-4-vision
 
-✅ Analytics Tracker initialized successfully
+⚠️ Redis not connected, skipping cache set
 
-✅ Enhanced OCR initialized
+✅ Cache SET successful: openai:c44865e54c4d:8001feff381f181f23ce87ee27e6058605e647ee066e06ee014e11def81ea5d7:gpt-4-vision (TTL: 3600s)
 
-🔄 Redis: Reconnecting in 5s... (attempt 1/3)
+📊 Request tracked: openai-vision for 6c660bd2-1c88-4ec4-8f23-2d0dc3370801 (314ms, $0.0008)
 
-🔄 Redis: Reconnecting in 5s... (attempt 1/3)
+✅ Enhanced AI Processor: Request req_1752746429705_dwebuyuxf completed successfully in 390ms
 
-🔄 Redis: Reconnecting in 5s... (attempt 1/3)
+✅ Enhanced AI processing completed via legacy route
 
-✅ Database connection test successful:
+🔍 === ENHANCED AI PROCESSOR RESPONSE DEBUG ===
 
-  Database: railway
+Response structure: {
 
-  User: postgres
+  "success": true,
 
-🔄 Redis: Reconnecting in 10s... (attempt 2/3)
+  "source": "openai-vision",
 
-🔄 Redis: Reconnecting in 10s... (attempt 2/3)
+  "result": {
 
-🔄 Redis: Reconnecting in 10s... (attempt 2/3)
-
-npm warn config production Use `--omit=dev` instead.
-
- 
-
-> framesense-backend@1.0.0 start
-
-> node dist/server.js
-
- 
-
-🔍 Loading environment variables from: /app/.env
-
-🔍 File exists: false
-
-🔍 Environment variables loaded:
-
-  DB_HOST: undefined
-
-  DB_PORT: undefined
-
-  DB_NAME: undefined
-
-  DB_USER: undefined
-
-  DB_PASSWORD: undefined
-
-🔍 Database connection config:
-
-  DATABASE_URL: ***
-
-  DB_HOST: undefined
-
-  DB_PORT: undefined
-
-  DB_NAME: undefined
-
-  DB_USER: undefined
-
-  DB_PASSWORD: undefined
-
-🔄 Initializing Redis cache connection...
-
-✅ Simple Cache Manager initialized
-
-✅ Response Optimizer initialized
-
-🔄 Initializing Analytics Tracker...

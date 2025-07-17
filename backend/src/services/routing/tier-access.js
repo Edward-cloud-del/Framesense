@@ -23,7 +23,7 @@ class TierAccess {
         supportLevel: 'community'
       },
       
-      pro: {
+      premium: {
         services: ['enhanced-ocr', 'google-vision-objects', 'google-vision-text', 'gpt-4-vision', 'gpt-3.5-vision'],
         questionTypes: ['PURE_TEXT', 'COUNT_OBJECTS', 'DESCRIBE_SCENE', 'DETECT_OBJECTS'],
         dailyLimit: 100,
@@ -37,7 +37,7 @@ class TierAccess {
         costLimit: 50.0 // $50/month
       },
       
-      premium: {
+      pro: {
         services: ['all'],
         questionTypes: ['all'],
         dailyLimit: 1000,
@@ -63,13 +63,14 @@ class TierAccess {
       'gpt-3.5-vision': 0.02
     };
 
-    // Question type to tier mapping
+    // Question type to tier mapping  
+    // Since hierarchy is now pro > premium > free, premium features should be accessible to pro users
     this.QUESTION_TYPE_TIERS = {
       'PURE_TEXT': 'free',
-      'COUNT_OBJECTS': 'pro',
-      'DETECT_OBJECTS': 'pro',
-      'DESCRIBE_SCENE': 'pro',
-      'IDENTIFY_CELEBRITY': 'premium',
+      'COUNT_OBJECTS': 'premium',  // Now accessible to both premium and pro
+      'DETECT_OBJECTS': 'premium', // Now accessible to both premium and pro
+      'DESCRIBE_SCENE': 'premium', // Now accessible to both premium and pro
+      'IDENTIFY_CELEBRITY': 'premium', // Accessible to premium and pro (pro > premium)
       'CUSTOM_ANALYSIS': 'premium'
     };
   }
@@ -110,14 +111,14 @@ class TierAccess {
       console.log(`  User Tier: ${userProfile.tier}`);
       console.log(`  All Question Type Mappings:`, JSON.stringify(this.QUESTION_TYPE_TIERS, null, 2));
       
-      // Special handling for premium tier with 'all' access
-      if (userProfile.tier === 'premium' && tierPermissions.questionTypes.includes('all')) {
-        console.log(`✅ PREMIUM TIER BYPASS: User has premium tier with 'all' question types access`);
+      // Special handling for pro tier with 'all' access (pro is highest tier)
+      if (userProfile.tier === 'pro' && tierPermissions.questionTypes.includes('all')) {
+        console.log(`✅ PRO TIER BYPASS: User has pro tier with 'all' question types access`);
       } else {
         console.log(`🔒 Checking if user tier '${userProfile.tier}' can access required tier '${requiredTier}'`);
         const canAccess = this.canAccessTier(userProfile.tier, requiredTier);
         console.log(`📊 Tier Hierarchy Check Result: ${canAccess}`);
-        console.log(`📊 Tier Hierarchy:`, { 'free': 0, 'pro': 1, 'premium': 2 });
+        console.log(`📊 Tier Hierarchy (CORRECTED):`, { 'free': 0, 'premium': 1, 'pro': 2 });
         
         if (!canAccess && requiredTier) {
           console.error(`❌ TIER INSUFFICIENT: ${questionType.id} requires '${requiredTier}' tier, user has '${userProfile.tier}' tier`);
