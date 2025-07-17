@@ -206,6 +206,7 @@ const MODEL_REGISTRY = {
 };
 
 // Tier definitions with access control
+// CORRECTED HIERARCHY: pro > premium > free
 const TIER_PERMISSIONS = {
   free: {
     level: 0,
@@ -214,19 +215,19 @@ const TIER_PERMISSIONS = {
     allowedProviders: ['tesseract', 'hybrid', 'ollama'],
     description: 'Basic AI analysis'
   },
-  pro: {
+  premium: {
     level: 1,
     maxCostPerRequest: 0.03,
     dailyRequestLimit: 200,
     allowedProviders: ['tesseract', 'hybrid', 'google', 'openai', 'huggingface', 'ollama'],
-    description: 'Advanced AI analysis'
+    description: 'Premium AI analysis'
   },
-  premium: {
+  pro: {
     level: 2,
     maxCostPerRequest: 0.1,
     dailyRequestLimit: 1000,
     allowedProviders: ['all'],
-    description: 'Premium AI analysis with all features'
+    description: 'Pro AI analysis with all features (highest tier)'
   }
 };
 

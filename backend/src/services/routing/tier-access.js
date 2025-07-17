@@ -202,17 +202,22 @@ class TierAccess {
 
   /**
    * Check if user tier can access required tier
+   * CORRECTED HIERARCHY: pro > premium > free
    */
   canAccessTier(userTier, requiredTier) {
-    const tierHierarchy = { 'free': 0, 'pro': 1, 'premium': 2 };
-    return tierHierarchy[userTier] >= tierHierarchy[requiredTier];
+    const tierHierarchy = { 'free': 0, 'premium': 1, 'pro': 2 };
+    console.log(`🎯 TIER HIERARCHY CHECK: ${userTier} (level ${tierHierarchy[userTier]}) vs ${requiredTier} (level ${tierHierarchy[requiredTier]})`);
+    const canAccess = tierHierarchy[userTier] >= tierHierarchy[requiredTier];
+    console.log(`🎯 ACCESS RESULT: ${canAccess}`);
+    return canAccess;
   }
 
   /**
    * Check if user tier can access lower tier features
+   * CORRECTED HIERARCHY: pro > premium > free
    */
   canAccessLowerTier(userTier, targetTier) {
-    const tierHierarchy = { 'free': 0, 'pro': 1, 'premium': 2 };
+    const tierHierarchy = { 'free': 0, 'premium': 1, 'pro': 2 };
     return tierHierarchy[userTier] >= tierHierarchy[targetTier];
   }
 
