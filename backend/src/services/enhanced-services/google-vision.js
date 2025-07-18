@@ -32,7 +32,7 @@ class GoogleVisionService {
 
   /**
    * MOMENT 2.2: Text Detection Service (OCR Fallback)
-   * High-accuracy text extraction with language detection
+   * High-accuracy text extraction with language detecti
    */
   async detectText(imageData, options = {}) {
     console.log(`👁️ === GOOGLE VISION TEXT DETECTION START ===`);

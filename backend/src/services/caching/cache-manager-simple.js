@@ -55,51 +55,50 @@ class SimpleCacheManager {
    */
   async generateKey(imageData, question, questionType, userTier) {
     try {
-      console.log(`🔑 === CACHE KEY GENERATION (SIMPLE) ===`);
+      console.log(`🔑 === CACHE KEY GENERATION (ENHANCED AI PROCESSOR) ===`);
       console.log(`Question Type: ${questionType}`);
       console.log(`User Tier: ${userTier}`);
-      console.log(`Question: ${question}`);
-      console.log(`=====================================`);
+      console.log(`Question: "${question}"`);
+      console.log(`Has Image Data: ${!!imageData}`);
       
-      // Map question types to cache strategies
+      // Map question type to service type for cache strategy
       const serviceTypeMapping = {
-        'PURE_TEXT': 'OCR_RESULTS',
-        'COUNT_OBJECTS': 'GOOGLE_VISION_OBJECTS',
-        'DETECT_OBJECTS': 'GOOGLE_VISION_OBJECTS',
-        'IDENTIFY_CELEBRITY': 'GOOGLE_VISION_WEB',
-        'DESCRIBE_SCENE': 'OPENAI_RESPONSES',
-        'CUSTOM_ANALYSIS': 'OPENAI_RESPONSES'
+        'PURE_TEXT': 'enhanced-ocr',
+        'OBJECT_COUNT': 'google-vision-objects', 
+        'CELEBRITY_ID': 'google-vision-web',
+        'DOCUMENT_READ': 'enhanced-ocr',
+        'GENERAL_VISION': 'google-vision-objects'
       };
       
-      const serviceType = serviceTypeMapping[questionType] || 'OPENAI_RESPONSES';
+      const serviceType = serviceTypeMapping[questionType] || 'enhanced-ocr';
       console.log(`🎯 Mapped to service type: ${serviceType}`);
       
-             // Use cache key strategy to generate the key
-       let cacheResult;
-       if (serviceType === 'OPENAI_RESPONSES') {
-         cacheResult = await cacheKeyStrategy.generateOpenAIKey(imageData, question);
-       } else {
-         cacheResult = await cacheKeyStrategy.generateCacheKey(serviceType, imageData, {
-           language: 'en', // Default language
-           questionText: question,
-           userTier: userTier
-         });
-       }
-       
-       // Extract the actual key string from the result object
-       const cacheKey = typeof cacheResult === 'object' ? cacheResult.key : cacheResult;
-       console.log(`✅ Generated cache key: ${cacheKey}`);
-       return cacheKey;
+      // Use existing cache strategy with proper options
+      const options = {
+        userTier,
+        question,
+        questionType,
+        language: 'en' // Default language
+      };
+      
+      const cacheInfo = await cacheKeyStrategy.generateCacheKey(serviceType, imageData, options);
+      console.log(`✅ Generated cache key: ${cacheInfo.key}`);
+      console.log(`=====================================`);
+      
+      return cacheInfo.key;
       
     } catch (error) {
-      console.error(`❌ Cache key generation failed:`, error.message);
-      // Fallback to simple key
-      return `fallback:${Date.now()}:${Math.random().toString(36).substr(2, 9)}`;
+      console.error(`❌ Cache key generation error:`, error.message);
+      // Return a simple fallback key to prevent crashes
+      const fallbackKey = `fallback:${questionType}:${Date.now()}`;
+      console.log(`🔄 Using fallback key: ${fallbackKey}`);
+      return fallbackKey;
     }
   }
   
   /**
    * Get from cache using cache key (Enhanced AI Processor interface)
+   * Graceful error handling to prevent crashes when Redis is down
    */
   async get(cacheKey) {
     // If called with just a cache key (Enhanced AI Processor style)
@@ -108,9 +107,18 @@ class SimpleCacheManager {
       this.metrics.totalRequests++;
       
       try {
-        console.log(`🔍 Cache GET with key: ${cacheKey}`);
+        console.log(`🔍 === CACHE GET (ENHANCED AI PROCESSOR) ===`);
+        console.log(`Cache Key: ${cacheKey}`);
         
-        // Try Redis
+        // Check if Redis is connected before attempting
+        if (!this.redisCache.isConnected) {
+          console.warn(`⚠️ Redis not connected, returning null for: ${cacheKey}`);
+          console.log(`=====================================`);
+          this.metrics.misses++;
+          return null; // Don't crash, just miss cache
+        }
+        
+        // Try Redis with graceful error handling
         let result = await this.redisCache.get(cacheKey);
         
         if (result !== null) {
@@ -123,23 +131,28 @@ class SimpleCacheManager {
               const compressedBuffer = Buffer.from(result._data, 'base64');
               const decompressedBuffer = await gunzip(compressedBuffer);
               result = JSON.parse(decompressedBuffer.toString());
+              console.log(`🗜️ Decompressed cached data successfully`);
             } catch (decompressionError) {
-              console.error('❌ Decompression failed:', decompressionError.message);
+              console.warn('⚠️ Decompression failed, returning null:', decompressionError.message);
               result = null;
             }
           }
           
+          console.log(`✅ Returning cached result (${typeof result})`);
+          console.log(`=====================================`);
           return result;
         } else {
           console.log(`❌ Cache MISS for key: ${cacheKey}`);
+          console.log(`=====================================`);
           this.metrics.misses++;
           return null;
         }
         
       } catch (error) {
-        console.error(`❌ Cache GET error:`, error.message);
+        console.error(`❌ Cache GET error (graceful handling):`, error.message);
+        console.log(`=====================================`);
         this.metrics.misses++;
-        return null;
+        return null; // Return null instead of throwing to prevent crashes
       }
     }
     
@@ -216,30 +229,26 @@ class SimpleCacheManager {
   }
   
   /**
-   * Set cache value (Enhanced AI Processor interface)
-   */
-  async set(cacheKeyOrServiceType, dataOrImageData, optionsOrData, optionsParam = {}) {
-    // Enhanced AI Processor interface: set(cacheKey, data, options)
-    if (typeof cacheKeyOrServiceType === 'string' && arguments.length <= 3 && 
-        (typeof optionsOrData === 'object' && !Buffer.isBuffer(optionsOrData))) {
-      return this.setByKey(cacheKeyOrServiceType, dataOrImageData, optionsOrData || {});
-    }
-    
-    // Original interface: set(serviceType, imageData, data, options)
-    return this.setByServiceType(cacheKeyOrServiceType, dataOrImageData, optionsOrData, optionsParam);
-  }
-  
-  /**
    * Set cache value using cache key (Enhanced AI Processor interface)
+   * Graceful error handling to prevent crashes when Redis is down
    */
-  async setByKey(cacheKey, data, options = {}) {
+  async set(cacheKey, data, options = {}) {
     const startTime = Date.now();
     
     try {
-      console.log(`💾 Cache SET with key: ${cacheKey}`);
+      console.log(`💾 === CACHE SET (ENHANCED AI PROCESSOR) ===`);
+      console.log(`Cache Key: ${cacheKey}`);
+      console.log(`Data Type: ${typeof data}`);
+      console.log(`Options:`, JSON.stringify(options, null, 2));
       
       // Use TTL from options or default
       const ttl = options.ttl || 3600; // 1 hour default
+      
+      // Check if Redis is connected before attempting
+      if (!this.redisCache.isConnected) {
+        console.warn(`⚠️ Redis not connected, skipping cache set for: ${cacheKey}`);
+        return false; // Don't crash, just skip caching
+      }
       
       // Compress data if needed
       let finalData = data;
@@ -260,25 +269,28 @@ class SimpleCacheManager {
           isCompressed = true;
           console.log(`🗜️ Data compressed: ${originalSize} -> ${compressedBuffer.length} bytes`);
         } catch (compressionError) {
-          console.error('❌ Compression failed:', compressionError.message);
+          console.warn('⚠️ Compression failed, using uncompressed data:', compressionError.message);
           finalData = data;
         }
       }
       
-      // Set in Redis
-      await this.redisCache.set(cacheKey, finalData, ttl);
+      // Set in Redis with graceful error handling
+      const success = await this.redisCache.set(cacheKey, finalData, ttl);
       
       // Track cost savings
       if (options.cost) {
-        this.trackCostSavings(options.cost, 'redis');
+        this.trackCostSavings('redis', options.cost);
       }
       
-      console.log(`✅ Cache SET successful: ${cacheKey} (TTL: ${ttl}s)`);
-      return true;
+      console.log(`✅ Cache SET result: ${success ? 'SUCCESS' : 'FAILED'} (TTL: ${ttl}s)`);
+      console.log(`=====================================`);
+      
+      return success; // Boolean result, no throwing
       
     } catch (error) {
-      console.error(`❌ Cache SET error:`, error.message);
-      return false;
+      console.error(`❌ Cache SET error (graceful handling):`, error.message);
+      console.log(`=====================================`);
+      return false; // Return false instead of throwing to prevent crashes
     }
   }
   
