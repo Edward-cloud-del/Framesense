@@ -61,10 +61,29 @@ class EnhancedOCR {
                 }
             }
             let result;
-            // TEMPORARY: Force Google Vision to avoid Tesseract crashes
-            console.log('🔧 Enhanced OCR: Using Google Vision (temporarily disabled Tesseract)');
-            result = await this.googleVisionFallback(imageData, language);
-            result.fallback_used = 'google-vision-forced';
+            // FIXED: Try Tesseract first, then fallback to Google Vision if needed
+            if (forceGoogleVision) {
+                console.log('🔧 Enhanced OCR: Using Google Vision (forced)');
+                result = await this.googleVisionFallback(imageData, language);
+                result.fallback_used = 'google-vision-forced';
+            }
+            else {
+                try {
+                    console.log('📝 Enhanced OCR: Trying Tesseract OCR first...');
+                    result = await this.tesseractOCR(imageData, { language, preprocessing });
+                    // Validate quality - if poor, fallback to Google Vision
+                    if (!this.validateTextQuality(result)) {
+                        console.log('⚠️ Enhanced OCR: Tesseract quality low, falling back to Google Vision');
+                        result = await this.googleVisionFallback(imageData, language);
+                        result.fallback_used = 'google-vision';
+                    }
+                }
+                catch (tesseractError) {
+                    console.log('⚠️ Enhanced OCR: Tesseract failed, falling back to Google Vision:', tesseractError.message);
+                    result = await this.googleVisionFallback(imageData, language);
+                    result.fallback_used = 'google-vision';
+                }
+            }
             // Add metadata
             result.processing_time = Date.now() - startTime;
             result.method = result.fallback_used === 'google-vision' ? 'google-vision' : 'tesseract';
@@ -94,10 +113,60 @@ class EnhancedOCR {
      */
     async tesseractOCR(imageData, options = {}) {
         const { language = 'eng', preprocessing = true } = options;
-        // Temporarily disable Tesseract due to 404 training data download issue
-        console.log('⚠️ Tesseract OCR: Temporarily disabled due to training data download issue (404 error)');
-        console.log('🔄 Falling back to Google Vision...');
-        throw new Error('Tesseract temporarily disabled - training data download failing with 404');
+        try {
+            console.log('📝 Tesseract OCR: Starting text extraction...');
+            // Get Tesseract dynamically
+            const Tesseract = await getTesseract();
+            if (!Tesseract) {
+                throw new Error('Tesseract.js not available');
+            }
+            // Preprocess image if enabled
+            let processedImageData = imageData;
+            if (preprocessing) {
+                processedImageData = await this.preprocessImageForOCR(imageData);
+            }
+            // Run Tesseract OCR
+            console.log(`🔍 Tesseract: Running OCR with language: ${language}`);
+            const { data } = await Tesseract.recognize(processedImageData, language, {
+                logger: (m) => {
+                    if (m.status === 'recognizing text') {
+                        console.log(`📖 Tesseract progress: ${Math.round(m.progress * 100)}%`);
+                    }
+                }
+            });
+            // Extract text and regions
+            const extractedText = data.text?.trim() || '';
+            const confidence = data.confidence / 100 || 0.0; // Convert to 0-1 scale
+            // Map Tesseract regions to standard format
+            const regions = (data.words || []).map(word => ({
+                text: word.text,
+                confidence: word.confidence / 100,
+                boundingBox: {
+                    x: word.bbox.x0,
+                    y: word.bbox.y0,
+                    width: word.bbox.x1 - word.bbox.x0,
+                    height: word.bbox.y1 - word.bbox.y0
+                }
+            }));
+            const result = {
+                text: extractedText,
+                confidence: confidence,
+                has_text: extractedText.length > 0,
+                word_count: extractedText.split(/\s+/).filter(w => w.length > 0).length,
+                language_detected: language,
+                regions: regions,
+                cost: 0.0, // Tesseract is free
+                preprocessing_used: preprocessing,
+                fullText: extractedText,
+                textRegions: regions
+            };
+            console.log(`✅ Tesseract OCR: Extracted "${extractedText}" with ${confidence.toFixed(2)} confidence`);
+            return result;
+        }
+        catch (error) {
+            console.error('❌ Tesseract OCR failed:', error.message);
+            throw error; // Let the caller handle fallback
+        }
     }
     /**
      * Google Vision fallback for OCR
