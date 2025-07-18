@@ -281,9 +281,7 @@ class ResponseOptimizer {
     
     this.metrics.tokensSaved += totalTokensSaved;
     
-    if (totalTokensSaved > 0) {
-      console.log(`🔤 Token optimization: saved ${totalTokensSaved} tokens`);
-    }
+    if (totalTokensSaved > 100) {console.log(`🔤 Token optimization: saved ${totalTokensSaved} tokens`);}
     
     return optimized;
   }
@@ -310,8 +308,7 @@ class ResponseOptimizer {
     
     return optimized;
   }
-  
-  /**
+    /**
    * Strip metadata based on strategy level
    */
   stripMetadata(response, level) {
