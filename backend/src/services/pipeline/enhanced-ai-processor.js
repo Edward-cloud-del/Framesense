@@ -11,7 +11,6 @@ import googleVisionService from '../enhanced-services/google-vision.js';
 // Enhanced OCR uses CommonJS, we'll create wrapper
 import UserService from '../user-service.js';
 import { AIProcessor } from '../ai-processor.js'; // FIXED: Static import instead of dynamic
-
 /**
  * Enhanced AI Processor - Main Orchestration Pipeline
  * MOMENT 5.1: Integrates all DAY 1-4 components into unified system
@@ -23,7 +22,12 @@ import { AIProcessor } from '../ai-processor.js'; // FIXED: Static import instea
  * - Comprehensive analytics and performance tracking
  * - Service execution with fallback management
  * - Response optimization and standardization
+ * 
+ * 
+ * 
+
  */
+
 class EnhancedAIProcessor {
   constructor() {
     // Initialize core services first
@@ -962,4 +966,6 @@ Please answer the user's question based on the extracted text. Be helpful and sp
 // Create and export singleton instance
 const enhancedAIProcessor = new EnhancedAIProcessor();
 
+// Export both as default and named export for flexibility
 export default enhancedAIProcessor;
+

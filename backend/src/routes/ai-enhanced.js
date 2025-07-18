@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import multer from 'multer';
-import enhancedAIProcessor from '../services/pipeline/enhanced-ai-processor.js';
+import {enhancedAIProcessor} from '../services/pipeline/enhanced-ai-processor.js';
 import { ModelSelector } from '../services/classification/model-selector.js';
 import { QuestionClassifier } from '../services/classification/question-classifier.js';
 import { TierAccess } from '../services/routing/tier-access.js';
@@ -297,6 +297,13 @@ router.post('/analyze', authenticateUser, upload.single('image'), async (req, re
       req.user.id,
       options
     );
+    if (result.error) {
+      return res.status(500).json({
+        success: false,
+        message: result.error.message,
+        code: 'ANALYSIS_FAILED'
+      });
+    }
     
     // Add API-specific metadata
     result.metadata = {

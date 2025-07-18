@@ -37,6 +37,6 @@ module.exports = {
   QuestionClassifier: Classification.QuestionClassifier,
   ModelSelector: Classification.ModelSelector,
   SmartRouter: Routing.SmartRouter,
-  EnhancedAIProcessor: Pipeline.EnhancedAIProcessor,
+  EnhancedAIProcessor: Pipeline.enhancedAIProcessor,
   CacheManager: Caching.CacheManager
 }; 

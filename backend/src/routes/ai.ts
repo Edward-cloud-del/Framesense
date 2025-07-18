@@ -88,8 +88,8 @@ export const analyzeImageRoute = async (req: Request, res: Response) => {
     console.log(`🎯 PURPOSE: Enable Google Vision for pro users via legacy endpoint`);
     console.log(`================================================`);
 
-    // Import Enhanced AI Processor for Google Vision support
-    const { default: enhancedAIProcessor } = await import('../services/pipeline/enhanced-ai-processor.js');
+    // Use the singleton Enhanced AI Processor instance (same as ai-enhanced.js)
+    const { enhancedAIProcessor } = await import('../services/pipeline/index.js');
 
     // Use Enhanced AI Processor instead of legacy processor
     const options = {
