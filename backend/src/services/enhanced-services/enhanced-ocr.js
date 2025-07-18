@@ -159,12 +159,12 @@ class EnhancedOCR {
 
       // Extract text and regions
       const extractedText = data.text?.trim() || '';
-      const confidence = data.confidence / 100 || 0.0; // Convert to 0-1 scale
+      const confidence = data.confidence / 100 || 0.7; // Convert to 0-1 scale, fallback to 70%
       
       // Map Tesseract regions to standard format
       const regions = (data.words || []).map(word => ({
         text: word.text,
-        confidence: word.confidence / 100,
+        confidence: word.confidence / 100 || 0.6, // Fallback for individual word confidence
         boundingBox: {
           x: word.bbox.x0,
           y: word.bbox.y0,
