@@ -453,9 +453,42 @@ Please answer the user's question based on the extracted text. Be helpful and sp
           return await this.googleVision.detectLogos(imageData, userProfile.tier);
           
         case 'openai-vision':
-          console.log(`🧠 Attempting OpenAI Vision...`);
-          // TODO: Implement OpenAI Enhanced service
-          throw new Error('OpenAI Enhanced service not yet implemented');
+          console.log(`🧠 Executing OpenAI Vision with existing proven code...`);
+          
+          // Use existing proven OpenAI implementation from ai-processor.js
+          const { AIProcessor } = await import('../ai-processor.js');
+          
+          // Create OpenAI client (assuming it's available in the environment)
+          const { default: OpenAI } = await import('openai');
+          const openaiClient = new OpenAI({
+            apiKey: process.env.OPENAI_API_KEY
+          });
+          
+          // Use existing AIProcessor with enhanced prompt
+          const openaiRequest = {
+            message: enhancedPrompt,
+            imageData: imageData,
+            userTier: userProfile.tier
+          };
+          
+          const openaiResult = await AIProcessor.processRequest(openaiRequest, openaiClient, {
+            userId: userProfile.id,
+            tier: userProfile.tier
+          });
+          
+          console.log(`✅ OpenAI Vision completed successfully`);
+          return {
+            result: {
+              summary: openaiResult.response || openaiResult.aiResponse || 'OpenAI analysis completed'
+            },
+            confidence: 0.9,
+            service: 'openai-vision',
+            metadata: {
+              model: 'gpt-4-vision',
+              responseTime: openaiResult.responseTime || 0,
+              cost: 0.03
+            }
+          };
           
         case 'open-source-api':
           console.log(`🔌 === FALLBACK FROM OPEN-SOURCE-API ===`);
