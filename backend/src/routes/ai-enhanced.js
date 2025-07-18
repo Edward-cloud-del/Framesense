@@ -297,11 +297,14 @@ router.post('/analyze', authenticateUser, upload.single('image'), async (req, re
       req.user.id,
       options
     );
-    if (result.error) {
+    
+    // Check if Enhanced AI Processor returned an error
+    if (!result.success) {
       return res.status(500).json({
         success: false,
-        message: result.error.message,
-        code: 'ANALYSIS_FAILED'
+        message: result.error || 'Analysis failed',
+        code: 'ANALYSIS_FAILED',
+        metadata: result.metadata
       });
     }
     

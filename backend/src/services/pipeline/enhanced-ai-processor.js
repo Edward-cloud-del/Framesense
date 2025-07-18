@@ -58,9 +58,9 @@ class EnhancedAIProcessor {
     this.googleVision = googleVisionService; // Already an instance
     this.enhancedOCR = null; // Will be dynamically imported
     
-    // Initialize Enhanced OCR dynamically
-    this.initializeEnhancedOCR();
-    
+    // Enhanced OCR will be initialized on first use (async)
+    this.enhancedOCRInitialized = false;
+  }    
     // Service registry for execution
     this.serviceRegistry = {
       'enhanced-ocr': null, // Will be set after dynamic import
@@ -313,6 +313,18 @@ class EnhancedAIProcessor {
       switch (service) {
         case 'enhanced-ocr':
           console.log(`📝 Executing Enhanced OCR...`);
+          
+          // Lazy initialization - ensure Enhanced OCR is ready
+          if (!this.enhancedOCRInitialized) {
+            console.log(`🔄 Initializing Enhanced OCR on first use...`);
+            await this.initializeEnhancedOCR();
+            this.enhancedOCRInitialized = true;
+          }
+          
+          if (!this.enhancedOCR) {
+            throw new Error('Enhanced OCR failed to initialize');
+          }
+          
           const ocrResult = await this.enhancedOCR.extractText(imageData, {
             ...parameters,
             language: parameters?.language || 'eng',
