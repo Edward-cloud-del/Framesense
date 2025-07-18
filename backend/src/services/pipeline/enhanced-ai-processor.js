@@ -60,7 +60,7 @@ class EnhancedAIProcessor {
     
     // Enhanced OCR will be initialized on first use (async)
     this.enhancedOCRInitialized = false;
-  }    
+    
     // Service registry for execution
     this.serviceRegistry = {
       'enhanced-ocr': null, // Will be set after dynamic import
