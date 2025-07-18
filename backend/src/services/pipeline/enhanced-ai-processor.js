@@ -196,7 +196,7 @@ class EnhancedAIProcessor {
       console.log(`🔄 Cache miss for ${requestId}, proceeding with analysis`);
       
       // 5. Route request based on type and user preferences
-      const routing = await this.smartRouter.routeRequest(
+      const routing = this.smartRouter.routeRequest(
         questionType,
         options.modelPreference,
         userProfile,

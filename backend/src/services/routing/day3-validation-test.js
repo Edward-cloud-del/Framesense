@@ -182,7 +182,7 @@ class Day3ValidationTest {
     };
 
     try {
-      const routeResult = await this.smartRouter.routeRequest(questionType, null, userProfile);
+      const routeResult = this.smartRouter.routeRequest(questionType, null, userProfile);
       this.recordResult('Smart Routing', 'Route generation', !!routeResult.service);
     } catch (error) {
       // Expected for some mock limitations
