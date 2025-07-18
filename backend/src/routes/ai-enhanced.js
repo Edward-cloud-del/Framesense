@@ -291,7 +291,7 @@ router.post('/analyze', authenticateUser, upload.single('image'), async (req, re
       cacheStrategy
     };
     
-    const result = await enhancedAIProcessor.processAnalysisRequest(
+    const result = enhancedAIProcessor.processAnalysisRequest(
       imageData,
       question,
       req.user.id,
