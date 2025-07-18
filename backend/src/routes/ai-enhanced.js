@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import multer from 'multer';
-import {enhancedAIProcessor} from '../services/pipeline/enhanced-ai-processor.js';
+import enhancedAIProcessor from '../services/pipeline/enhanced-ai-processor.js';
 import { ModelSelector } from '../services/classification/model-selector.js';
 import { QuestionClassifier } from '../services/classification/question-classifier.js';
 import { TierAccess } from '../services/routing/tier-access.js';

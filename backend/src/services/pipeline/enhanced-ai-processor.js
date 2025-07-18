@@ -965,7 +965,7 @@ Please answer the user's question based on the extracted text. Be helpful and sp
 
 // Create and export singleton instance
 const enhancedAIProcessor = new EnhancedAIProcessor();
-
+export { enhancedAIProcessor };
 // Export both as default and named export for flexibility
 export default enhancedAIProcessor;
 
