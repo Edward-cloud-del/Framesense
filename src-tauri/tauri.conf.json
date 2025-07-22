@@ -43,7 +43,7 @@
   },
   "productName": "frame-sense",
   "mainBinaryName": "frame-sense",
-  "version": "../package.json",
+  "version": "0.2.8",
   "identifier": "com.framesense.app",
   "plugins": {
     "updater": {

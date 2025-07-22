@@ -1,7 +1,7 @@
 {
   "name": "framesense-backend",
   "version": "1.0.0",
-  "description": "FrameSense API Backend",
+  "description": "FrameSense Simple OCR + ChatGPT Backend",
   "main": "dist/server.js",
   "type": "module",
   "scripts": {
@@ -11,33 +11,16 @@
     "railway": "npm run build && npm start"
   },
   "dependencies": {
-    "@google-cloud/vision": "^5.3.0",
-    "@types/pg": "^8.15.4",
-    "@types/sqlite3": "^3.1.11",
-    "bcryptjs": "^2.4.3",
-    "blockhash-core": "^0.1.0",
     "cors": "^2.8.5",
-    "crypto": "^1.0.1",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
-    "helmet": "^7.1.0",
-    "imghash": "^1.0.0",
-    "jsonwebtoken": "^9.0.0",
     "multer": "^1.4.5-lts.1",
     "openai": "^4.24.0",
-    "pg": "^8.16.3",
-    "redis": "^4.6.0",
-    "sharp": "^0.33.5",
-    "sqlite3": "^5.1.7",
-    "stripe": "^14.11.0",
-    "tesseract.js": "^5.1.1",
-    "tiktoken": "^1.0.21"
+    "tesseract.js": "^5.1.1"
   },
   "devDependencies": {
-    "@types/bcryptjs": "^2.4.6",
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
-    "@types/jsonwebtoken": "^9.0.5",
     "@types/multer": "^1.4.11",
     "@types/node": "^20.10.0",
     "tsx": "^4.6.0",
