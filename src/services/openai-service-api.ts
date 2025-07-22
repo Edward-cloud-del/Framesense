@@ -16,8 +16,8 @@ export class OpenAIServiceAPI implements IAIService {
       'http://localhost:3001/api/analyze'    // Local backend
     ];
     
-    // For now, return the first one (simple backend)
-    return possibleUrls[0];
+    // For now, return the first one (simple backend)  
+    return possibleUrls[0] || 'http://localhost:8080/api/analyze';
   }
 
   private getAuthToken(): string | null {
@@ -83,13 +83,13 @@ export class OpenAIServiceAPI implements IAIService {
         formData.append('image', blob, 'screenshot.png');
       }
 
-      const response = await fetch(this.apiUrl, {
-        method: 'POST',
-                 headers: authToken ? {
+             const response = await fetch(this.apiUrl, {
+         method: 'POST',
+         headers: authToken ? {
            'Authorization': `Bearer ${authToken}`
-         } : {}
-        body: formData
-      });
+         } : {},
+         body: formData
+       });
 
       if (!response.ok) {
         const error = await response.json().catch(() => ({ message: 'Unknown error' }));
