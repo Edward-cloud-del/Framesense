@@ -37,6 +37,12 @@ export async function analyzeImage(req: Request, res: Response) {
     
     // Build enhanced context for ChatGPT
     let enhancedQuestion = userQuestion;
+    
+    // Add specific instructions for person identification questions
+    if (userQuestion.toLowerCase().includes('who') && userQuestion.toLowerCase().includes('person')) {
+      enhancedQuestion += `\n\nPlease analyze the image carefully and try to identify any people in the image. If you recognize any public figures, celebrities, or well-known individuals, please provide their names and relevant information.`;
+    }
+    
     if (visionResult.success) {
       const visionContext = [];
       if (visionResult.objects.length > 0) {
@@ -46,7 +52,11 @@ export async function analyzeImage(req: Request, res: Response) {
         visionContext.push(`Logos/brands detected: ${visionResult.logos.join(', ')}`);
       }
       if (visionResult.faces > 0) {
-        visionContext.push(`${visionResult.faces} person(s) detected`);
+        if (enhancedQuestion.toLowerCase().includes('who') || enhancedQuestion.toLowerCase().includes('person')) {
+          visionContext.push(`${visionResult.faces} person(s) detected - Please identify who this person is if they are a known public figure or celebrity`);
+        } else {
+          visionContext.push(`${visionResult.faces} person(s) detected`);
+        }
       }
       
       if (visionContext.length > 0) {
