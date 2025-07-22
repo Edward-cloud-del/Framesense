@@ -9,14 +9,15 @@ export class OpenAIServiceAPI implements IAIService {
   }
 
   private getAPIUrl(): string {
-    // Use environment variable or default to production
-    if (import.meta.env.VITE_API_URL) {
-      return import.meta.env.VITE_API_URL;
-    }
+    // Try different possible API URLs
+    const possibleUrls = [
+      'http://localhost:8080/api/analyze',   // Simple backend
+      'https://api.finalyze.pro/api/analyze', // Railway
+      'http://localhost:3001/api/analyze'    // Local backend
+    ];
     
-    // Always use Railway in production - based on RAILWAY-SETUP.md
-    // Development can also use Railway to avoid localhost issues
-    return 'https://api.finalyze.pro';
+    // For now, return the first one (simple backend)
+    return possibleUrls[0];
   }
 
   private getAuthToken(): string | null {
@@ -57,32 +58,37 @@ export class OpenAIServiceAPI implements IAIService {
   }
 
   async analyzeImageWithText(request: AIRequest): Promise<AIResponse> {
+    console.log('🔄 Making backend API request...');
+    
     try {
-      console.log('📡 Sending request to backend API...');
+      // Get auth token (optional for simple backend)
+      const authToken = this.getAuthToken();
       
-      // Get authentication token from localStorage
-      const token = this.getAuthToken();
-      console.log('🔍 Auth token retrieved:', token ? `${token.substring(0, 20)}...` : 'none');
+      // Convert base64 image to blob for multipart upload
+      const formData = new FormData();
+      formData.append('question', request.message);
       
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-      };
-      
-      // Add Authorization header if token exists
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-        console.log('✅ Authorization header added to request');
-      } else {
-        console.warn('⚠️ No authentication token found - request may fail');
+      if (request.imageData) {
+        // Convert base64 data URL to blob
+        const base64Data = request.imageData.replace(/^data:image\/[a-z]+;base64,/, '');
+        const byteString = atob(base64Data);
+        const arrayBuffer = new ArrayBuffer(byteString.length);
+        const uint8Array = new Uint8Array(arrayBuffer);
+        
+        for (let i = 0; i < byteString.length; i++) {
+          uint8Array[i] = byteString.charCodeAt(i);
+        }
+        
+        const blob = new Blob([arrayBuffer], { type: 'image/png' });
+        formData.append('image', blob, 'screenshot.png');
       }
-      
-      const response = await fetch(`${this.apiUrl}/api/analyze`, {
+
+      const response = await fetch(this.apiUrl, {
         method: 'POST',
-        headers,
-        body: JSON.stringify({
-          message: request.message,
-          imageData: request.imageData
-        })
+                 headers: authToken ? {
+           'Authorization': `Bearer ${authToken}`
+         } : {}
+        body: formData
       });
 
       if (!response.ok) {
@@ -107,8 +113,8 @@ export class OpenAIServiceAPI implements IAIService {
       
       // Convert backend response to frontend format
       return {
-        content: result.message,
-        tokensUsed: undefined, // Backend doesn't return this yet
+        content: result.answer || result.message || 'No response',
+        tokensUsed: result.tokensUsed,
         model: 'gpt-4o-mini',
         timestamp: Date.now()
       };
@@ -120,16 +126,14 @@ export class OpenAIServiceAPI implements IAIService {
   }
 
   getRemainingRequests(): number {
-    // TODO: Get from backend API
-    return 50;
+    return 100; // Mock value for now
   }
 
   getUsageStats() {
-    // TODO: Get from backend API
     return {
       requestCount: 0,
       dailyLimit: 100,
-      remaining: 50,
+      remaining: 100,
       lastReset: new Date().toDateString()
     };
   }
