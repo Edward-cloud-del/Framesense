@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { extractTextFromImage } from '../services/ocr.js';
 import { analyzeWithChatGPT } from '../services/chatgpt.js';
+import { analyzeImageContent } from '../services/vision.js';
 
 export async function analyzeImage(req: Request, res: Response) {
   try {
@@ -24,22 +25,58 @@ export async function analyzeImage(req: Request, res: Response) {
     console.log('🔍 Step 1: Running OCR...');
     const ocrResult = await extractTextFromImage(imageBuffer);
     
+    // Step 1.5: Analyze with Google Vision (objects, logos, faces)
+    console.log('👁️ Step 1.5: Running Google Vision analysis...');
+    const visionResult = await analyzeImageContent(imageBuffer);
+    
     // Step 2: Convert image to base64 for ChatGPT
     const imageBase64 = imageBuffer.toString('base64');
     
-    // Step 3: Send to ChatGPT with OCR context
-    console.log('🤖 Step 2: Sending to ChatGPT...');
+    // Step 3: Send to ChatGPT with OCR + Vision context
+    console.log('🤖 Step 3: Sending to ChatGPT...');
+    
+    // Build enhanced context for ChatGPT
+    let enhancedQuestion = userQuestion;
+    if (visionResult.success) {
+      const visionContext = [];
+      if (visionResult.objects.length > 0) {
+        visionContext.push(`Objects detected: ${visionResult.objects.join(', ')}`);
+      }
+      if (visionResult.logos.length > 0) {
+        visionContext.push(`Logos/brands detected: ${visionResult.logos.join(', ')}`);
+      }
+      if (visionResult.faces > 0) {
+        visionContext.push(`${visionResult.faces} person(s) detected`);
+      }
+      
+      if (visionContext.length > 0) {
+        enhancedQuestion += `\n\nGoogle Vision detected: ${visionContext.join('; ')}`;
+      }
+    }
+    
     const chatGPTResult = await analyzeWithChatGPT({
-      text: userQuestion,
-      ocrText: ocrResult.success ? ocrResult.text : undefined,
+      text: enhancedQuestion,
+      ocrText: ocrResult.success ? ocrResult.text : (visionResult.text || undefined),
       imageBase64: imageBase64
     });
     
-    // Return comprehensive response
+    // Return comprehensive response with Vision data
     const response = {
       success: true,
+      // OCR data
       text: ocrResult.text || 'No text detected',
       textConfidence: ocrResult.confidence,
+      
+      // Google Vision data
+      vision: {
+        objects: visionResult.objects || [],
+        logos: visionResult.logos || [],
+        faces: visionResult.faces || 0,
+        confidence: visionResult.confidence || 0,
+        success: visionResult.success || false
+      },
+      
+      // ChatGPT data
       answer: chatGPTResult.answer,
       tokensUsed: chatGPTResult.tokensUsed,
       timestamp: new Date().toISOString()
@@ -48,6 +85,10 @@ export async function analyzeImage(req: Request, res: Response) {
     console.log('✅ Analysis complete:', {
       hasOcrText: !!ocrResult.text,
       ocrConfidence: Math.round(ocrResult.confidence * 100) + '%',
+      visionSuccess: visionResult.success,
+      visionObjects: visionResult.objects?.length || 0,
+      visionLogos: visionResult.logos?.length || 0,
+      visionFaces: visionResult.faces || 0,
       chatGptSuccess: chatGPTResult.success,
       responseLength: chatGPTResult.answer.length,
       tokensUsed: chatGPTResult.tokensUsed || 0
