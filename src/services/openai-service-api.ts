@@ -61,8 +61,8 @@ export class OpenAIServiceAPI implements IAIService {
     console.log('🔄 Making backend API request...');
     
     try {
-      // Get auth token (optional for simple backend)
-      const authToken = this.getAuthToken();
+      // 🔥 DEBUG: No auth needed for simple backend
+      console.log('🔥 DEBUG: Calling simple backend - NO AUTH REQUIRED');
       
       // Convert base64 image to blob for multipart upload
       const formData = new FormData();
@@ -85,23 +85,20 @@ export class OpenAIServiceAPI implements IAIService {
 
              const response = await fetch(this.apiUrl, {
          method: 'POST',
-         headers: authToken ? {
-           'Authorization': `Bearer ${authToken}`
-         } : {},
+         headers: {
+           // 🔥 DEBUG: No auth headers for simple backend
+         },
          body: formData
        });
 
       if (!response.ok) {
         const error = await response.json().catch(() => ({ message: 'Unknown error' }));
         
-        // Enhanced error handling for authentication issues
+        // 🔥 DEBUG: Simple backend errors
+        console.error('🔥 DEBUG: Backend response error:', response.status, error);
+        
         if (response.status === 401) {
-          console.error('❌ Authentication failed - token may be invalid or expired');
-          console.log('🔍 Current localStorage state:');
-          console.log('  framesense_user_session:', localStorage.getItem('framesense_user_session') ? 'exists' : 'missing');
-          console.log('  framesense_token:', localStorage.getItem('framesense_token') ? 'exists' : 'missing');
-          
-          throw new Error('Authentication failed. Please log in again.');
+          throw new Error('🔥 DEBUG: 401 error from simple backend (should not happen)');
         }
         
         throw new Error(error.message || `HTTP ${response.status}`);
