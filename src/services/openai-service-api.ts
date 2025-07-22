@@ -1,4 +1,4 @@
-import type { IAIService, AIRequest, AIResponse } from '../../../src/types/ai-types';
+import type { IAIService, AIRequest, AIResponse } from '../types/ai-types';
 
 export class OpenAIServiceAPI implements IAIService {
   private apiUrl: string;
