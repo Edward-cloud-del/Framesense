@@ -51,7 +51,7 @@ class VisionService {
       console.warn('⚠️ Google Vision not available:', error.message);
       console.warn('📝 Continuing without Google Vision - OCR + ChatGPT will still work');
       this.client = null;
-      this.initialized = false;
+      this.initialized = true; // Mark as initialized to avoid retry loops
     }
   }
 
