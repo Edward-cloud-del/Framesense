@@ -207,15 +207,37 @@ class VisionService {
   async analyzeImageContent(imageBuffer: Buffer): Promise<VisionResult> {
     console.log('🔍 Starting comprehensive Google Vision analysis...');
     
-    // Run all detections in parallel for speed
+    // Run detections with timeouts to prevent hanging
+    const timeoutMs = 8000; // 8 second timeout per detection
+    
+    const detectWithTimeout = async (detectFn: Promise<any>, name: string) => {
+      try {
+        return await Promise.race([
+          detectFn,
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error(`${name} timeout`)), timeoutMs)
+          )
+        ]);
+      } catch (error: any) {
+        console.warn(`⚠️ ${name} failed:`, error.message);
+        return { success: false, confidence: 0 };
+      }
+    };
+
     const [objects, logos, faces, visionText] = await Promise.all([
-      this.detectObjects(imageBuffer),
-      this.detectLogos(imageBuffer),
-      this.detectFaces(imageBuffer),
-      this.detectText(imageBuffer)
+      detectWithTimeout(this.detectObjects(imageBuffer), 'Objects'),
+      detectWithTimeout(this.detectLogos(imageBuffer), 'Logos'),
+      detectWithTimeout(this.detectFaces(imageBuffer), 'Faces'),
+      detectWithTimeout(this.detectText(imageBuffer), 'Text')
     ]);
 
-    const hasAnyResults = objects.success || logos.success || faces.success || visionText.success;
+    // Handle fallback results from timeouts
+    const safeObjects = objects.success ? objects : { objects: [], confidence: 0, success: false };
+    const safeLogos = logos.success ? logos : { logos: [], confidence: 0, success: false };
+    const safeFaces = faces.success ? faces : { faces: 0, confidence: 0, success: false };
+    const safeText = visionText.success ? visionText : { text: '', confidence: 0, success: false };
+    
+    const hasAnyResults = safeObjects.success || safeLogos.success || safeFaces.success || safeText.success;
     
     if (!hasAnyResults) {
       console.log('⚠️ Google Vision analysis failed - will use fallback methods');
@@ -230,7 +252,7 @@ class VisionService {
     }
 
     // Calculate overall confidence
-    const confidences = [objects, logos, faces, visionText]
+    const confidences = [safeObjects, safeLogos, safeFaces, safeText]
       .filter(result => result.success)
       .map(result => result.confidence);
     
@@ -239,26 +261,26 @@ class VisionService {
       : 0;
 
     console.log(`✅ Google Vision analysis complete:`, {
-      objects: objects.objects?.length || 0,
-      logos: logos.logos?.length || 0, 
-      faces: faces.faces || 0,
-      textLength: visionText.text?.length || 0,
+      objects: safeObjects.objects?.length || 0,
+      logos: safeLogos.logos?.length || 0, 
+      faces: safeFaces.faces || 0,
+      textLength: safeText.text?.length || 0,
       confidence: Math.round(overallConfidence * 100) + '%'
     });
 
     return {
-      objects: objects.objects || [],
-      logos: logos.logos || [],
-      faces: faces.faces || 0,
-      text: visionText.text || '',
+      objects: safeObjects.objects || [],
+      logos: safeLogos.logos || [],
+      faces: safeFaces.faces || 0,
+      text: safeText.text || '',
       confidence: overallConfidence,
       success: hasAnyResults,
       // Keep detailed results for debugging
       details: {
-        objectsResult: objects,
-        logosResult: logos,
-        facesResult: faces,
-        textResult: visionText
+        objectsResult: safeObjects,
+        logosResult: safeLogos,
+        facesResult: safeFaces,
+        textResult: safeText
       }
     };
   }
