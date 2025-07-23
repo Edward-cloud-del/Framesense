@@ -17,12 +17,7 @@ const ResultOverlay: React.FC<ResultOverlayProps> = ({ result }) => {
 
   useEffect(() => {
     setIsVisible(true);
-    // Auto-close after 15 seconds (extended for reading time)
-    const timer = setTimeout(() => {
-      handleClose();
-    }, 15000);
-
-    return () => clearTimeout(timer);
+    // No auto-close - user must manually dismiss
   }, []);
 
   const handleClose = () => {

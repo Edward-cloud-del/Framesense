@@ -29,12 +29,27 @@ export async function analyzeImage(req: Request, res: Response) {
     
     // If OCR found good text, include it as context
     if (ocrResult.success && ocrResult.confidence > 0.5) {
-      enhancedQuestion += `\n\nOCR found text in image: "${ocrResult.text}" (confidence: ${Math.round(ocrResult.confidence * 100)}%)`;
+      enhancedQuestion += `\n\nOCR detected text: "${ocrResult.text}" (${Math.round(ocrResult.confidence * 100)}% confidence)
+
+Additionally, identify:
+• Vehicle details: Exact brand, model, year, color if visible
+• Logos/Brands: Company names, trademarks, or brand symbols
+• People: Names of any recognizable individuals
+• Scene context: Location, setting, or situation
+
+Be confident and specific in your identifications. Provide detailed assessments even if not 100% certain.`;
       console.log(`✅ OCR successful: "${ocrResult.text.substring(0, 50)}..." (${Math.round(ocrResult.confidence * 100)}%)`);
     } else {
       // OCR failed or low confidence - rely on ChatGPT Vision
-      enhancedQuestion += `\n\nPlease analyze this image carefully. OCR could not read text clearly, so describe what you see including any text, objects, people, brands, or other details that might help identify what this is.`;
-      console.log(`⚠️ OCR low confidence (${Math.round(ocrResult.confidence * 100)}%) - relying on ChatGPT Vision`);
+      enhancedQuestion += `\n\nAnalyze this image and identify:
+• Vehicle: Brand, model, year, color, type (if it's a car/truck/motorcycle)
+• Logos/Brands: Any visible company logos, brands, or trademarks
+• People: Identify any recognizable people or celebrities
+• Text: Read any visible text, signs, or writing
+• Objects: Key items, products, or distinctive features
+
+Be confident in your identification. Give your best assessment even if you're not 100% certain. Provide specific details like exact model years, brand names, or person names when possible.`;
+      console.log(`⚠️ OCR low confidence (${Math.round(ocrResult.confidence * 100)}%) - using enhanced ChatGPT Vision`);
     }
     
     // Step 3: Send to ChatGPT with image + enhanced context
