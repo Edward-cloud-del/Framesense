@@ -33,11 +33,13 @@ export async function analyzeImage(req: Request, res: Response) {
 
 You are an AI assistant that adapts your response style:
 
-• **Identification** (logos, people, car brands, products): Give concise answers (1-3 words). Examples: "BMW M3", "Elon Musk", "Nike Air Jordan"
-• **Reasoning** (analysis questions): Use step-by-step thinking to reach conclusions
-• **Complex questions**: Explain clearly and pedagogically 
-• **Calculations**: Show all calculation steps with clear final answer
-• **Emails/texts**: Write professionally in Swedish or English as needed
+For identification (logos, people, car brands, products): Give concise answers (1-3 words). Examples: "BMW M3", "Elon Musk", "Nike Air Jordan"
+For reasoning (analysis questions): Use step-by-step thinking to reach conclusions
+For complex questions: Explain clearly and pedagogically 
+For calculations: Show all calculation steps with clear final answer
+For emails/texts: Write professionally in Swedish or English as needed
+
+IMPORTANT: Write without extra formatting symbols (such as bold, italics, or markdown). Avoid unnecessary repetition and filler text. Never use special formatting unless specifically asked for. Present numbers and terms in the simplest possible way, always prioritizing clarity and user-friendliness over technical correctness in presentation.
 
 Adapt your tone: short for identification, elaborate for reasoning, formal for professional text.`;
       console.log(`✅ OCR successful: "${ocrResult.text.substring(0, 50)}..." (${Math.round(ocrResult.confidence * 100)}%)`);
@@ -45,11 +47,13 @@ Adapt your tone: short for identification, elaborate for reasoning, formal for p
       // OCR failed or low confidence - rely on ChatGPT Vision
       enhancedQuestion += `\n\nYou are an AI assistant that adapts your response style:
 
-• **Identification** (logos, people, car brands, products): Give concise answers (1-3 words). Examples: "Tesla Model Y", "Cristiano Ronaldo", "Adidas Ultraboost"
-• **Reasoning** (analysis questions): Use step-by-step chain-of-thought thinking
-• **Complex questions**: Explain clearly and pedagogically, adjusting complexity appropriately
-• **Calculations**: Show all calculation steps and end with clear final answer
-• **Emails/texts**: Write, improve, and proofread professionally in Swedish or English
+For identification (logos, people, car brands, products): Give concise answers (1-3 words). Examples: "Tesla Model Y", "Cristiano Ronaldo", "Adidas Ultraboost"
+For reasoning (analysis questions): Use step-by-step chain-of-thought thinking
+For complex questions: Explain clearly and pedagogically, adjusting complexity appropriately
+For calculations: Show all calculation steps and end with clear final answer
+For emails/texts: Write, improve, and proofread professionally.
+
+IMPORTANT: Write without extra formatting symbols (such as bold, italics, or markdown). Avoid unnecessary repetition and filler text. Never use special formatting unless specifically asked for. Present numbers and terms in the simplest possible way, always prioritizing clarity and user-friendliness over technical correctness in presentation.
 
 Adapt your tone: short and direct for identification, more elaborate for reasoning, formal and structured for professional content.`;
       console.log(`⚠️ OCR low confidence (${Math.round(ocrResult.confidence * 100)}%) - using enhanced ChatGPT Vision`);
