@@ -15,6 +15,7 @@ import ModelSelector from './components/ModelSelector';
 import { useAppStore, AIResult } from './stores/app-store';
 import { authService, type User } from './services/auth-service-db';
 import ProfileDropdown from './components/ProfileDropdown';
+import DebugPanel from './components/DebugPanel';
 
 // 🤖 Real OpenAI Integration
 import { createAIService } from './services/openai-service';
@@ -948,6 +949,13 @@ function App() {
 			{/* Login Dialog - Removed since login is now handled in ProfileDropdown */}
 
 			{/* ⚙️ Settings Dialog - Removed, now using Upgrade to Pro button */}
+			
+			{/* Debug Panel - Only in dev mode */}
+			{import.meta.env.DEV && (
+				<div className="mt-4">
+					<DebugPanel />
+				</div>
+			)}
 
 
 		</div>

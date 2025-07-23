@@ -280,6 +280,99 @@ async fn test_quick_command(app: tauri::AppHandle) -> Result<AppResult, String> 
     }
 }
 
+// Debug capture flow - test the entire capture process
+#[tauri::command]
+async fn debug_capture_flow(app: tauri::AppHandle) -> Result<AppResult, String> {
+    println!("🔍 DEBUG: Testing complete capture flow...");
+    
+    // Test 1: Check screen access
+    match screenshots::Screen::all() {
+        Ok(screens) => {
+            println!("✅ DEBUG: Found {} screen(s)", screens.len());
+            if let Some(screen) = screens.first() {
+                println!("✅ DEBUG: Screen dimensions: {}x{}", screen.display_info.width, screen.display_info.height);
+                
+                // Test 2: Try a small capture in top-left corner
+                match screen.capture_area(0, 0, 100, 100) {
+                    Ok(image) => {
+                        println!("✅ DEBUG: Screen capture working!");
+                        
+                        // Test 3: Check base64 encoding
+                        match image.to_png(None) {
+                            Ok(png_data) => {
+                                let base64_data = base64::engine::general_purpose::STANDARD.encode(&png_data);
+                                let full_data = format!("data:image/png;base64,{}", base64_data);
+                                println!("✅ DEBUG: Base64 encoding working, size: {}KB", png_data.len() / 1024);
+                                
+                                // Test 4: Try to emit event to frontend
+                                if let Some(main_window) = app.get_webview_window("main") {
+                                    let test_result = serde_json::json!({
+                                        "type": "image",
+                                        "bounds": {"x": 0, "y": 0, "width": 100, "height": 100},
+                                        "imageData": full_data,
+                                        "text": null,
+                                        "success": true,
+                                        "message": "DEBUG: Test capture successful!"
+                                    });
+                                    
+                                    match main_window.emit("selection-result", test_result) {
+                                        Ok(_) => {
+                                            println!("✅ DEBUG: Event emission successful!");
+                                            Ok(AppResult {
+                                                success: true,
+                                                message: "✅ Complete capture flow working! Screen capture + encoding + event emission all successful.".to_string(),
+                                            })
+                                        },
+                                        Err(e) => {
+                                            println!("❌ DEBUG: Event emission failed: {}", e);
+                                            Ok(AppResult {
+                                                success: false,
+                                                message: format!("❌ Event emission failed: {}", e),
+                                            })
+                                        }
+                                    }
+                                } else {
+                                    println!("❌ DEBUG: No main window found for event emission");
+                                    Ok(AppResult {
+                                        success: false,
+                                        message: "❌ No main window found for event emission".to_string(),
+                                    })
+                                }
+                            },
+                            Err(e) => {
+                                println!("❌ DEBUG: PNG encoding failed: {}", e);
+                                Ok(AppResult {
+                                    success: false,
+                                    message: format!("❌ PNG encoding failed: {}", e),
+                                })
+                            }
+                        }
+                    },
+                    Err(e) => {
+                        println!("❌ DEBUG: Screen capture failed: {}", e);
+                        Ok(AppResult {
+                            success: false,
+                            message: format!("❌ Screen capture blocked: {}\n\n🔧 This is the root cause! Check System Preferences → Privacy & Security → Screen Recording", e),
+                        })
+                    }
+                }
+            } else {
+                Ok(AppResult {
+                    success: false,
+                    message: "❌ No screens available".to_string(),
+                })
+            }
+        },
+        Err(e) => {
+            println!("❌ DEBUG: Failed to access screens: {}", e);
+            Ok(AppResult {
+                success: false,
+                message: format!("❌ Failed to access screens: {}", e),
+            })
+        }
+    }
+}
+
 // Test OCR functionality (Step 1B from AI.txt)
 #[tauri::command]
 async fn test_ocr() -> Result<AppResult, String> {
@@ -937,7 +1030,7 @@ async fn process_screen_selection_optimized(
         let image_data = capture_result.image_data.unwrap();
         println!("✅ Optimized screen capture successful!");
         
-        // Send result to React (same as original)
+        // Send result to React with detailed logging
         if let Some(window) = app.get_webview_window("main") {
             let analysis_result = serde_json::json!({
                 "type": "image",
@@ -948,8 +1041,21 @@ async fn process_screen_selection_optimized(
                 "message": "Optimized screen area captured successfully!"
             });
             
-            window.emit("selection-result", analysis_result).unwrap();
-            println!("📤 Sent optimized capture data to main app");
+            println!("📤 Emitting 'selection-result' event to main window...");
+            println!("📊 Event payload: type={}, bounds={}x{} at ({},{}), imageSize={}KB", 
+                     "image", bounds.width, bounds.height, bounds.x, bounds.y, 
+                     image_data.len() / 1024);
+            
+            match window.emit("selection-result", analysis_result) {
+                Ok(_) => {
+                    println!("✅ Event emitted successfully to main window!");
+                },
+                Err(e) => {
+                    println!("❌ Failed to emit event to main window: {}", e);
+                }
+            }
+        } else {
+            println!("❌ No main window found to emit event to!");
         }
         
         // Hide overlay using optimized manager
@@ -1295,77 +1401,94 @@ fn main() {
                 }
             }
             
-            // Set up global shortcut event handler
+            // Set up global shortcut event handler with better error handling
+            let shortcut_app_handle = app_handle.clone();
             app.global_shortcut().on_shortcut("CmdOrCtrl+Shift+F", move || {
-                println!("🚀 Global shortcut CmdOrCtrl+Shift+F triggered!");
+                println!("🚀 GLOBAL SHORTCUT TRIGGERED! CmdOrCtrl+Shift+F");
                 
-                let app_handle_clone = app_handle.clone();
+                let app_handle_clone = shortcut_app_handle.clone();
                 tauri::async_runtime::spawn(async move {
-                    // Check if main window exists, if not create it
-                    if app_handle_clone.get_webview_window("main").is_none() {
-                        println!("🎯 Creating main window via global shortcut...");
-                        
-                        // Get screen size for positioning
-                        let (screen_width, screen_height) = match screenshots::Screen::all() {
-                            Ok(screens) => {
-                                if let Some(screen) = screens.first() {
-                                    (screen.display_info.width as f64, screen.display_info.height as f64)
-                                } else {
-                                    (1440.0, 900.0)
-                                }
-                            },
-                            Err(_) => (1440.0, 900.0),
-                        };
-                        
-                        let window_width = 600.0;
-                        let window_height = 50.0;
-                        let x = (screen_width - window_width) / 2.0;
-                        let y = screen_height * 0.2 - window_height / 2.0;
-                        
-                        match WebviewWindowBuilder::new(
-                            &app_handle_clone,
-                            "main",
-                            WebviewUrl::App("/".into())
-                        )
-                        .title("FrameSense")
-                        .inner_size(window_width, window_height)
-                        .position(x, y)
-                        .resizable(false)
-                        .decorations(false)
-                        .transparent(true)
-                        .always_on_top(true)
-                        .skip_taskbar(true)
-                        .visible(true)
-                        .focused(true)
-                        .build() {
-                            Ok(_) => {
-                                println!("✅ Main window created successfully via global shortcut!");
-                            },
-                            Err(e) => {
-                                println!("❌ Failed to create main window via global shortcut: {}", e);
+                    println!("🎯 Processing global shortcut in async task...");
+                    
+                    // Check if main window exists
+                    match app_handle_clone.get_webview_window("main") {
+                        Some(window) => {
+                            // Window exists, just show and focus it
+                            println!("🔍 Found existing main window, showing and focusing...");
+                            match window.show() {
+                                Ok(_) => {
+                                    println!("✅ Main window shown via global shortcut");
+                                    match window.set_focus() {
+                                        Ok(_) => println!("✅ Main window focused via global shortcut"),
+                                        Err(e) => println!("⚠️ Failed to focus main window: {}", e),
+                                    }
+                                },
+                                Err(e) => println!("❌ Failed to show main window: {}", e),
                             }
-                        }
-                    } else {
-                        // Window exists, just show and focus it
-                        if let Some(window) = app_handle_clone.get_webview_window("main") {
-                            if let Err(e) = window.show() {
-                                println!("❌ Failed to show main window: {}", e);
-                            } else {
-                                println!("👁️ Main window shown via global shortcut");
-                                if let Err(e) = window.set_focus() {
-                                    println!("⚠️ Failed to focus main window: {}", e);
+                        },
+                        None => {
+                            // Window doesn't exist, create it
+                            println!("🎯 No main window found, creating new one...");
+                            
+                            // Get screen size for positioning
+                            let (screen_width, screen_height) = match screenshots::Screen::all() {
+                                Ok(screens) => {
+                                    if let Some(screen) = screens.first() {
+                                        (screen.display_info.width as f64, screen.display_info.height as f64)
+                                    } else {
+                                        (1440.0, 900.0)
+                                    }
+                                },
+                                Err(_) => (1440.0, 900.0),
+                            };
+                            
+                            let window_width = 600.0;
+                            let window_height = 50.0;
+                            let x = (screen_width - window_width) / 2.0;
+                            let y = screen_height * 0.2 - window_height / 2.0;
+                            
+                            println!("📏 Creating window at ({}, {}) with size {}x{}", x, y, window_width, window_height);
+                            
+                            match WebviewWindowBuilder::new(
+                                &app_handle_clone,
+                                "main",
+                                WebviewUrl::App("/".into())
+                            )
+                            .title("FrameSense")
+                            .inner_size(window_width, window_height)
+                            .position(x, y)
+                            .resizable(false)
+                            .decorations(false)
+                            .transparent(true)
+                            .always_on_top(true)
+                            .skip_taskbar(true)
+                            .visible(true)
+                            .focused(true)
+                            .build() {
+                                Ok(window) => {
+                                    println!("✅ Main window created successfully via global shortcut!");
+                                    // Ensure it's focused
+                                    if let Err(e) = window.set_focus() {
+                                        println!("⚠️ Failed to focus new window: {}", e);
+                                    }
+                                },
+                                Err(e) => {
+                                    println!("❌ Failed to create main window via global shortcut: {}", e);
                                 }
                             }
                         }
                     }
                 });
             });
+            
+            println!("✅ Global shortcut event handler set up successfully");
 
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
             test_command,
             test_quick_command,
+            debug_capture_flow,
             test_ocr,
             run_ocr_verification,
             extract_text_ocr,
