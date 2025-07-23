@@ -23,7 +23,7 @@
     "global-shortcut:default",
     "http:default",
     "http:allow-fetch",
-    "http:allow-request"
+    "http:allow-fetch-send"
   ],
   "remote": {
     "urls": [
