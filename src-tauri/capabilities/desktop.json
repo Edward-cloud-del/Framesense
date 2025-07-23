@@ -20,6 +20,15 @@
     "core:tray:default",
     "shell:default",
     "notification:default",
-    "global-shortcut:default"
-  ]
+    "global-shortcut:default",
+    "http:default",
+    "http:allow-fetch",
+    "http:allow-request"
+  ],
+  "remote": {
+    "urls": [
+      "https://api.finalyze.pro/**",
+      "https://*.finalyze.pro/**"
+    ]
+  }
 }

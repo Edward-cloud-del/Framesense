@@ -1204,125 +1204,40 @@ fn main() {
     
     // Database access through backend API only - no direct connection
     
+    // Build Tauri application with plugins
     tauri::Builder::default()
+        .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_notification::init())
+        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
+        .plugin(tauri_plugin_http::init())
         .manage(shared_state)
         .manage(shared_overlay_manager)
         .manage(shared_permission_cache)
         .manage(shared_screenshot_cache)
         .manage(shared_auth_service)
-        .plugin(tauri_plugin_global_shortcut::Builder::new()
-            .with_handler(|app, shortcut, event| {
-                println!("🔥 GLOBAL SHORTCUT: {:?} - State: {:?}", shortcut, event.state());
-                
-                // Only react to key PRESS, not release!
-                if event.state() == ShortcutState::Pressed {
-                    let app_clone = app.clone();
-                    std::thread::spawn(move || {
-                        // Small delay to avoid rapid toggle
-                        std::thread::sleep(std::time::Duration::from_millis(50));
-                        
-                        // Raycast-style: Create/Destroy window to appear on current Space
-                        if let Some(window) = app_clone.get_webview_window("main") {
-                            // Window exists - save state and close it
-                            println!("🔄 Window exists, closing and saving state...");
-                            
-                            // Emit event to React to save its state before closing
-                            let _ = window.emit("save-state-and-close", ());
-                            
-                            // Close after allowing React to save state
-                            std::thread::sleep(std::time::Duration::from_millis(100));
-                            let _ = window.close();
-                            
-                            // Record the time when window was closed for quit logic
-                            if let Some(state) = app_clone.try_state::<SharedState>() {
-                                let mut app_state = state.lock().unwrap();
-                                app_state.last_window_closed_time = Some(
-                                    SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs()
-                                );
-                            }
-                            
-                            println!("🗑️ Window closed (Raycast-style)");
-                        } else {
-                            // No window exists - always create new window (remove quit logic)
-                            println!("✨ No window exists...");
-                            println!("🆕 Creating new window on current Space...");
-                            let rt = tokio::runtime::Runtime::new().unwrap();
-                            rt.block_on(async {
-                                if let Err(e) = create_main_window(app_clone).await {
-                                    println!("❌ Failed to create window: {}", e);
-                                } else {
-                                    println!("✅ New window created successfully!");
-                                }
-                            });
-                        }
-                    });
-                } else {
-                    println!("⚪ Ignoring key release");
-                }
-            })
-            .build())
-        .plugin(tauri_plugin_shell::init())
-        .plugin(tauri_plugin_notification::init())
-        .setup(|app| {
-            // Continue with existing setup...
-            // Create tray menu items inside setup where we have access to app
-            let quit_item = MenuItem::with_id(app, "quit", "Quit FrameSense", true, None::<&str>)?;
-            let capture_item = MenuItem::with_id(app, "capture", "Start Capture", true, None::<&str>)?;
-            let test_item = MenuItem::with_id(app, "test", "Test Command", true, None::<&str>)?;
-            
-            let menu = Menu::with_items(app, &[&capture_item, &test_item, &quit_item])?;
+        .setup(move |app| {
+            // Set up system tray
+            let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
+            let menu = Menu::with_items(app, &[&quit])?;
             
             let _tray = TrayIconBuilder::new()
-                .icon(app.default_window_icon().unwrap().clone())
                 .menu(&menu)
-                .on_menu_event(|app, event| {
-                    match event.id().as_ref() {
-                        "quit" => {
-                            println!("💀 Quit selected");
-                            std::process::exit(0);
-                        },
-                        "capture" => {
-                            println!("📸 Capture triggered from menu!");
-                            if let Some(window) = app.get_webview_window("main") {
-                                window.emit("show-capture-overlay", ()).unwrap();
-                                println!("✅ Sent show-capture-overlay event to React");
-                            } else {
-                                println!("❌ Main window not found");
-                            }
-                        },
-                        "test" => {
-                            println!("🧪 Test command triggered");
-                        },
-                        _ => {}
+                .icon(app.default_window_icon().unwrap().clone())
+                .tooltip("FrameSense")
+                .on_menu_event(move |app, event| match event.id.as_ref() {
+                    "quit" => {
+                        println!("🚪 Quit requested from tray menu");
+                        app.exit(0);
                     }
-                })
-                .on_tray_icon_event(|_tray, event| {
-                    println!("🎯 Tray icon event: {:?}", event);
+                    _ => {}
                 })
                 .build(app)?;
 
-            // Register global hotkey like Cluely (Cmd+Shift+Space for macOS compatibility)
-            println!("🚀 Setting up FrameSense background app...");
-            
-            // Setup global shortcut for window toggle (like Cluely)
-            let shortcut = "Alt+Space".parse::<Shortcut>().unwrap();
-            
-            match app.global_shortcut().register(shortcut) {
-                Ok(_) => {
-                    println!("✅ Global shortcut Alt+Space registered successfully!");
-                    println!("⚠️  Note: Use Alt+Space to toggle window visibility");
-                },
-                Err(e) => println!("❌ Failed to register global shortcut: {} - Use tray menu instead", e),
-            }
-            
-            println!("✅ FrameSense is ready! Press Alt+Space to create window or use tray menu");
-            
-            // Close initial window - we'll create fresh ones on Alt+Space (Raycast-style)
-            if let Some(window) = app.get_webview_window("main") {
-                let _ = window.close();
-                println!("🗑️ Closed initial window - will create fresh ones on current Space");
-            }
-            
+            // Set up global shortcut (Cmd+Shift+F for macOS, Ctrl+Shift+F for others)
+            app.global_shortcut().register("CmdOrCtrl+Shift+F", || {
+                println!("🔥 Global shortcut triggered: CmdOrCtrl+Shift+F");
+            })?;
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
