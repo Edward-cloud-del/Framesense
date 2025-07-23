@@ -244,6 +244,42 @@ async fn test_command() -> Result<AppResult, String> {
     })
 }
 
+// Test quick command functionality
+#[tauri::command]
+async fn test_quick_command(app: tauri::AppHandle) -> Result<AppResult, String> {
+    println!("🧪 Testing quick command functionality...");
+    
+    // Simulate global shortcut trigger
+    println!("🔥 Simulating global shortcut trigger...");
+    
+    // Check if main window exists
+    if let Some(window) = app.get_webview_window("main") {
+        match window.show() {
+            Ok(_) => {
+                window.set_focus().ok();
+                println!("✅ Quick command test: Main window shown and focused");
+                Ok(AppResult {
+                    success: true,
+                    message: "Quick command test successful! Main window shown.".to_string(),
+                })
+            },
+            Err(e) => {
+                println!("❌ Quick command test failed to show window: {}", e);
+                Ok(AppResult {
+                    success: false,
+                    message: format!("Failed to show main window: {}", e),
+                })
+            }
+        }
+    } else {
+        println!("❌ Quick command test: No main window found");
+        Ok(AppResult {
+            success: false,
+            message: "No main window found - this may indicate a startup issue".to_string(),
+        })
+    }
+}
+
 // Test OCR functionality (Step 1B from AI.txt)
 #[tauri::command]
 async fn test_ocr() -> Result<AppResult, String> {
@@ -1250,18 +1286,86 @@ fn main() {
                 .build(app)?;
 
             // Set up global shortcut (Cmd+Shift+F for macOS, Ctrl+Shift+F for others)
+            let app_handle = app.handle().clone();
             match app.global_shortcut().register("CmdOrCtrl+Shift+F") {
                 Ok(_) => println!("✅ Global shortcut CmdOrCtrl+Shift+F registered successfully"),
                 Err(e) => {
                     println!("❌ Failed to register global shortcut: {}", e);
-                    return Err(e.into());
+                    // Don't return error - continue without global shortcut
                 }
             }
+            
+            // Set up global shortcut event handler
+            app.global_shortcut().on_shortcut("CmdOrCtrl+Shift+F", move || {
+                println!("🚀 Global shortcut CmdOrCtrl+Shift+F triggered!");
+                
+                let app_handle_clone = app_handle.clone();
+                tauri::async_runtime::spawn(async move {
+                    // Check if main window exists, if not create it
+                    if app_handle_clone.get_webview_window("main").is_none() {
+                        println!("🎯 Creating main window via global shortcut...");
+                        
+                        // Get screen size for positioning
+                        let (screen_width, screen_height) = match screenshots::Screen::all() {
+                            Ok(screens) => {
+                                if let Some(screen) = screens.first() {
+                                    (screen.display_info.width as f64, screen.display_info.height as f64)
+                                } else {
+                                    (1440.0, 900.0)
+                                }
+                            },
+                            Err(_) => (1440.0, 900.0),
+                        };
+                        
+                        let window_width = 600.0;
+                        let window_height = 50.0;
+                        let x = (screen_width - window_width) / 2.0;
+                        let y = screen_height * 0.2 - window_height / 2.0;
+                        
+                        match WebviewWindowBuilder::new(
+                            &app_handle_clone,
+                            "main",
+                            WebviewUrl::App("/".into())
+                        )
+                        .title("FrameSense")
+                        .inner_size(window_width, window_height)
+                        .position(x, y)
+                        .resizable(false)
+                        .decorations(false)
+                        .transparent(true)
+                        .always_on_top(true)
+                        .skip_taskbar(true)
+                        .visible(true)
+                        .focused(true)
+                        .build() {
+                            Ok(_) => {
+                                println!("✅ Main window created successfully via global shortcut!");
+                            },
+                            Err(e) => {
+                                println!("❌ Failed to create main window via global shortcut: {}", e);
+                            }
+                        }
+                    } else {
+                        // Window exists, just show and focus it
+                        if let Some(window) = app_handle_clone.get_webview_window("main") {
+                            if let Err(e) = window.show() {
+                                println!("❌ Failed to show main window: {}", e);
+                            } else {
+                                println!("👁️ Main window shown via global shortcut");
+                                if let Err(e) = window.set_focus() {
+                                    println!("⚠️ Failed to focus main window: {}", e);
+                                }
+                            }
+                        }
+                    }
+                });
+            });
 
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
             test_command,
+            test_quick_command,
             test_ocr,
             run_ocr_verification,
             extract_text_ocr,
