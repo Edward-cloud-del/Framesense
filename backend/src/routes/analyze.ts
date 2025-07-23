@@ -31,11 +31,27 @@ export async function analyzeImage(req: Request, res: Response) {
     if (ocrResult.success && ocrResult.confidence > 0.5) {
       enhancedQuestion += `\n\nOCR detected text: "${ocrResult.text}" (${Math.round(ocrResult.confidence * 100)}% confidence)
 
-Give a concise response with specific model names. For vehicles: exact brand and model (e.g., "BMW M3", "Tesla Model S"). For products: specific product name (e.g., "Adidas Ultraboost 22", "iPhone 14 Pro"). For people: actual names if recognizable. Be direct and specific - avoid generic descriptions.`;
+You are an AI assistant that adapts your response style:
+
+• **Identification** (logos, people, car brands, products): Give concise answers (1-3 words). Examples: "BMW M3", "Elon Musk", "Nike Air Jordan"
+• **Reasoning** (analysis questions): Use step-by-step thinking to reach conclusions
+• **Complex questions**: Explain clearly and pedagogically 
+• **Calculations**: Show all calculation steps with clear final answer
+• **Emails/texts**: Write professionally in Swedish or English as needed
+
+Adapt your tone: short for identification, elaborate for reasoning, formal for professional text.`;
       console.log(`✅ OCR successful: "${ocrResult.text.substring(0, 50)}..." (${Math.round(ocrResult.confidence * 100)}%)`);
     } else {
       // OCR failed or low confidence - rely on ChatGPT Vision
-      enhancedQuestion += `\n\nIdentify what you see with specific model names and be concise. For vehicles: give exact brand, model, and year (e.g., "2023 BMW M4"). For products: specific product name (e.g., "Adidas Predator Edge", "Nike Air Jordan 1"). For people: actual names if recognizable. Be direct and specific rather than descriptive.`;
+      enhancedQuestion += `\n\nYou are an AI assistant that adapts your response style:
+
+• **Identification** (logos, people, car brands, products): Give concise answers (1-3 words). Examples: "Tesla Model Y", "Cristiano Ronaldo", "Adidas Ultraboost"
+• **Reasoning** (analysis questions): Use step-by-step chain-of-thought thinking
+• **Complex questions**: Explain clearly and pedagogically, adjusting complexity appropriately
+• **Calculations**: Show all calculation steps and end with clear final answer
+• **Emails/texts**: Write, improve, and proofread professionally in Swedish or English
+
+Adapt your tone: short and direct for identification, more elaborate for reasoning, formal and structured for professional content.`;
       console.log(`⚠️ OCR low confidence (${Math.round(ocrResult.confidence * 100)}%) - using enhanced ChatGPT Vision`);
     }
     
