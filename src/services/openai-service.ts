@@ -170,11 +170,11 @@ export class OpenAIServiceFrontend implements IAIService {
 }
 
 // 🔧 FACTORY FUNCTION - This is what the app will use
-// ✅ UPDATED: Now using backend API service
-export function createAIService(apiKey: string): IAIService {
-  // ✅ NEW: Backend API implementation (secure)
+// ✅ SECURE: Now using backend API service (no API key needed in frontend)
+export function createAIService(): IAIService {
+  // ✅ SECURE: Backend API implementation (Railway backend has the API key)
   return new OpenAIServiceAPI();
   
-  // 🚨 OLD: Frontend implementation (insecure)
+  // 🚨 OLD: Frontend implementation (insecure - required API key in browser)
   // return new OpenAIServiceFrontend({ apiKey });
 } 

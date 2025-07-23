@@ -18,7 +18,7 @@ import ProfileDropdown from './components/ProfileDropdown';
 
 // 🤖 Real OpenAI Integration
 import { createAIService } from './services/openai-service';
-import { getApiKey } from './config/api-config';
+// Removed: API key no longer needed in frontend (uses backend API)
 import type { IAIService, AIRequest } from './types/ai-types';
 import UserService from './services/user-service';
 import DevHelpers from './utils/dev-helpers';
@@ -268,14 +268,13 @@ function App() {
 		// Restore app state when window is created (Raycast-style)
 		restoreAppState();
 		
-		// 🤖 Initialize AI service with API key
-		const apiKey = getApiKey();
-		if (apiKey) {
-			const service = createAIService(apiKey);
+		// 🤖 Initialize AI service (uses secure backend API)
+		try {
+			const service = createAIService();
 			setAiService(service);
-			console.log('✅ AI service initialized with real OpenAI');
-		} else {
-			console.warn('⚠️ No API key found - AI service disabled');
+			console.log('✅ AI service initialized with backend API');
+		} catch (error) {
+			console.error('❌ Failed to initialize AI service:', error);
 		}
 		
 		// 🔗 Server-centralized method - no deep link service needed
