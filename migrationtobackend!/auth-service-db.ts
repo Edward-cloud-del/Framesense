@@ -17,9 +17,7 @@ export interface User {
 class AuthService {
     private currentUser: User | null = null;
     private authListeners: Array<(user: User | null) => void> = [];
-    private apiUrl = process.env.NODE_ENV === 'production' 
-        ? 'https://your-railway-app.railway.app' // TODO: Replace with actual Railway URL
-        : 'http://localhost:8080';
+    private apiUrl = 'http://localhost:8080'; // Change this to your Railway URL when deployed
     private sessionKey = 'framesense_user_session';
 
 
@@ -54,10 +52,6 @@ class AuthService {
             const user = data.user;
             // Add the token to the user object (backend returns it separately)
             user.token = data.token;
-            
-            // Everyone gets premium tier when logged in (simple!)
-            user.tier = 'premium';
-            
             this.currentUser = user;
             
             console.log('🔍 DEBUG: About to save user session:', {
@@ -170,7 +164,7 @@ class AuthService {
                         id: tauriUser.id,
                         email: tauriUser.email,
                         name: tauriUser.name,
-                        tier: 'premium', // Force premium for all logged in users
+                        tier: tauriUser.tier,
                         token: tauriUser.token,
                         created_at: tauriUser.created_at,
                         subscription_status: tauriUser.subscription_status,
@@ -200,8 +194,6 @@ class AuthService {
                 // Fallback to localStorage
                 user = this.loadUserSessionLocal();
                 if (user) {
-                    // Force premium tier for all logged in users
-                    user.tier = 'premium';
                     console.log('✅ DEBUG: Loaded user session from localStorage:', {
                         email: user.email, 
                         tier: user.tier,
@@ -256,8 +248,39 @@ class AuthService {
             if (data.success && data.user) {
                 const freshUser = data.user;
                 
-                // Force premium tier for all logged in users
-                freshUser.tier = 'premium';
+                // Update local session if tier changed
+                if (freshUser.tier !== this.currentUser.tier) {
+                    console.log('🔄 User tier updated:', this.currentUser.tier, '→', freshUser.tier);
+                    // Save to BOTH Tauri storage AND localStorage when tier changes
+                    try {
+                        // Convert freshUser to Tauri-compatible format
+                        const tauriUser = {
+                            id: freshUser.id,
+                            email: freshUser.email,
+                            name: freshUser.name,
+                            tier: freshUser.tier,
+                            token: this.currentUser.token, // Keep existing token
+                            usage: {
+                                daily: freshUser.usage_daily || 0,
+                                total: freshUser.usage_total || 0,
+                                last_reset: new Date().toISOString().split('T')[0]
+                            },
+                            created_at: freshUser.created_at,
+                            subscription_status: freshUser.subscription_status,
+                            stripe_customer_id: freshUser.stripe_customer_id,
+                            usage_daily: freshUser.usage_daily,
+                            usage_total: freshUser.usage_total,
+                            updated_at: freshUser.updated_at
+                        };
+                        
+                        // @ts-ignore - invoke is available in Tauri context
+                        await invoke('save_user_session', { user: tauriUser });
+                        console.log('✅ DEBUG: Updated tier saved to Tauri storage');
+                    } catch (error) {
+                        console.error('❌ DEBUG: Failed to save tier update to Tauri storage:', error);
+                    }
+                    this.saveUserSessionLocal(freshUser);
+                }
                 
                 this.currentUser = freshUser;
                 this.notifyAuthListeners(freshUser);
@@ -298,6 +321,7 @@ class AuthService {
                 console.log('✅ DEBUG: User session loaded from localStorage:', {
                     email: user.email,
                     tier: user.tier,
+                    hasToken: !!user.token,
                     dataLength: userJson.length
                 });
                 return user;
@@ -329,13 +353,12 @@ class AuthService {
     }
 
     getUserTier(): string {
-        // All logged in users get premium tier access to UI
-        return this.currentUser ? 'premium' : 'free';
+        return this.currentUser?.tier || 'free';
     }
 
     async getAvailableModels(tier?: string): Promise<string[]> {
         try {
-            const userTier = 'premium'; // All logged in users get premium models
+            const userTier = tier || this.getUserTier();
             const models = await invoke<string[]>('get_available_models', { userTier });
             return models;
         } catch (error) {
@@ -346,24 +369,38 @@ class AuthService {
 
     async canUseModel(model: string, tier?: string): Promise<boolean> {
         try {
-            // All logged in users can use any model
-            return this.isLoggedIn();
+            const userTier = tier || this.getUserTier();
+            const canUse = await invoke<boolean>('can_use_model', { userTier, model });
+            return canUse;
         } catch (error) {
             console.error('❌ Failed to check model access:', error);
             return false;
         }
     }
 
-    // Get required tier for a specific model (for UI display only)
+    // Get required tier for a specific model
     getRequiredTier(model: string): string {
-        // All models available to logged in users
-        return this.isLoggedIn() ? 'premium' : 'premium';
+        if (['GPT-4o 32k', 'Claude 3 Opus', 'Llama 3.1 405B'].includes(model)) {
+            return 'enterprise';
+        } else if (['GPT-4o', 'Claude 3.5 Sonnet', 'Llama 3.1 70B'].includes(model)) {
+            return 'pro';
+        } else if (['GPT-4o-mini', 'Claude 3 Haiku', 'Gemini Pro'].includes(model)) {
+            return 'premium';
+        } else {
+            return 'free';
+        }
     }
 
     // Get daily limit for user tier
     getDailyLimit(tier?: string): number {
-        // Generous limit for all logged in users
-        return this.isLoggedIn() ? 5000 : 50;
+        const userTier = tier || this.getUserTier();
+        switch (userTier) {
+            case 'free': return 50;
+            case 'premium': return 1000;
+            case 'pro': return 5000;
+            case 'enterprise': return 999999; // Unlimited
+            default: return 10;
+        }
     }
 
     // Get usage percentage

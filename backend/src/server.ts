@@ -3,6 +3,7 @@ import cors from 'cors';
 import multer from 'multer';
 import dotenv from 'dotenv';
 import { analyzeImage } from './routes/analyze.js';
+import authRoutes from './routes/auth.js';
 
 // Load environment variables
 dotenv.config();
@@ -10,8 +11,16 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 8080;
 
-// CORS - allow all origins for simplicity
-app.use(cors());
+// CORS - configured for Tauri app and local development
+app.use(cors({
+  origin: [
+    'http://localhost:5173',  // Vite dev server
+    'http://localhost:3000',  // Website
+    'tauri://localhost',      // Tauri app
+    'https://tauri.localhost' // Tauri app (alternative)
+  ],
+  credentials: true
+}));
 
 // Body parsing
 app.use(express.json({ limit: '50mb' }));
@@ -32,6 +41,9 @@ app.get('/health', (req, res) => {
     timestamp: new Date().toISOString()
   });
 });
+
+// Auth routes
+app.use('/api/auth', authRoutes);
 
 // THE ONLY ENDPOINT: Image analysis with OCR + ChatGPT
 app.post('/api/analyze', upload.single('image'), analyzeImage);
