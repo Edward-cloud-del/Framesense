@@ -1,7 +1,6 @@
 import { Request, Response } from 'express';
 import { extractTextFromImage } from '../services/ocr.js';
 import { analyzeWithChatGPT } from '../services/chatgpt.js';
-import { analyzeImageContent } from '../services/vision.js';
 
 export async function analyzeImage(req: Request, res: Response) {
   try {
@@ -21,74 +20,46 @@ export async function analyzeImage(req: Request, res: Response) {
     console.log(`📝 User question: "${userQuestion}"`);
     console.log(`🖼️ Image size: ${Math.round(imageBuffer.length / 1024)}KB`);
     
-    // Step 1: Extract text using OCR
+    // Step 1: Try OCR first
     console.log('🔍 Step 1: Running OCR...');
     const ocrResult = await extractTextFromImage(imageBuffer);
     
-    // Step 1.5: Analyze with Google Vision (objects, logos, faces)
-    console.log('👁️ Step 1.5: Running Google Vision analysis...');
-    const visionResult = await analyzeImageContent(imageBuffer);
-    
-    // Step 2: Convert image to base64 for ChatGPT
-    const imageBase64 = imageBuffer.toString('base64');
-    
-    // Step 3: Send to ChatGPT with OCR + Vision context
-    console.log('🤖 Step 3: Sending to ChatGPT...');
-    
-    // Build enhanced context for ChatGPT
+    // Step 2: Prepare enhanced question for ChatGPT Vision
     let enhancedQuestion = userQuestion;
-    if (visionResult.success) {
-      const visionContext = [];
-      if (visionResult.objects.length > 0) {
-        visionContext.push(`Objects detected: ${visionResult.objects.join(', ')}`);
-      }
-      if (visionResult.logos.length > 0) {
-        visionContext.push(`Logos/brands detected: ${visionResult.logos.join(', ')}`);
-      }
-      if (visionResult.faces > 0) {
-        visionContext.push(`${visionResult.faces} person(s) detected`);
-      }
-      
-      if (visionContext.length > 0) {
-        enhancedQuestion += `\n\nGoogle Vision detected: ${visionContext.join('; ')}`;
-      }
+    
+    // If OCR found good text, include it as context
+    if (ocrResult.success && ocrResult.confidence > 0.5) {
+      enhancedQuestion += `\n\nOCR found text in image: "${ocrResult.text}" (confidence: ${Math.round(ocrResult.confidence * 100)}%)`;
+      console.log(`✅ OCR successful: "${ocrResult.text.substring(0, 50)}..." (${Math.round(ocrResult.confidence * 100)}%)`);
+    } else {
+      // OCR failed or low confidence - rely on ChatGPT Vision
+      enhancedQuestion += `\n\nPlease analyze this image carefully. OCR could not read text clearly, so describe what you see including any text, objects, people, brands, or other details that might help identify what this is.`;
+      console.log(`⚠️ OCR low confidence (${Math.round(ocrResult.confidence * 100)}%) - relying on ChatGPT Vision`);
     }
+    
+    // Step 3: Send to ChatGPT with image + enhanced context
+    console.log('🤖 Step 2: Sending to ChatGPT Vision...');
+    const imageBase64 = imageBuffer.toString('base64');
     
     const chatGPTResult = await analyzeWithChatGPT({
       text: enhancedQuestion,
-      ocrText: ocrResult.success ? ocrResult.text : (visionResult.text || undefined),
+      ocrText: ocrResult.success ? ocrResult.text : undefined,
       imageBase64: imageBase64
     });
     
-    // Return comprehensive response with Vision data
+    // Return simple response
     const response = {
       success: true,
-      // OCR data
-      text: ocrResult.text || 'No text detected',
+      text: ocrResult.text || 'No text detected by OCR',
       textConfidence: ocrResult.confidence,
-      
-      // Google Vision data
-      vision: {
-        objects: visionResult.objects || [],
-        logos: visionResult.logos || [],
-        faces: visionResult.faces || 0,
-        confidence: visionResult.confidence || 0,
-        success: visionResult.success || false
-      },
-      
-      // ChatGPT data
       answer: chatGPTResult.answer,
       tokensUsed: chatGPTResult.tokensUsed,
       timestamp: new Date().toISOString()
     };
     
     console.log('✅ Analysis complete:', {
-      hasOcrText: !!ocrResult.text,
+      ocrText: ocrResult.success ? `"${ocrResult.text.substring(0, 30)}..."` : 'None',
       ocrConfidence: Math.round(ocrResult.confidence * 100) + '%',
-      visionSuccess: visionResult.success,
-      visionObjects: visionResult.objects?.length || 0,
-      visionLogos: visionResult.logos?.length || 0,
-      visionFaces: visionResult.faces || 0,
       chatGptSuccess: chatGPTResult.success,
       responseLength: chatGPTResult.answer.length,
       tokensUsed: chatGPTResult.tokensUsed || 0
