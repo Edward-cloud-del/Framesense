@@ -1,37 +1,30 @@
-// 🚨 TEMPORARY API CONFIGURATION 🚨
+// 🚨 SECURE API CONFIGURATION 🚨
 // =====================================
-// ⚠️  WARNING: This file contains API keys - DO NOT commit to git!
-// ⚠️  SECURITY: Move to environment variables or backend storage
-// ⚠️  TODO: Replace with secure Tauri backend storage
+// ✅ SECURITY: Uses environment variables for API keys
+// ✅ PRODUCTION: No hardcoded secrets in code
 // =====================================
 
-// 🔧 TEMPORARY: Hardcoded API key for development
-// Replace with your actual OpenAI API key
-export const TEMP_OPENAI_API_KEY = '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';
+// 🔐 SECURE: Get API key from environment
+export function getApiKey(): string {
+  // Get from environment variable
+  const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
+  
+  if (!apiKey || apiKey === 'sk-your-api-key-here') {
+    throw new Error('❌ Please set VITE_OPENAI_API_KEY environment variable');
+  }
+  
+  return apiKey;
+}
 
-// 🔮 FUTURE: These will be moved to backend/environment
+// 🔮 AI Configuration
 export const AI_CONFIG = {
   model: 'gpt-3.5-turbo',
   maxTokens: 1000,
   temperature: 0.2,
-  dailyLimit: 50, // Conservative limit for testing
+  dailyLimit: 50,
 };
 
-// 🔧 MIGRATION NOTES:
-// 1. IMMEDIATELY: Add this file to .gitignore
-// 2. ENVIRONMENT: Move to .env file with VITE_OPENAI_API_KEY
-// 3. BACKEND: Move to secure Tauri storage system
-// 4. PRODUCTION: Use backend-only API calls
-
-export function getApiKey(): string {
-  // 🚨 TEMPORARY: Return hardcoded key
-  if (!TEMP_OPENAI_API_KEY || TEMP_OPENAI_API_KEY === 'sk-your-api-key-here') {
-    throw new Error('❌ Please set your OpenAI API key in src/config/api-config.ts');
-  }
-  
-  return TEMP_OPENAI_API_KEY;
-  
-  // 🔮 FUTURE: Get from environment or backend
-  // return import.meta.env.VITE_OPENAI_API_KEY;
-  // or: return await invoke('get_api_key_secure');
-} 
+// 🔧 SETUP INSTRUCTIONS:
+// 1. Create .env file in project root
+// 2. Add: VITE_OPENAI_API_KEY=your-actual-api-key-here
+// 3. Never commit .env files to git 
