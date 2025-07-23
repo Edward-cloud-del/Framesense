@@ -6,29 +6,39 @@ export async function analyzeImage(req: Request, res: Response) {
   try {
     console.log('📸 Image analysis request received');
     
-    // Check if image was uploaded
-    if (!req.file) {
-      return res.status(400).json({
-        success: false,
-        message: 'No image file provided'
-      });
+    const userQuestion = req.body.question || 'Hello, how can I help you?';
+    console.log(`📝 User question: "${userQuestion}"`);
+    
+    // Check if image was uploaded (optional now)
+    const hasImage = !!req.file;
+    const imageBuffer = hasImage ? req.file!.buffer : null;
+    
+    if (hasImage) {
+      console.log(`🖼️ Image size: ${Math.round(imageBuffer!.length / 1024)}KB`);
+    } else {
+      console.log('💬 Text-only conversation (no image)');
     }
     
-    const imageBuffer = req.file.buffer;
-    const userQuestion = req.body.question || 'What do you see in this image?';
+    // Step 1: Try OCR first (only if image exists)
+    let ocrResult;
+    if (hasImage) {
+      console.log('🔍 Step 1: Running OCR...');
+      ocrResult = await extractTextFromImage(imageBuffer!);
+    } else {
+      console.log('🔍 Step 1: Skipping OCR (no image)');
+      ocrResult = { text: '', confidence: 0, success: false };
+    }
     
-    console.log(`📝 User question: "${userQuestion}"`);
-    console.log(`🖼️ Image size: ${Math.round(imageBuffer.length / 1024)}KB`);
-    
-    // Step 1: Try OCR first
-    console.log('🔍 Step 1: Running OCR...');
-    const ocrResult = await extractTextFromImage(imageBuffer);
-    
-    // Step 2: Prepare enhanced question for ChatGPT Vision
+    // Step 2: Prepare enhanced question for ChatGPT
     let enhancedQuestion = userQuestion;
     
+    // If no image, just use text-only ChatGPT
+    if (!hasImage) {
+      console.log('💬 Text-only conversation mode');
+      enhancedQuestion += `\n\nThis is a text-only conversation without any image. Respond naturally as a helpful AI assistant.`;
+    }
     // If OCR found good text, include it as context
-    if (ocrResult.success && ocrResult.confidence > 0.5) {
+    else if (ocrResult.success && ocrResult.confidence > 0.5) {
       enhancedQuestion += `\n\nOCR detected text: "${ocrResult.text}" (${Math.round(ocrResult.confidence * 100)}% confidence)
 
 You are an AI assistant that adapts your response style:
@@ -50,7 +60,7 @@ Adapt your tone: short for identification, elaborate for reasoning, formal for p
 For identification (logos, people, car brands, products): Give concise answers (1-3 words). Examples: "Tesla Model Y", "Cristiano Ronaldo", "Adidas Ultraboost"
 For reasoning (analysis questions): Use step-by-step chain-of-thought thinking
 For complex questions: Explain clearly and pedagogically, adjusting complexity appropriately
-For calculations: Show all calculation steps and end with clear final answer
+For calculations: Show all calculation steps and end with clear final answer. Never use LaTeX/MathJax-syntax
 For emails/texts: Write, improve, and proofread professionally.
 
 IMPORTANT: Write without extra formatting symbols (such as bold, italics, or markdown). Avoid unnecessary repetition and filler text. Never use special formatting unless specifically asked for. Present numbers and terms in the simplest possible way, always prioritizing clarity and user-friendliness over technical correctness in presentation.
@@ -59,9 +69,14 @@ Adapt your tone: short and direct for identification, more elaborate for reasoni
       console.log(`⚠️ OCR low confidence (${Math.round(ocrResult.confidence * 100)}%) - using enhanced ChatGPT Vision`);
     }
     
-    // Step 3: Send to ChatGPT with image + enhanced context
-    console.log('🤖 Step 2: Sending to ChatGPT Vision...');
-    const imageBase64 = imageBuffer.toString('base64');
+    // Step 3: Send to ChatGPT (with or without image)
+    if (hasImage) {
+      console.log('🤖 Step 3: Sending to ChatGPT Vision...');
+    } else {
+      console.log('🤖 Step 3: Sending to ChatGPT (text-only)...');
+    }
+    
+    const imageBase64 = hasImage ? imageBuffer!.toString('base64') : undefined;
     
     const chatGPTResult = await analyzeWithChatGPT({
       text: enhancedQuestion,
