@@ -37,7 +37,7 @@ const ResultOverlay: React.FC<ResultOverlayProps> = ({ result }) => {
   };
 
   const handleUpgrade = () => {
-    window.open('http://localhost:8080/payments', '_blank');
+    window.open('https://framesense.vercel.app/payments', '_blank');
   };
 
   // Removed model selector functionality to match AIResponse simplicity

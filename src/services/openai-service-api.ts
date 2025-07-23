@@ -9,15 +9,8 @@ export class OpenAIServiceAPI implements IAIService {
   }
 
   private getAPIUrl(): string {
-          // Try different possible API URLs
-      const possibleUrls = [
-        'https://api.finalyze.pro/api/analyze', // Railway backend endpoint
-        'http://localhost:8080/api/analyze',   // Local backend fallback
-        'http://localhost:3001/api/analyze'    // Alternative local
-      ];
-    
-    // Use Railway backend as primary
-    return possibleUrls[0] || 'http://localhost:8080/api/analyze';
+    // ✅ PRODUCTION: Always use Railway backend - no localhost fallbacks
+    return 'https://api.finalyze.pro/api/analyze';
   }
 
   private getAuthToken(): string | null {

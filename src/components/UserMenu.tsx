@@ -53,7 +53,7 @@ export const UserMenu: React.FC<UserMenuProps> = ({ user, onLogout, onUserUpdate
     };
 
     const openManageSubscription = () => {
-        window.open('http://localhost:3000/account', '_blank');
+        window.open('https://framesense.vercel.app/account', '_blank');
     };
 
     const getTierColor = (tier: string) => {

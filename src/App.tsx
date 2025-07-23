@@ -207,7 +207,7 @@ function App() {
 
     const testPaymentsPage = () => {
         console.log('🧪 Testing payments page...');
-        open('http://localhost:3000/payments');
+        open('https://framesense.vercel.app/payments');
         console.log('✅ Payments page opened');
     };
 
