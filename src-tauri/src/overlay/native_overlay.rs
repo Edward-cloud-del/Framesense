@@ -1,5 +1,5 @@
 #[cfg(target_os = "macos")]
-use cocoa::appkit::{NSWindow, NSView, NSApp, NSApplication, NSApplicationActivationPolicy};
+use cocoa::appkit::{NSWindow, NSApp, NSApplication, NSApplicationActivationPolicy};
 #[cfg(target_os = "macos")]
 use cocoa::base::{id, nil, YES, NO};
 #[cfg(target_os = "macos")]

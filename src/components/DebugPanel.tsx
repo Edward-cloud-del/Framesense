@@ -61,6 +61,17 @@ const DebugPanel: React.FC = () => {
     setIsLoading(false);
   };
 
+  const testAlternativeCapture = async () => {
+    setIsLoading(true);
+    try {
+      const result = await invoke('test_alternative_capture') as DebugResult;
+      addResult(result);
+    } catch (error) {
+      addResult({ success: false, message: `Error: ${error}` });
+    }
+    setIsLoading(false);
+  };
+
   return (
     <div className="p-4 bg-gray-900 text-white max-w-2xl mx-auto">
       <h3 className="text-lg font-bold mb-4">🔧 Debug Panel</h3>
@@ -88,6 +99,14 @@ const DebugPanel: React.FC = () => {
           className="px-3 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 rounded text-sm"
         >
           Test Screen Capture
+        </button>
+        
+        <button
+          onClick={testAlternativeCapture}
+          disabled={isLoading}
+          className="px-3 py-2 bg-yellow-600 hover:bg-yellow-700 disabled:bg-gray-600 rounded text-sm"
+        >
+          Test Alt Capture
         </button>
         
         <button
