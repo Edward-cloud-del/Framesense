@@ -43,7 +43,7 @@
   },
   "productName": "frame-sense",
   "mainBinaryName": "frame-sense",
-  "version": "0.2.16",
+  "version": "0.2.17",
   "identifier": "com.framesense.app",
   "plugins": {
     "updater": {
@@ -56,7 +56,7 @@
   "app": {
     "macOSPrivateApi": true,
     "security": {
-      "csp": "default-src blob: data: filesystem: ws: wss: http: https: tauri: 'unsafe-eval' 'unsafe-inline' 'self' img-src: 'self'; connect-src ipc: http://ipc.localhost https://api.finalyze.pro https://*.finalyze.pro"
+      "csp": "default-src blob: data: filesystem: ws: wss: http: https: tauri: 'unsafe-eval' 'unsafe-inline' 'self'; img-src 'self' data: blob:; connect-src ipc: http://ipc.localhost https://api.finalyze.pro https://*.finalyze.pro; script-src 'self' 'unsafe-inline' 'unsafe-eval' tauri:; style-src 'self' 'unsafe-inline'"
     },
     "windows": [
       {
@@ -67,6 +67,7 @@
         "center": true,
         "resizable": false,
         "decorations": false,
+        "transparent": true,
         "y": 191
       }
     ],

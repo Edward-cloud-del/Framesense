@@ -1234,7 +1234,13 @@ fn main() {
                 .build(app)?;
 
             // Set up global shortcut (Cmd+Shift+F for macOS, Ctrl+Shift+F for others)
-            app.global_shortcut().register("CmdOrCtrl+Shift+F")?;
+            match app.global_shortcut().register("CmdOrCtrl+Shift+F") {
+                Ok(_) => println!("✅ Global shortcut CmdOrCtrl+Shift+F registered successfully"),
+                Err(e) => {
+                    println!("❌ Failed to register global shortcut: {}", e);
+                    return Err(e.into());
+                }
+            }
 
             Ok(())
         })
