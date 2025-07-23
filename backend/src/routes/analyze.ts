@@ -31,11 +31,11 @@ export async function analyzeImage(req: Request, res: Response) {
     if (ocrResult.success && ocrResult.confidence > 0.5) {
       enhancedQuestion += `\n\nOCR detected text: "${ocrResult.text}" (${Math.round(ocrResult.confidence * 100)}% confidence)
 
-Give a natural, conversational response identifying what you see. If it's a vehicle, tell me the brand, model, and approximate year. If you see people, brands, or logos, mention them naturally. Be confident and specific even if you're not 100% certain - give your best assessment in a friendly, flowing way without bullet points or formatting.`;
+Give a concise response with specific model names. For vehicles: exact brand and model (e.g., "BMW M3", "Tesla Model S"). For products: specific product name (e.g., "Adidas Ultraboost 22", "iPhone 14 Pro"). For people: actual names if recognizable. Be direct and specific - avoid generic descriptions.`;
       console.log(`✅ OCR successful: "${ocrResult.text.substring(0, 50)}..." (${Math.round(ocrResult.confidence * 100)}%)`);
     } else {
       // OCR failed or low confidence - rely on ChatGPT Vision
-      enhancedQuestion += `\n\nAnalyze this image and tell me what you see in a natural, conversational way. If it's a car, tell me the brand, model, and year. If you see logos, people, or other interesting details, mention them naturally. Be confident in your identifications even if you're not 100% sure - just give me your best assessment in a friendly, flowing response without bullet points or special formatting.`;
+      enhancedQuestion += `\n\nIdentify what you see with specific model names and be concise. For vehicles: give exact brand, model, and year (e.g., "2023 BMW M4"). For products: specific product name (e.g., "Adidas Predator Edge", "Nike Air Jordan 1"). For people: actual names if recognizable. Be direct and specific rather than descriptive.`;
       console.log(`⚠️ OCR low confidence (${Math.round(ocrResult.confidence * 100)}%) - using enhanced ChatGPT Vision`);
     }
     
