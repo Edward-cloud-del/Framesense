@@ -43,7 +43,7 @@
   },
   "productName": "frame-sense",
   "mainBinaryName": "frame-sense",
-  "version": "0.2.14",
+  "version": "0.2.15",
   "identifier": "com.framesense.app",
   "plugins": {
     "updater": {
