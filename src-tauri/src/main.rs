@@ -84,7 +84,7 @@ type SharedScreenshotCache = Arc<Mutex<ScreenshotCache>>;
 // Authentication service manager
 type SharedAuthService = Arc<Mutex<AuthService>>;
 
-// Test screen capture capability
+// Test screen capture capability with detailed diagnostics
 #[tauri::command]
 async fn test_screen_capture() -> Result<CaptureResult, String> {
     println!("🧪 Testing screen capture capability...");
@@ -93,12 +93,28 @@ async fn test_screen_capture() -> Result<CaptureResult, String> {
         Ok(screens) => {
             if let Some(screen) = screens.first() {
                 println!("✅ Screen access working. Available: {} screen(s)", screens.len());
-                Ok(CaptureResult {
-                    success: true,
-                    message: format!("Screen capture test successful! Found {} screen(s)", screens.len()),
-                    bounds: None,
-                    image_data: None,
-                })
+                
+                // Try to actually capture a small area to test permissions
+                match screen.capture_area(0, 0, 10, 10) {
+                    Ok(_) => {
+                        println!("✅ Screen capture permission granted!");
+                        Ok(CaptureResult {
+                            success: true,
+                            message: format!("Screen capture fully working! Found {} screen(s) with capture permission granted.", screens.len()),
+                            bounds: None,
+                            image_data: None,
+                        })
+                    },
+                    Err(e) => {
+                        println!("❌ Screen capture blocked by macOS: {}", e);
+                        Ok(CaptureResult {
+                            success: false,
+                            message: format!("❌ macOS blocked screen capture: {}\n\n🔧 Solution:\n1. Go to System Preferences → Privacy & Security → Screen Recording\n2. Add FrameSense to allowed apps\n3. If already added, remove and re-add\n4. Restart FrameSense\n\n⚠️ Note: Unsigned apps may require Developer ID for screen capture", e),
+                            bounds: None,
+                            image_data: None,
+                        })
+                    }
+                }
             } else {
                 println!("❌ No screens available");
                 Ok(CaptureResult {
@@ -113,7 +129,7 @@ async fn test_screen_capture() -> Result<CaptureResult, String> {
             println!("❌ Screen capture test failed: {}", e);
             Ok(CaptureResult {
                 success: false,
-                message: format!("Screen access failed: {}", e),
+                message: format!("Screen access failed: {}\n\n🔧 This is likely a macOS permission or code signing issue.", e),
                 bounds: None,
                 image_data: None,
             })

@@ -26,7 +26,7 @@
       "minimumSystemVersion": "10.15",
       "exceptionDomain": "",
       "signingIdentity": null,
-      "entitlements": null
+      "entitlements": "entitlements.plist"
     },
     "linux": {
       "deb": {
@@ -43,7 +43,7 @@
   },
   "productName": "frame-sense",
   "mainBinaryName": "frame-sense",
-  "version": "0.2.17",
+  "version": "0.2.18",
   "identifier": "com.framesense.app",
   "plugins": {
     "updater": {
