@@ -6,6 +6,18 @@
     <title>FrameSense - AI-Powered Screen Capture</title>
     <meta name="description" content="Capture, analyze, and understand your screen with AI-powered insights. Download FrameSense for free.">
     <link rel="icon" href="/favicon.ico">
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .feature-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+    </style>
 </head>
 <body class="bg-gray-900 text-white">
     <!-- Navigation -->
@@ -44,22 +56,22 @@
                 
                 <!-- Download Buttons -->
                 <div class="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
-                    <a href="https://github.com/Edward-cloud-del/framesense/releases/download/v0.2.8/frame-sense_0.2.8_x64.dmg" 
+                    <a href="https://github.com/Edward-cloud-del/framesense/releases/download/v0.2.11/frame-sense_0.2.11_x64.dmg" 
                        class="flex items-center space-x-3 bg-white text-gray-900 px-6 py-4 rounded-xl font-semibold hover:bg-gray-100 transition-all transform hover:scale-105 shadow-lg">
                         <i data-lucide="monitor" class="w-5 h-5"></i>
                         <span>Mac (Intel)</span>
                     </a>
-                    <a href="https://github.com/Edward-cloud-del/framesense/releases/download/v0.2.8/frame-sense_0.2.8_aarch64.dmg" 
+                    <a href="https://github.com/Edward-cloud-del/framesense/releases/download/v0.2.11/frame-sense_0.2.11_aarch64.dmg" 
                        class="flex items-center space-x-3 bg-gray-100 text-gray-900 px-6 py-4 rounded-xl font-semibold hover:bg-gray-200 transition-all transform hover:scale-105 shadow-lg">
                         <i data-lucide="cpu" class="w-5 h-5"></i>
                         <span>Mac (Apple Silicon)</span>
                     </a>
-                    <a href="https://github.com/Edward-cloud-del/framesense/releases/download/v0.2.8/frame-sense_0.2.8_x64_en-US.msi" 
+                    <a href="https://github.com/Edward-cloud-del/framesense/releases/download/v0.2.11/frame-sense_0.2.11_x64_en-US.msi" 
                        class="flex items-center space-x-3 bg-transparent border-2 border-white text-white px-8 py-4 rounded-xl font-semibold hover:bg-white hover:text-gray-900 transition-all transform hover:scale-105">
                         <i data-lucide="monitor" class="w-5 h-5"></i>
                         <span>Download for Windows</span>
                     </a>
-                    <a href="https://github.com/Edward-cloud-del/framesense/releases/download/v0.2.8/frame-sense_0.2.8_amd64.AppImage" 
+                    <a href="https://github.com/Edward-cloud-del/framesense/releases/download/v0.2.11/frame-sense_0.2.11_amd64.AppImage" 
                        class="flex items-center space-x-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white px-8 py-4 rounded-xl font-semibold hover:from-blue-600 hover:to-purple-600 transition-all transform hover:scale-105">
                         <i data-lucide="terminal" class="w-5 h-5"></i>
                         <span>Download for Linux</span>
@@ -67,7 +79,7 @@
                 </div>
 
                 <p class="text-sm text-gray-300">
-                    Free download • macOS 10.15+ (Intel & Apple Silicon) • Windows 10+ • Linux (AppImage) • Latest version: <span class="latest-version">v0.2.8</span>
+                    Free download • macOS 10.15+ (Intel & Apple Silicon) • Windows 10+ • Linux (AppImage) • Latest version: <span class="latest-version">v0.2.11</span>
                 </p>
             </div>
         </div>
@@ -167,17 +179,17 @@
             </p>
             
             <div class="flex flex-col sm:flex-row gap-6 justify-center">
-                <a href="https://github.com/Edward-cloud-del/framesense/releases/download/v0.2.8/frame-sense_0.2.8_x64.dmg"
+                <a href="https://github.com/Edward-cloud-del/framesense/releases/download/v0.2.11/frame-sense_0.2.11_x64.dmg"
                    class="flex items-center justify-center space-x-3 bg-white text-gray-900 px-12 py-4 rounded-xl font-semibold hover:bg-gray-100 transition-all transform hover:scale-105 shadow-lg">
                     <i data-lucide="download" class="w-5 h-5"></i>
                     <span>Download for Mac</span>
                 </a>
-                <a href="https://github.com/Edward-cloud-del/framesense/releases/download/v0.2.8/frame-sense_0.2.8_x64_en-US.msi"
+                <a href="https://github.com/Edward-cloud-del/framesense/releases/download/v0.2.11/frame-sense_0.2.11_x64_en-US.msi"
                    class="flex items-center justify-center space-x-3 bg-transparent border-2 border-white text-white px-12 py-4 rounded-xl font-semibold hover:bg-white hover:text-gray-900 transition-all transform hover:scale-105">
                     <i data-lucide="download" class="w-5 h-5"></i>
                     <span>Download for Windows</span>
                 </a>
-                <a href="https://github.com/Edward-cloud-del/framesense/releases/download/v0.2.8/frame-sense_0.2.8_amd64.AppImage"
+                <a href="https://github.com/Edward-cloud-del/framesense/releases/download/v0.2.11/frame-sense_0.2.11_amd64.AppImage"
                    class="flex items-center justify-center space-x-3 bg-gradient-to-r from-blue-500 to-purple-500 text-white px-12 py-4 rounded-xl font-semibold hover:from-blue-600 hover:to-purple-600 transition-all transform hover:scale-105">
                     <i data-lucide="download" class="w-5 h-5"></i>
                     <span>Download for Linux</span>
@@ -215,6 +227,19 @@
         </div>
     </footer>
 
-    <script type="module" src="/src/main.js"></script>
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+        
+        // Smooth scrolling for navigation links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+    </script>
 </body>
 </html> 
