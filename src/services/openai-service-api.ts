@@ -11,12 +11,12 @@ export class OpenAIServiceAPI implements IAIService {
   private getAPIUrl(): string {
     // Try different possible API URLs
     const possibleUrls = [
-      'http://localhost:8080/api/analyze',   // Simple backend
-      'https://api.finalyze.pro/api/analyze', // Railway
-      'http://localhost:3001/api/analyze'    // Local backend
+      'https://api.finalyze.pro', // Railway backend
+      'http://localhost:8080/api/analyze',   // Local backend fallback
+      'http://localhost:3001/api/analyze'    // Alternative local
     ];
     
-    // For now, return the first one (simple backend)  
+    // Use Railway backend as primary
     return possibleUrls[0] || 'http://localhost:8080/api/analyze';
   }
 
