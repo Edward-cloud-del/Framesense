@@ -14,10 +14,14 @@ const PORT = process.env.PORT || 8080;
 // CORS - configured for Tauri app and local development
 app.use(cors({
   origin: [
-    'http://localhost:5173',  // Vite dev server
-    'http://localhost:3000',  // Website
-    'tauri://localhost',      // Tauri app
-    'https://tauri.localhost' // Tauri app (alternative)
+    'http://localhost:5173',   // Vite dev server
+    'http://127.0.0.1:5173',   // Vite dev server (IP)
+    'http://localhost:3000',   // Website
+    'http://127.0.0.1:3000',   // Website (IP)
+    'tauri://localhost',       // Tauri app
+    'https://tauri.localhost', // Tauri app (alternative)
+    'http://127.0.0.1:8080',   // Backend itself for testing
+    '*'                        // Allow all for now (remove in production)
   ],
   credentials: true
 }));

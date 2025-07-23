@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
+import { DevHelpers } from '../utils/dev-helpers.js';
 
 export interface User {
     id: string;
@@ -17,9 +18,7 @@ export interface User {
 class AuthService {
     private currentUser: User | null = null;
     private authListeners: Array<(user: User | null) => void> = [];
-    private apiUrl = process.env.NODE_ENV === 'production' 
-        ? 'https://your-railway-app.railway.app' // TODO: Replace with actual Railway URL
-        : 'http://localhost:8080';
+    private apiUrl = 'https://api.finalyze.pro'; // Railway backend
     private sessionKey = 'framesense_user_session';
 
 
@@ -335,8 +334,8 @@ class AuthService {
 
     async getAvailableModels(tier?: string): Promise<string[]> {
         try {
-            const userTier = 'premium'; // All logged in users get premium models
-            const models = await invoke<string[]>('get_available_models', { userTier });
+            const userTier = this.isLoggedIn() ? 'premium' : 'free'; // All logged in users get premium models
+            const models = DevHelpers.getAvailableModels(userTier);
             return models;
         } catch (error) {
             console.error('❌ Failed to get available models:', error);
@@ -346,8 +345,9 @@ class AuthService {
 
     async canUseModel(model: string, tier?: string): Promise<boolean> {
         try {
-            // All logged in users can use any model
-            return this.isLoggedIn();
+            const userTier = this.isLoggedIn() ? 'premium' : 'free';
+            const availableModels = DevHelpers.getAvailableModels(userTier);
+            return availableModels.includes(model);
         } catch (error) {
             console.error('❌ Failed to check model access:', error);
             return false;
@@ -356,8 +356,15 @@ class AuthService {
 
     // Get required tier for a specific model (for UI display only)
     getRequiredTier(model: string): string {
-        // All models available to logged in users
-        return this.isLoggedIn() ? 'premium' : 'premium';
+        if (['GPT-4o 32k', 'Claude 3 Opus', 'Gemini Ultra Pro', 'Llama 3.1 405B'].includes(model)) {
+            return 'enterprise';
+        } else if (['GPT-4o', 'Claude 3.5 Sonnet', 'Gemini Ultra', 'Llama 3.1 70B'].includes(model)) {
+            return 'pro';
+        } else if (['GPT-4o-mini', 'Claude 3 Haiku', 'Gemini Pro'].includes(model)) {
+            return 'premium';
+        } else {
+            return 'free';
+        }
     }
 
     // Get daily limit for user tier

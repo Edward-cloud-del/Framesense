@@ -815,16 +815,9 @@ function App() {
 			data-tauri-drag-region
 		>
 			{/* Compact palette header */}
-			<div className="flex items-center justify-between flex-shrink-0">
+			<div className="flex items-center justify-center flex-shrink-0">
 				<div className="flex items-center space-x-2">
-					<div className="w-5 h-5 bg-primary-100 rounded-full flex items-center justify-center">
-						<svg className="w-3 h-3 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-						</svg>
-					</div>
-					<span className="text-xs font-medium text-white">Vely</span>
-					
-					{/* 🔍 DEBUG: Current User Display */}
+					{/* Profile Dropdown */}
 					<ProfileDropdown
 						currentUser={currentUser}
 						debugMode={debugMode}
@@ -838,7 +831,7 @@ function App() {
 						testPaymentsPage={testPaymentsPage}
 					/>
 					
-					{/* Screenshot result - BETWEEN LOGO AND BUTTON */}
+					{/* Screenshot result */}
 					{screenshotResult && (
 						<div className="flex items-center space-x-1 px-1 py-0.5 bg-gray-500/20 rounded border border-white/10 backdrop-blur-sm">
 							<img 
@@ -848,10 +841,7 @@ function App() {
 							/>
 						</div>
 					)}
-				</div>
-				
-				{/* Action Buttons */}
-				<div className="flex space-x-1.5" data-tauri-drag-region="false">
+					
 					{/* Upgrade to Pro Button */}
 					<button
 						onClick={() => handleUpgradeClick('pro')}
@@ -862,8 +852,6 @@ function App() {
 						</svg>
 						<span>Upgrade to Pro</span>
 					</button>
-
-
 
 					{/* Model Selector Button */}
 					<button

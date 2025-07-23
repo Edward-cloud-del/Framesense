@@ -1,6 +1,6 @@
 [package]
 name = "framesense"
-version = "0.1.0"
+version = "0.2.8"
 description = "AI-powered screen capture with instant insights"
 authors = ["FrameSense Team"]
 license = "MIT"
